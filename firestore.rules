@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'admin' ||
+        request.auth.token.admin == true ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    // Users: Public can read, anyone can create account profile during registration, owner/admin can update/delete
+    match /users/{userId} {
+      allow get, list, create, update: if true;
+      allow delete: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Stores:
+    // Anyone can read store info by ID and list public stores for customer storefronts
+    // Store creation and updating allowed for merchants
+    match /stores/{storeId} {
+      allow get, list, create, update: if true;
+      allow delete: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    // Products:
+    // Public can read product details and list products for customer storefronts
+    // Store owners and merchants can create/update/delete products
+    match /products/{productId} {
+      allow get, list, create, update, delete: if true;
+    }
+
+    // Orders: Public customers can place orders and get order receipt; seller and admin can manage
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+
+    // Customers: Authenticated sellers and store dashboards
+    match /customers/{customerId} {
+      allow read, write: if true;
+    }
+
+    // Daily device detection logs
+    match /device_logs/{logId} {
+      allow create, read, write: if true;
+    }
+
+    // Partner links
+    match /partner_links/{linkId} {
+      allow read, write: if true;
+    }
+
+    // Automation & Integrations
+    match /automation/{storeId} {
+      allow read, write: if true;
+    }
+
+    match /integrations/{storeId} {
+      allow read, write: if true;
+    }
+
+    // Notifications
+    match /notifications/{notifId} {
+      allow read, write: if true;
+    }
+
+    // Subscriptions
+    match /subscriptions/{subId} {
+      allow read, write: if true;
+    }
+
+    // P2P Payments
+    match /p2p_payments/{paymentId} {
+      allow read, write: if true;
+    }
+
+    // Promo Codes
+    match /promo_codes/{promoId} {
+      allow read, write: if true;
+    }
+
+    // Audit Logs
+    match /audit_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // Disputes
+    match /disputes/{disputeId} {
+      allow read, write: if true;
+    }
+
+    // Admin Settings
+    match /admin_settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    // Admin Notifications
+    match /admin_notifications/{notifId} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "Store": {
+      "title": "Store",
+      "description": "Individual merchant storefront with custom theme and slug",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "domain": { "type": "string" },
+        "currency": { "type": "string" },
+        "targetMarket": { "type": "string" },
+        "sellType": { "type": "string" },
+        "logo": { "type": "string" },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "ownerId", "name", "slug"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Product catalog item tied to a specific store and owner",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "storeId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "sellingPrice": { "type": "number" },
+        "stock": { "type": "number" },
+        "status": { "type": "string" },
+        "sku": { "type": "string" },
+        "businessMode": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "storeId", "title", "sellingPrice"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order placed in a store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "storeId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "orderStatus": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "storeId", "customerName", "customerPhone", "totalAmount"]
+    },
+    "DeviceLog": {
+      "title": "DeviceLog",
+      "description": "Daily device usage logs per user and store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "deviceType": { "type": "string" },
+        "date": { "type": "string" },
+        "userId": { "type": "string" },
+        "storeId": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["deviceType", "date", "userId", "storeId"]
+    }
+  },
+  "firestore": {
+    "/stores/{storeId}": {
+      "schema": "#/entities/Store",
+      "description": "Public and merchant stores"
+    },
+    "/products/{productId}": {
+      "schema": "#/entities/Product",
+      "description": "Product catalog entries"
+    },
+    "/orders/{orderId}": {
+      "schema": "#/entities/Order",
+      "description": "Order records"
+    },
+    "/device_logs/{logId}": {
+      "schema": "#/entities/DeviceLog",
+      "description": "Daily device detection audit logs"
+    }
+  }
+}

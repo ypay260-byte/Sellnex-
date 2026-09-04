@@ -1,0 +1,6 @@
+{
+  "name": "Sellnex",
+  "description": "Central Asian e-commerce and dropshipping platform with store builder, product import, profit calculator, local payments (Click, Payme, Uzum Bank), and automated fulfillment.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
