@@ -184,7 +184,7 @@ export const OrderSuccessView: React.FC = () => {
             className="flex-1 py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 font-bold text-xs text-white shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 transition-transform hover:scale-[1.01]"
           >
             <StoreIcon className="w-4 h-4" />
-            <span>View Order in Seller Dashboard (Demo)</span>
+            <span>View Order in Seller Dashboard</span>
           </button>
         </div>
       </div>

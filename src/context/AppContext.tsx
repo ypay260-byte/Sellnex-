@@ -404,17 +404,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         firestoreService.getNotifications(userId),
       ]);
 
-      // Combine products and deduplicate by id
+      // Combine products and deduplicate by id (strictly belonging to active store)
       const productMap = new Map<string, Product>();
       (storeProducts || []).forEach((p) => productMap.set(p.id, p));
       (ownerProducts || []).forEach((p) => {
-        if (!productMap.has(p.id)) {
-          // Heal product if it was missing storeId
-          if (!p.storeId || p.storeId === '') {
-            p.storeId = activeStore.id;
-            p.productUrl = getProductUrl(activeStore.slug, p.id);
-            firestoreService.saveProduct(p).catch(console.warn);
-          }
+        const belongsToActiveStore =
+          p.storeId === activeStore.id ||
+          p.storeId === activeStore.slug ||
+          p.storeId === activeStore.storeId;
+        if (belongsToActiveStore && !productMap.has(p.id)) {
           productMap.set(p.id, p);
         }
       });
@@ -588,9 +586,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             (s) =>
               s.slug?.toLowerCase() === cleanLower ||
               s.id === clean ||
-              s.storeId === clean ||
-              s.slug?.toLowerCase() === cleanLower.replace(/store$/, '') ||
-              s.name?.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanLower
+              s.storeId === clean
           ) || null;
       }
 
@@ -635,10 +631,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         else if (isOwnerOrAdmin) productMap.set(p.id, p);
       });
 
-      // Include owner products only if they match this store (prevents cross-store leakage if seller owns multiple stores)
+      // Include owner products only if they strictly match this store (prevents cross-store leakage if seller owns multiple stores)
       (ownerProducts || []).forEach((p) => {
         const matchesThisStore =
-          !p.storeId ||
           p.storeId === fetchedStore.id ||
           p.storeId === fetchedStore.slug ||
           p.storeId === fetchedStore.storeId;

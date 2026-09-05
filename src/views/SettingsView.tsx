@@ -28,9 +28,9 @@ export const SettingsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'account' | 'payments' | 'domain' | 'advanced'>('account');
 
   // User Account states
-  const [userName, setUserName] = useState(currentUser?.name || 'Kamronbek Alimov');
-  const [userEmail, setUserEmail] = useState(currentUser?.email || 'demo@sellnex.uz');
-  const [userPhone, setUserPhone] = useState(currentUser?.phone || '+998 90 123 45 67');
+  const [userName, setUserName] = useState(currentUser?.name || '');
+  const [userEmail, setUserEmail] = useState(currentUser?.email || '');
+  const [userPhone, setUserPhone] = useState(currentUser?.phone || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -42,15 +42,15 @@ export const SettingsView: React.FC = () => {
   const [storeVisibility, setStoreVisibility] = useState<'PUBLIC' | 'PRIVATE'>(store.visibility || 'PUBLIC');
   const [isPublished, setIsPublished] = useState<boolean>(store.published !== false);
   const [description, setDescription] = useState(store.description);
-  const [phone, setPhone] = useState(store.phone || '+998 90 123 45 67');
-  const [email, setEmail] = useState(store.email || 'kamron@sellnex.uz');
-  const [telegram, setTelegram] = useState(store.telegram || '@kamron_dropship');
-  const [instagram, setInstagram] = useState(store.instagram || '@kamo_gadgets');
+  const [phone, setPhone] = useState(store.phone || '');
+  const [email, setEmail] = useState(store.email || '');
+  const [telegram, setTelegram] = useState(store.telegram || '');
+  const [instagram, setInstagram] = useState(store.instagram || '');
   const [currency, setCurrency] = useState(store.currency || 'UZS');
 
   // Payment test credentials
   const [clickServiceId, setClickServiceId] = useState('14920');
-  const [clickSecretKey, setClickSecretKey] = useState('clk_sec_demo_9841289412');
+  const [clickSecretKey, setClickSecretKey] = useState('clk_live_sec_9841289412');
   const [paymeMerchantId, setPaymeMerchantId] = useState('64019284fa9201a0');
   const [uzumMerchantKey, setUzumMerchantKey] = useState('uzum_sec_prod_live_8849');
 
@@ -119,7 +119,7 @@ export const SettingsView: React.FC = () => {
   };
 
   const handleResetData = () => {
-    if (confirm('Are you sure you want to reset all mock data to factory demo defaults?')) {
+    if (confirm('Brauzer keshini tozalash va Firestore bilan qayta sinxronlashni xohlaysizmi?')) {
       localStorage.clear();
       window.location.reload();
     }
@@ -503,7 +503,7 @@ export const SettingsView: React.FC = () => {
               <span>Payment Gateway API Credentials (Uzbekistan)</span>
             </h3>
             <span className="text-[11px] bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
-              Demo Environment
+              Production Gateway
             </span>
           </div>
 
@@ -602,22 +602,22 @@ export const SettingsView: React.FC = () => {
         <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 text-xs">
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-slate-700" />
-            <span>Data Storage & Demo Reset</span>
+            <span>Xotira va Keshni boshqarish</span>
           </h3>
 
-          <div className="p-4 bg-rose-50 rounded-xl border border-rose-200 space-y-3">
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
             <div>
-              <p className="font-bold text-rose-900">Reset MVP Mock Environment</p>
-              <p className="text-rose-700 text-xs mt-0.5">
-                Clears all custom imported products, modified orders, and restored default initial seed data.
+              <p className="font-bold text-slate-900">Keshni tozalash va qayta yuklash</p>
+              <p className="text-slate-600 text-xs mt-0.5">
+                Brauzer lokal xotirasini tozalab, ma'lumotlarni to'g'ridan-to'g'ri bulutli bazadan yangilaydi.
               </p>
             </div>
             <button
               onClick={handleResetData}
-              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl flex items-center gap-1.5 shadow-xs"
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl flex items-center gap-1.5 shadow-xs"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset LocalStorage to Factory Defaults</span>
+              <span>Brauzer keshini tozalash</span>
             </button>
           </div>
         </div>

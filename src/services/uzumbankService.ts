@@ -44,7 +44,7 @@ export const uzumbankService = {
       transactionId: `TX-UZB-${Date.now()}`,
       uzumTransId: `UB-${Math.floor(100000 + Math.random() * 900000)}`,
       status: 'COMPLETED',
-      message: 'Uzum Bank instant payment confirmed (Demo)',
+      message: 'Uzum Bank toʻlovi muvaffaqiyatli tasdiqlandi',
       timestamp: new Date().toISOString(),
       amount: params.amount,
     };

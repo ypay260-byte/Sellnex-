@@ -47,7 +47,7 @@ export const paymeService = {
       transactionId: `TX-PAYME-${Date.now()}`,
       paymeTransId: `PM-${Math.floor(100000 + Math.random() * 900000)}`,
       status: 'PAID',
-      message: 'Demo Payme Payment successfully authorized',
+      message: 'Payme toʻlovi muvaffaqiyatli tasdiqlandi',
       timestamp: new Date().toISOString(),
       amount: params.amount,
     };

@@ -336,27 +336,6 @@ export const firestoreService = {
         }
       }
 
-      // 6. Query by slug with or without 'store' suffix (e.g. 'nike' vs 'nikestore')
-      if (cleanLower.endsWith('store')) {
-        const withoutStore = cleanLower.replace(/store$/, '');
-        if (withoutStore) {
-          const qWithout = query(collection(db, COLLECTIONS.STORES), where('slug', '==', withoutStore));
-          const snapWithout = await getDocs(qWithout);
-          if (!snapWithout.empty) {
-            const docSnap = snapWithout.docs[0];
-            return { id: docSnap.id, ...docSnap.data() } as Store;
-          }
-        }
-      } else {
-        const withStore = `${cleanLower}store`;
-        const qWith = query(collection(db, COLLECTIONS.STORES), where('slug', '==', withStore));
-        const snapWith = await getDocs(qWith);
-        if (!snapWith.empty) {
-          const docSnap = snapWith.docs[0];
-          return { id: docSnap.id, ...docSnap.data() } as Store;
-        }
-      }
-
       return null;
     } catch (err) {
       console.error('Error fetching store by ID or slug:', err);
@@ -430,7 +409,8 @@ export const firestoreService = {
         published: store.published !== undefined ? store.published : true,
         updatedAt: new Date().toISOString(),
       };
-      await setDoc(docRef, storePayload, { merge: true });
+      const cleaned = sanitizeData(storePayload);
+      await setDoc(docRef, cleaned, { merge: true });
     } catch (err: any) {
       console.error('[Firestore saveStore Critical Error]:', {
         errorMessage: err?.message,

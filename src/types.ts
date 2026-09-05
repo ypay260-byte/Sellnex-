@@ -236,7 +236,7 @@ export interface Supplier {
   id: string;
   name: string;
   type: 'Amazon' | 'Alibaba' | 'Uzum Market' | 'Custom Supplier';
-  status: 'Connected' | 'Demo Integration' | 'Available' | 'Disconnected';
+  status: 'Connected' | 'Partner API' | 'Available' | 'Disconnected';
   apiUrl?: string;
   apiKey?: string;
   defaultShippingCost: number;

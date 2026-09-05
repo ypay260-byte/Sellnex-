@@ -24,7 +24,7 @@ import {
 import { motion } from 'motion/react';
 
 export const LandingPage: React.FC = () => {
-  const { navigateTo, store, formatMoney, t } = useApp();
+  const { navigateTo, store, formatMoney, t, currentUser } = useApp();
 
   const howItWorksSteps = [
     {
@@ -123,12 +123,12 @@ export const LandingPage: React.FC = () => {
   ];
 
   const integrations = [
-    { name: 'Click', type: 'Local Payments', status: 'Connected / Demo', icon: '💳' },
-    { name: 'Payme', type: 'Local Payments', status: 'Connected / Demo', icon: '⚡' },
-    { name: 'Uzum Bank', type: 'Installment & Payments', status: 'Connected / Demo', icon: '🍇' },
-    { name: 'Uzum Market', type: 'Marketplace Sync', status: 'Connected / Demo', icon: '🛍️' },
-    { name: 'Amazon', type: 'Global Supplier', status: 'Demo Integration', icon: '📦' },
-    { name: 'Alibaba', type: 'Wholesale Dropship', status: 'Demo Integration', icon: '🌏' },
+    { name: 'Click', type: 'Local Payments', status: 'Connected', icon: '💳' },
+    { name: 'Payme', type: 'Local Payments', status: 'Connected', icon: '⚡' },
+    { name: 'Uzum Bank', type: 'Installment & Payments', status: 'Connected', icon: '🍇' },
+    { name: 'Uzum Market', type: 'Marketplace Sync', status: 'Official Partner', icon: '🛍️' },
+    { name: 'Amazon', type: 'Global Supplier', status: 'Global API', icon: '📦' },
+    { name: 'Alibaba', type: 'Wholesale Dropship', status: 'Wholesale API', icon: '🌏' },
     { name: 'Custom Suppliers', type: 'Direct API & Warehouse', status: 'Available', icon: '🏢' },
     { name: 'Telegram Bot', type: 'Order Notifications', status: 'Available', icon: '🤖' },
   ];
@@ -218,21 +218,19 @@ export const LandingPage: React.FC = () => {
           </button>
 
           <button
-            id="hero-explore-demo"
-            onClick={() => navigateTo('dashboard')}
+            id="hero-login-btn"
+            onClick={() => navigateTo('auth', { mode: 'login' })}
             className="px-8 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-base shadow-md transition-all hover:scale-[1.02] flex items-center gap-2 min-h-[48px]"
           >
-            <Play className="w-4 h-4 text-blue-400 fill-blue-400" />
-            <span>{t('btn_explore_demo', 'Explore Demo Dashboard')}</span>
+            <span>{t('nav_login', 'Log In')}</span>
           </button>
 
           <button
-            id="hero-view-storefront"
-            onClick={() => navigateTo('public-store', { storeSlug: store.slug })}
+            id="hero-view-pricing"
+            onClick={() => navigateTo('pricing')}
             className="px-6 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-base transition-colors flex items-center gap-2 min-h-[48px]"
           >
-            <StoreIcon className="w-4 h-4 text-slate-600" />
-            <span>{t('nav_view_store', 'View Sample Storefront')}</span>
+            <span>{t('nav_pricing', 'Pricing & Plans')}</span>
           </button>
         </div>
 
@@ -241,7 +239,7 @@ export const LandingPage: React.FC = () => {
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>Qurilma bo'yicha to'g'ridan-to'g'ri kirish:</span>
+              <span>Qurilma bo'yicha kirish:</span>
             </span>
             <span className="text-[11px] text-slate-400">Telegram & Web tayyor</span>
           </div>
@@ -251,7 +249,11 @@ export const LandingPage: React.FC = () => {
               id="landing-enter-mobile-btn"
               onClick={() => {
                 localStorage.setItem('sellnex_device_mode', 'mobile');
-                navigateTo('dashboard');
+                if (currentUser) {
+                  navigateTo('dashboard');
+                } else {
+                  navigateTo('auth', { mode: 'signup' });
+                }
               }}
               className="flex items-center gap-2.5 p-3 rounded-xl bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-800 transition-all text-left group shadow-2xs cursor-pointer min-h-[44px]"
             >
@@ -270,7 +272,11 @@ export const LandingPage: React.FC = () => {
               id="landing-enter-desktop-btn"
               onClick={() => {
                 localStorage.setItem('sellnex_device_mode', 'desktop');
-                navigateTo('dashboard');
+                if (currentUser) {
+                  navigateTo('dashboard');
+                } else {
+                  navigateTo('auth', { mode: 'signup' });
+                }
               }}
               className="flex items-center gap-2.5 p-3 rounded-xl bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-slate-800 transition-all text-left group shadow-2xs cursor-pointer min-h-[44px]"
             >
@@ -477,7 +483,7 @@ export const LandingPage: React.FC = () => {
               Marketplaces, Suppliers & Local Payments
             </h2>
             <p className="text-slate-400 mt-3 text-sm sm:text-base">
-              Connect your favorite platforms with real and demo simulated integrations.
+              Connect your favorite platforms with real automated integrations.
             </p>
           </div>
 
@@ -577,7 +583,7 @@ export const LandingPage: React.FC = () => {
               onClick={() => navigateTo('pricing')}
               className="mt-8 w-full py-3 rounded-xl bg-white hover:bg-slate-100 font-bold text-blue-700 text-sm shadow-md transition-colors"
             >
-              Subscribe to PRO (Demo)
+              Subscribe to PRO
             </button>
           </div>
 
@@ -623,8 +629,8 @@ export const LandingPage: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-6 text-xs text-slate-400">
             <button onClick={() => navigateTo('dashboard')} className="hover:text-white">Dashboard</button>
-            <button onClick={() => navigateTo('import-product')} className="hover:text-white">Import Product</button>
-            <button onClick={() => navigateTo('public-store', { storeSlug: store.slug })} className="hover:text-white">Sample Store</button>
+            <button onClick={() => navigateTo('pricing')} className="hover:text-white">Pricing</button>
+            <button onClick={() => navigateTo('auth', { mode: 'signup' })} className="hover:text-white">Start Selling</button>
             <button onClick={() => navigateTo('admin')} className="hover:text-white text-amber-400">Admin Portal</button>
           </div>
 

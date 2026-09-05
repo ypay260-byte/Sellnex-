@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { DemoBanner } from './components/common/DemoBanner';
 import { TrialBanner } from './components/common/TrialBanner';
 import { Sidebar } from './components/common/Sidebar';
 import { TopBar } from './components/common/TopBar';
@@ -90,7 +89,6 @@ const MainAppContent: React.FC = () => {
     if (currentUser && currentUser.role !== 'admin') {
       return (
         <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-white">
-          <DemoBanner />
           <DashboardView />
           <DeviceSelectorModal />
           <ToastContainer />
@@ -109,7 +107,6 @@ const MainAppContent: React.FC = () => {
   if (currentRoute === 'landing' || (!currentUser && isProtectedRoute)) {
     return (
       <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-white">
-        <DemoBanner />
         <LandingPage />
         <DeviceSelectorModal />
         <ToastContainer />
@@ -120,7 +117,6 @@ const MainAppContent: React.FC = () => {
   if (currentRoute === 'auth') {
     return (
       <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-slate-50">
-        <DemoBanner />
         <AuthPage />
         <DeviceSelectorModal />
         <ToastContainer />
@@ -131,7 +127,6 @@ const MainAppContent: React.FC = () => {
   if (currentRoute === 'onboarding') {
     return (
       <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-slate-50">
-        <DemoBanner />
         <OnboardingWizard />
         <DeviceSelectorModal />
         <ToastContainer />
@@ -142,7 +137,6 @@ const MainAppContent: React.FC = () => {
   if (currentRoute === 'public-store') {
     return (
       <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-slate-50">
-        <DemoBanner />
         <PublicStoreView />
         <DeviceSelectorModal />
         <ToastContainer />
@@ -153,7 +147,6 @@ const MainAppContent: React.FC = () => {
   if (currentRoute === 'product-detail' || currentRoute === 'public-product') {
     return (
       <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-slate-50">
-        <DemoBanner />
         <ProductDetailView />
         <DeviceSelectorModal />
         <ToastContainer />
@@ -164,7 +157,6 @@ const MainAppContent: React.FC = () => {
   if (currentRoute === 'checkout') {
     return (
       <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-slate-50">
-        <DemoBanner />
         <CheckoutView />
         <DeviceSelectorModal />
         <ToastContainer />
@@ -175,7 +167,6 @@ const MainAppContent: React.FC = () => {
   if (currentRoute === 'order-success') {
     return (
       <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-slate-50">
-        <DemoBanner />
         <OrderSuccessView />
         <DeviceSelectorModal />
         <ToastContainer />
@@ -223,7 +214,6 @@ const MainAppContent: React.FC = () => {
 
   return (
     <div id="sellnex-merchant-layout" className="w-full min-h-screen bg-slate-50 flex flex-col antialiased selection:bg-blue-600 selection:text-white">
-      <DemoBanner />
       <TrialBanner />
 
       <div className="flex-1 flex overflow-hidden">

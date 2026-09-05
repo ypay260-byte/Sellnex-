@@ -46,7 +46,7 @@ export const clickService = {
       transactionId: `TX-CLK-${Date.now()}`,
       clickTransId: `CK-${Math.floor(100000 + Math.random() * 900000)}`,
       status: 'SUCCESS',
-      message: 'Demo Click Payment successfully confirmed via Uzbekistan National Payment Switch',
+      message: 'Click toʻlovi muvaffaqiyatli amalga oshirildi',
       timestamp: new Date().toISOString(),
       amount: params.amount,
     };

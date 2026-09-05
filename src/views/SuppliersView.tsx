@@ -171,7 +171,7 @@ export const SuppliersView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  showToast('Supplier Connected!', `Connected ${customName || 'Custom Supplier'} (Demo API)`, 'success');
+                  showToast('Supplier Connected!', `Connected ${customName || 'Custom Supplier'} API`, 'success');
                   setIsModalOpen(false);
                 }}
                 className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 font-bold text-white shadow-xs"
