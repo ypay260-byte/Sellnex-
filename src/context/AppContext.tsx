@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   User,
   Store,
@@ -218,6 +218,112 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
+export interface ParsedRouteInfo {
+  route: string;
+  params: Record<string, string>;
+  storeIdToLoad?: string;
+  productIdToLoad?: string;
+}
+
+export function parseLocationRoute(
+  rawPathname = typeof window !== 'undefined' ? window.location.pathname : '',
+  rawHash = typeof window !== 'undefined' ? window.location.hash : '',
+  rawSearch = typeof window !== 'undefined' ? window.location.search : ''
+): ParsedRouteInfo {
+  const cleanPath = (rawPathname || '').replace(/^\/+/, '').split('?')[0].replace(/\/+$/, '');
+  const lowerPath = cleanPath.toLowerCase();
+
+  const rawHashVal = rawHash || '';
+  const hashWithoutHash = rawHashVal.replace(/^#\/?/, '').replace(/^\/+/, '');
+  const cleanHash = hashWithoutHash.split('?')[0].split('&')[0].replace(/\/+$/, '');
+  const lowerHash = cleanHash.toLowerCase();
+
+  const searchParams = new URLSearchParams(rawSearch || '');
+  const hashQueryIndex = rawHashVal.indexOf('?');
+  const hashParams = hashQueryIndex !== -1 ? new URLSearchParams(rawHashVal.slice(hashQueryIndex)) : null;
+
+  // 1. Direct Store Pathname matching: /store/:storeId, /store/:storeId/product/:productId, /s/:storeId
+  if (lowerPath.startsWith('store/') || lowerPath.startsWith('s/')) {
+    const parts = cleanPath.split('/').filter(Boolean);
+    const rawStoreId = parts[1];
+    const rawProdId = parts[2]?.toLowerCase() === 'product' ? parts[3] : undefined;
+
+    if (rawStoreId) {
+      const storeId = decodeURIComponent(rawStoreId).trim();
+      const prodId = rawProdId ? decodeURIComponent(rawProdId).trim() : undefined;
+      return {
+        route: prodId ? 'product-detail' : 'public-store',
+        params: { storeId, storeSlug: storeId, ...(prodId ? { productId: prodId } : {}) },
+        storeIdToLoad: storeId,
+        productIdToLoad: prodId,
+      };
+    }
+  }
+
+  // 2. Hash-based Store matching: /#store/:storeId, /#/store/:storeId
+  if (lowerHash.startsWith('store/') || lowerHash.startsWith('s/')) {
+    const parts = cleanHash.split('/').filter(Boolean);
+    const rawStoreId = parts[1];
+    const rawProdId = parts[2]?.toLowerCase() === 'product' ? parts[3] : undefined;
+
+    if (rawStoreId) {
+      const storeId = decodeURIComponent(rawStoreId).trim();
+      const prodId = rawProdId ? decodeURIComponent(rawProdId).trim() : undefined;
+      return {
+        route: prodId ? 'product-detail' : 'public-store',
+        params: { storeId, storeSlug: storeId, ...(prodId ? { productId: prodId } : {}) },
+        storeIdToLoad: storeId,
+        productIdToLoad: prodId,
+      };
+    }
+  }
+
+  // 3. Query params store matching: ?store=:storeId, ?s=:storeId
+  const qStore =
+    searchParams.get('store') ||
+    searchParams.get('storeId') ||
+    searchParams.get('s') ||
+    hashParams?.get('store') ||
+    hashParams?.get('storeId') ||
+    hashParams?.get('s');
+
+  const qProd =
+    searchParams.get('product') ||
+    searchParams.get('productId') ||
+    searchParams.get('p') ||
+    hashParams?.get('product') ||
+    hashParams?.get('productId') ||
+    hashParams?.get('p');
+
+  if (qStore) {
+    const storeId = decodeURIComponent(qStore).trim();
+    const prodId = qProd ? decodeURIComponent(qProd).trim() : undefined;
+    return {
+      route: prodId ? 'product-detail' : 'public-store',
+      params: { storeId, storeSlug: storeId, ...(prodId ? { productId: prodId } : {}) },
+      storeIdToLoad: storeId,
+      productIdToLoad: prodId,
+    };
+  }
+
+  // 4. Admin Panel routes
+  if (
+    lowerHash === 'admin' ||
+    lowerHash === 'admin-panel' ||
+    lowerHash === 'administrator' ||
+    lowerPath === 'admin' ||
+    lowerPath === 'admin-panel' ||
+    searchParams.get('route') === 'admin' ||
+    searchParams.get('page') === 'admin'
+  ) {
+    return { route: 'admin-panel', params: {} };
+  }
+
+  // 5. Standard app routes
+  const candidateRoute = cleanHash || cleanPath || 'landing';
+  return { route: candidateRoute, params: {} };
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     try {
@@ -276,16 +382,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [shareModalConfig, setShareModalConfig] = useState<ShareModalConfig | null>(null);
   const [limitModalConfig, setLimitModalConfig] = useState<LimitModalConfig | null>(null);
 
+  // Synchronous URL Routing Parser for immediate First-Paint without redirects or flash
+  const initialRouteInfo = useMemo(() => parseLocationRoute(), []);
+
   // Public Storefront Isolated State
   const [publicStore, setPublicStore] = useState<Store | null>(null);
   const [publicProducts, setPublicProducts] = useState<Product[]>([]);
-  const [publicStoreLoading, setPublicStoreLoading] = useState<boolean>(false);
+  const [publicStoreLoading, setPublicStoreLoading] = useState<boolean>(() => {
+    return initialRouteInfo.route === 'public-store' || initialRouteInfo.route === 'product-detail';
+  });
   const [publicStoreStatus, setPublicStoreStatus] = useState<'ready' | 'loading' | 'not_found' | 'private' | 'suspended'>('loading');
   const [publicActiveProduct, setPublicActiveProduct] = useState<Product | null>(null);
 
   // Routing State
-  const [currentRoute, setCurrentRoute] = useState<string>('landing');
-  const [routeParams, setRouteParams] = useState<Record<string, string>>({});
+  const [currentRoute, setCurrentRoute] = useState<string>(initialRouteInfo.route);
+  const [routeParams, setRouteParams] = useState<Record<string, string>>(initialRouteInfo.params);
   const [historyStack, setHistoryStack] = useState<{ route: string; params: Record<string, string> }[]>([]);
 
   // Toast system
@@ -303,14 +414,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // URL Generation Helpers (Strictly unique per store using store.slug or store.id)
-  // Uses universal fail-safe routing format (#store/slug) that works 100% without 404 on all hosting platforms
+  // Generates clean standard web URLs (/store/:storeId) supported natively by Vercel rewrites
   const getStoreUrl = useCallback((storeIdOrSlug?: string) => {
     const target = (storeIdOrSlug || store.slug || store.id || 'store').trim();
     let origin = typeof window !== 'undefined' ? window.location.origin : '';
     if (!origin || origin.includes('google.com') || origin.includes('aistudio') || origin.includes('run.app')) {
       origin = 'https://sellnex-ten.vercel.app';
     }
-    return `${origin}/#store/${target}`;
+    return `${origin}/store/${target}`;
   }, [store.id, store.slug]);
 
   const getProductUrl = useCallback((storeIdOrSlug?: string, productId?: string) => {
@@ -320,7 +431,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!origin || origin.includes('google.com') || origin.includes('aistudio') || origin.includes('run.app')) {
       origin = 'https://sellnex-ten.vercel.app';
     }
-    return `${origin}/#store/${targetStore}/product/${pId}`;
+    return `${origin}/store/${targetStore}/product/${pId}`;
   }, [store.id, store.slug]);
 
   const copyStoreLink = async (storeIdOrSlug?: string): Promise<boolean> => {
@@ -731,49 +842,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, []);
 
-  // Load public store data from URL (handles hash, query params, or pathname)
+  // Synchronously track loaded store key to avoid duplicate fetches
+  const lastLoadedStoreKeyRef = useRef<string>('');
+
+  // 1. Initial Store Data Loading if URL matches on initial mount
   useEffect(() => {
-    const handleUrlRouting = async () => {
+    if (initialRouteInfo.storeIdToLoad) {
+      const key = `${initialRouteInfo.storeIdToLoad}_${initialRouteInfo.productIdToLoad || ''}`;
+      lastLoadedStoreKeyRef.current = key;
+      loadPublicStoreData(initialRouteInfo.storeIdToLoad, initialRouteInfo.productIdToLoad);
+    }
+  }, [initialRouteInfo.storeIdToLoad, initialRouteInfo.productIdToLoad, loadPublicStoreData]);
+
+  // 2. React to Browser URL Changes (Direct navigation, popstate, hashchange)
+  useEffect(() => {
+    const handleUrlRouting = () => {
       try {
-        const rawHash = window.location.hash || '';
-        const hashWithoutHash = rawHash.replace(/^#\/?/, '').replace(/^\/+/, '');
-        const hash = hashWithoutHash.split('?')[0].split('&')[0].replace(/\/+$/, '') || '';
+        const routeInfo = parseLocationRoute();
 
-        const searchParams = new URLSearchParams(window.location.search);
-        const hashQueryIndex = rawHash.indexOf('?');
-        const hashParams = hashQueryIndex !== -1 ? new URLSearchParams(rawHash.slice(hashQueryIndex)) : null;
+        // 1. Check store route
+        if (routeInfo.route === 'public-store' || routeInfo.route === 'product-detail') {
+          setCurrentRoute(routeInfo.route);
+          setRouteParams(routeInfo.params);
 
-        const queryStore =
-          searchParams.get('store') ||
-          searchParams.get('storeId') ||
-          searchParams.get('s') ||
-          hashParams?.get('store') ||
-          hashParams?.get('storeId') ||
-          hashParams?.get('s');
+          if (routeInfo.storeIdToLoad) {
+            const key = `${routeInfo.storeIdToLoad}_${routeInfo.productIdToLoad || ''}`;
+            if (lastLoadedStoreKeyRef.current !== key) {
+              lastLoadedStoreKeyRef.current = key;
+              loadPublicStoreData(routeInfo.storeIdToLoad, routeInfo.productIdToLoad);
+            }
+          }
 
-        const queryProduct =
-          searchParams.get('product') ||
-          searchParams.get('productId') ||
-          searchParams.get('p') ||
-          hashParams?.get('product') ||
-          hashParams?.get('productId') ||
-          hashParams?.get('p');
+          // If hash had stale navigation state (e.g. #dashboard) while accessing clean URL /store/..., clean the hash
+          if (typeof window !== 'undefined' && window.location.hash && !window.location.hash.toLowerCase().includes('store/')) {
+            try {
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            } catch {
+              // ignore
+            }
+          }
+          return;
+        }
 
-        const rawPath = window.location.pathname.replace(/^\/+/, '').split('?')[0].replace(/\/+$/, '');
-
-        // 1. Strict Admin Panel Detection
-        const isAdminExplicitlyRequested =
-          hash === 'admin-panel' ||
-          hash === 'admin' ||
-          hash === 'administrator' ||
-          rawPath === 'admin' ||
-          rawPath === 'admin-panel' ||
-          searchParams.get('route') === 'admin' ||
-          searchParams.get('page') === 'admin';
-
-        if (isAdminExplicitlyRequested) {
+        // 2. Strict Admin Panel Detection
+        if (routeInfo.route === 'admin-panel') {
           const activeUser = Storage.getCurrentUser();
-          // If user is logged in as regular seller, never send them to admin panel!
           if (activeUser && activeUser.role !== 'admin') {
             setCurrentRoute('dashboard');
             window.location.hash = 'dashboard';
@@ -783,77 +896,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return;
         }
 
-        // 2. Check if hash matches store route: store/:storeId or store/:storeId/product/:productId
-        if (hash.startsWith('store/')) {
-          const parts = hash.split('/').filter(Boolean);
-          const rawStoreIdOrSlug = parts[1];
-          const rawProdId = parts[2] === 'product' ? parts[3] : undefined;
-
-          if (rawStoreIdOrSlug) {
-            const storeIdOrSlug = decodeURIComponent(rawStoreIdOrSlug).trim();
-            const prodId = rawProdId ? decodeURIComponent(rawProdId).trim() : undefined;
-
-            if (prodId) {
-              setCurrentRoute('product-detail');
-              setRouteParams({ storeId: storeIdOrSlug, storeSlug: storeIdOrSlug, productId: prodId });
-              loadPublicStoreData(storeIdOrSlug, prodId);
-            } else {
-              setCurrentRoute('public-store');
-              setRouteParams({ storeId: storeIdOrSlug, storeSlug: storeIdOrSlug });
-              loadPublicStoreData(storeIdOrSlug);
-            }
-            return;
-          }
-        }
-
-        // 3. Check if pathname matches store route: store/:storeId or store/:storeId/product/:productId or s/:storeId
-        if (rawPath.startsWith('store/') || rawPath.startsWith('s/')) {
-          const parts = rawPath.split('/').filter(Boolean);
-          const rawStoreIdOrSlug = parts[1];
-          const rawProdId = parts[2] === 'product' ? parts[3] : undefined;
-
-          if (rawStoreIdOrSlug) {
-            const storeIdOrSlug = decodeURIComponent(rawStoreIdOrSlug).trim();
-            const prodId = rawProdId ? decodeURIComponent(rawProdId).trim() : undefined;
-
-            if (prodId) {
-              setCurrentRoute('product-detail');
-              setRouteParams({ storeId: storeIdOrSlug, storeSlug: storeIdOrSlug, productId: prodId });
-              loadPublicStoreData(storeIdOrSlug, prodId);
-            } else {
-              setCurrentRoute('public-store');
-              setRouteParams({ storeId: storeIdOrSlug, storeSlug: storeIdOrSlug });
-              loadPublicStoreData(storeIdOrSlug);
-            }
-            return;
-          }
-        }
-
-        // 4. Check query parameters: ?store=:storeId&product=:productId
-        if (queryStore) {
-          const storeIdOrSlug = decodeURIComponent(queryStore).trim();
-          const prodId = queryProduct ? decodeURIComponent(queryProduct).trim() : undefined;
-
-          if (prodId) {
-            setCurrentRoute('product-detail');
-            setRouteParams({ storeId: storeIdOrSlug, storeSlug: storeIdOrSlug, productId: prodId });
-            loadPublicStoreData(storeIdOrSlug, prodId);
-          } else {
-            setCurrentRoute('public-store');
-            setRouteParams({ storeId: storeIdOrSlug, storeSlug: storeIdOrSlug });
-            loadPublicStoreData(storeIdOrSlug);
-          }
-          return;
-        }
-
-        // 5. Default routing for standard app routes
-        const publicRoutes = ['landing', 'auth', 'onboarding', 'pricing', 'checkout', 'order-success', 'product-detail', 'public-store', 'admin-panel', 'admin'];
+        // 3. Default routing for standard app routes
+        const publicRoutes = ['landing', 'auth', 'onboarding', 'pricing', 'checkout', 'order-success', 'product-detail', 'public-store', 'admin-panel', 'admin', 'store'];
         const user = Storage.getCurrentUser();
-        const routeName = hash || rawPath || 'landing';
+        const routeName = routeInfo.route || 'landing';
 
         if (!user && !publicRoutes.includes(routeName)) {
           setCurrentRoute('landing');
-          window.location.hash = 'landing';
+          if (window.location.pathname === '/' || window.location.pathname === '') {
+            window.location.hash = 'landing';
+          }
         } else {
           if ((routeName === 'admin' || routeName === 'admin-panel') && user && user.role !== 'admin') {
             setCurrentRoute('dashboard');
@@ -864,11 +916,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } catch (err) {
         console.warn('Routing parse error:', err);
-        setCurrentRoute('landing');
       }
     };
 
-    handleUrlRouting();
     window.addEventListener('hashchange', handleUrlRouting);
     window.addEventListener('popstate', handleUrlRouting);
     return () => {
@@ -878,7 +928,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [loadPublicStoreData]);
 
   const navigateTo = (route: string, params: Record<string, string> = {}) => {
-    const publicRoutes = ['landing', 'auth', 'onboarding', 'pricing', 'checkout', 'order-success', 'product-detail', 'public-store', 'admin-panel', 'admin'];
+    const publicRoutes = ['landing', 'auth', 'onboarding', 'pricing', 'checkout', 'order-success', 'product-detail', 'public-store', 'admin-panel', 'admin', 'store'];
     const activeUser = currentUser || Storage.getCurrentUser();
     let targetRoute = route === 'admin' ? 'admin-panel' : route;
 
@@ -911,6 +961,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {
         window.location.hash = `store/${sId}`;
       }
+      lastLoadedStoreKeyRef.current = `${sId}_`;
       loadPublicStoreData(sId);
     } else if (targetRoute === 'public-product' || targetRoute === 'product-detail') {
       const sId = params.storeId || params.storeSlug || store.slug || store.id;
@@ -920,6 +971,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {
         window.location.hash = `store/${sId}/product/${pId}`;
       }
+      lastLoadedStoreKeyRef.current = `${sId}_${pId}`;
       loadPublicStoreData(sId, pId);
     } else {
       try {

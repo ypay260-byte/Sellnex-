@@ -250,7 +250,7 @@ export const AdminStoresTab: React.FC<AdminStoresTabProps> = ({
 
                 <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
                   <a
-                    href={`/#store/${st.slug}`}
+                    href={`/store/${st.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
@@ -404,7 +404,7 @@ export const AdminStoresTab: React.FC<AdminStoresTabProps> = ({
 
             <div className="flex items-center gap-3">
               <a
-                href={`/#store/${selectedStore.slug}`}
+                href={`/store/${selectedStore.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold text-center border border-slate-700 transition-colors inline-flex items-center justify-center gap-1.5"

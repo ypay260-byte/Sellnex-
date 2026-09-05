@@ -472,7 +472,7 @@ export const OnboardingWizard: React.FC = () => {
                       : 'border-slate-300 focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-transparent'
                   }`}>
                     <span className="bg-slate-100 border-r border-slate-200 px-3 py-2.5 text-xs text-slate-600 font-mono flex items-center select-none">
-                      /#store/
+                      /store/
                     </span>
                     <input
                       id="input-store-slug"
@@ -493,7 +493,7 @@ export const OnboardingWizard: React.FC = () => {
 
                   <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs text-slate-700 font-medium">
                     <span className="text-slate-500">Do'koningiz rasmiy havolasi:</span>
-                    <strong className="font-mono text-blue-600">/#store/{storeSlug || 'mystore'}</strong>
+                    <strong className="font-mono text-blue-600">/store/{storeSlug || 'mystore'}</strong>
                   </div>
                 </div>
 

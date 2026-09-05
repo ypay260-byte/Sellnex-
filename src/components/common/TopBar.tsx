@@ -260,7 +260,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
               </div>
               <div className="hidden xl:block text-left">
                 <p className="text-xs font-semibold text-slate-900 leading-none">{currentUser?.name || 'Seller'}</p>
-                <p className="text-[10px] text-blue-600 font-mono mt-0.5">/#store/{store?.slug || 'store'}</p>
+                <p className="text-[10px] text-blue-600 font-mono mt-0.5">/store/{store?.slug || 'store'}</p>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
             </button>

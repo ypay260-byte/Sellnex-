@@ -141,7 +141,7 @@ export const MobileBottomNav: React.FC = () => {
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
               <div className="min-w-0">
                 <p className="text-xs font-bold text-slate-900 truncate">{store.name}</p>
-                <p className="text-[11px] text-blue-600 font-mono font-medium truncate">/#store/{store.slug}</p>
+                <p className="text-[11px] text-blue-600 font-mono font-medium truncate">/store/{store.slug}</p>
               </div>
               <button
                 onClick={() => {

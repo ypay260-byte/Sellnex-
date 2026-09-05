@@ -51,6 +51,7 @@ const PUBLIC_ROUTES = [
   'pricing',
   'admin-panel',
   'admin',
+  'store',
 ];
 
 const MainAppContent: React.FC = () => {
@@ -134,7 +135,12 @@ const MainAppContent: React.FC = () => {
     );
   }
 
-  if (currentRoute === 'public-store') {
+  if (
+    currentRoute === 'public-store' ||
+    currentRoute === 'store' ||
+    currentRoute.startsWith('store/') ||
+    currentRoute.startsWith('s/')
+  ) {
     return (
       <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-slate-50">
         <PublicStoreView />

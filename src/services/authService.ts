@@ -497,7 +497,7 @@ export const authService = {
         storeId: verifiedStore.id,
         ownerId: verifiedStore.ownerId,
         slug: verifiedStore.slug,
-        publicUrl: `/#store/${verifiedStore.id}`,
+        publicUrl: `/store/${verifiedStore.id}`,
       });
 
       return {

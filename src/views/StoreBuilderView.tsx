@@ -366,7 +366,7 @@ export const StoreBuilderView: React.FC = () => {
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
               </div>
               <span className="font-mono text-slate-600 bg-white px-3 py-0.5 rounded border border-slate-200 truncate max-w-xs">
-                /#store/{store.slug}
+                /store/{store.slug}
               </span>
               <span className="text-[10px] text-emerald-600 font-semibold">● Live Preview</span>
             </div>

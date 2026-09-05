@@ -174,7 +174,7 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
                 : 'border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100'
             }`}>
               <span className="pl-3.5 pr-1 text-slate-500 text-xs font-mono select-none">
-                /#store/
+                /store/
               </span>
               <input
                 id="modal-input-store-slug"
