@@ -24,6 +24,7 @@ import confetti from 'canvas-confetti';
 export const ProductDetailView: React.FC = () => {
   const {
     publicStore,
+    store,
     publicProducts,
     publicActiveProduct,
     publicStoreLoading,
@@ -39,7 +40,7 @@ export const ProductDetailView: React.FC = () => {
     cartTotalCount,
   } = useApp();
 
-  const activeStore = publicStore;
+  const activeStore = publicStore || store;
   const productId = routeParams.productId;
 
   const [product, setProduct] = useState<Product | null>(() => {
@@ -171,7 +172,7 @@ export const ProductDetailView: React.FC = () => {
     );
   }
 
-  const primaryColor = activeStore.theme?.primaryColor || activeStore.primaryColor || '#2563eb';
+  const primaryColor = activeStore?.theme?.primaryColor || (activeStore as any)?.primaryColor || '#2563eb';
 
   const handleAddToCart = () => {
     addToCart(product, quantity, selectedVariant);
@@ -185,7 +186,10 @@ export const ProductDetailView: React.FC = () => {
     } catch {
       // ignore
     }
-    navigateTo('checkout', { storeId: activeStore.id, storeSlug: activeStore.slug });
+    navigateTo('checkout', {
+      storeId: activeStore?.id || product.storeId || '',
+      storeSlug: activeStore?.slug || '',
+    });
   };
 
   const discountPercent =

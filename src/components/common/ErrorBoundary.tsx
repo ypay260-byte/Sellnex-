@@ -24,12 +24,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   private handleReload = () => {
-    try {
-      localStorage.clear();
-    } catch {
-      // ignore
-    }
-    window.location.hash = '';
+    window.location.reload();
+  };
+
+  private handleGoHome = () => {
+    window.location.hash = 'landing';
     window.location.reload();
   };
 
@@ -42,14 +41,20 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           </div>
           <h1 className="text-2xl font-black mb-2 text-white">Sellnex Uzbekistan</h1>
           <p className="text-slate-400 text-sm max-w-md mb-6 leading-relaxed">
-            Ilova muvaffaqiyatli ishga tushirildi. Qayta yuklash tugmasini bosib to'liq interfeysni ochishingiz mumkin.
+            Kutilmagan xatolik yuz berdi. Iltimos, sahifani yangilang yoki bosh sahifaga qayting.
           </p>
           <div className="flex gap-3">
             <button
               onClick={this.handleReload}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-all shadow-md active:scale-95"
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-all shadow-md active:scale-95 cursor-pointer"
             >
-              Ilovani Qayta Yuklash
+              Sahifani Yangilash
+            </button>
+            <button
+              onClick={this.handleGoHome}
+              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-sm transition-all shadow-md active:scale-95 cursor-pointer"
+            >
+              Bosh Sahifa
             </button>
           </div>
         </div>

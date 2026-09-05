@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { P2PPayment, AdminSettings, DynamicPlan, User, PlanType, Order } from '../../../types';
+import { P2PPayment, AdminSettings, DynamicPlan, User, PlanType, Order, Store } from '../../../types';
 import { firestoreService } from '../../../services/firestoreService';
 import {
   CreditCard,
@@ -31,6 +31,7 @@ interface AdminPaymentsTabProps {
   plans: DynamicPlan[];
   users: User[];
   orders?: Order[];
+  stores?: Store[];
   adminEmail: string;
   onRefresh: () => Promise<void>;
   showToast: (title: string, desc?: string, type?: 'success' | 'error' | 'info') => void;
@@ -43,6 +44,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
   plans,
   users,
   orders = [],
+  stores = [],
   adminEmail,
   onRefresh,
   showToast,
@@ -387,6 +389,12 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                       <div className="text-xs text-slate-400 flex flex-wrap items-center gap-x-4 gap-y-1">
                         <span>
                           Mijoz: <strong className="text-white">{o.customerName}</strong> ({o.customerPhone})
+                        </span>
+                        <span>
+                          Do‘kon:{' '}
+                          <strong className="text-cyan-300 font-semibold">
+                            {stores.find((s) => s.id === o.storeId || s.slug === o.storeId)?.name || o.storeId || 'Sellnex Do‘koni'}
+                          </strong>
                         </span>
                         <span>
                           Summa:{' '}

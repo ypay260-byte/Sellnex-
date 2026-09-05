@@ -252,9 +252,20 @@ export const CheckoutView: React.FC = () => {
         notes: notes.trim() || undefined,
       };
 
+      const resolvedStoreId =
+        activeStore?.id ||
+        routeParams.storeId ||
+        (cart.length > 0 ? cart[0].product.storeId : '') ||
+        store.id;
+      const resolvedOwnerId =
+        activeStore?.ownerId ||
+        publicStore?.ownerId ||
+        store.ownerId ||
+        '';
+
       const created = await createOrder({
-        storeId: activeStore?.id || store.id,
-        ownerId: activeStore?.ownerId || store.ownerId || '',
+        storeId: resolvedStoreId,
+        ownerId: resolvedOwnerId,
         customerId: currentUser?.id || undefined,
         customerName: customerName.trim(),
         customerPhone: phone.trim(),

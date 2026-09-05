@@ -613,22 +613,34 @@ export const firestoreService = {
     });
   },
 
-  async rejectOrderPayment(orderId: string, adminEmail: string, reason?: string): Promise<void> {
+  async rejectOrderPayment(orderId: string, param1: string, param2?: string): Promise<void> {
     const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
     const existing = await this.getOrderById(orderId);
+
+    let adminEmail = 'admin@sellnex.uz';
+    let reason = "To‘lov cheki ma'lumotlari tasdiqlanmadi. Yangi chek talab qilinadi.";
+
+    if (param1 && param1.includes('@')) {
+      adminEmail = param1;
+      if (param2) reason = param2;
+    } else {
+      if (param1) reason = param1;
+      if (param2) adminEmail = param2;
+    }
+
     const newTimeline = [
       ...(existing?.timeline || []),
       {
         status: 'Pending' as const,
         timestamp: new Date().toISOString(),
         title: "To'lov cheki rad etildi (Admin)",
-        description: reason || "To'lov cheki ma'lumotlari tasdiqlanmadi. Yangi chek talab qilinadi.",
+        description: reason,
       },
     ];
 
     await updateDoc(docRef, {
       paymentStatus: 'rejected',
-      receiptRejectedReason: reason || "To‘lov cheki tasdiqlanmadi. Iltimos, yangi chek yuklang.",
+      receiptRejectedReason: reason,
       verifiedBy: adminEmail,
       verifiedAt: new Date().toISOString(),
       timeline: newTimeline,
@@ -636,15 +648,22 @@ export const firestoreService = {
     });
   },
 
-  async getOrdersByStore(storeId: string): Promise<Order[]> {
+  async getOrdersByStore(storeId: string, onlyPaid: boolean = true): Promise<Order[]> {
     try {
       if (!storeId) return [];
       const q = query(collection(db, COLLECTIONS.ORDERS), where('storeId', '==', storeId));
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((docSnap) => ({
+      const orders = querySnapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
       })) as Order[];
+      if (onlyPaid) {
+        // Business rule: Sellers only see orders where payment has been verified and marked as paid
+        return orders.filter(
+          (o) => o.paymentStatus === 'paid' || o.paymentStatus === 'Paid'
+        );
+      }
+      return orders;
     } catch (err) {
       console.error('Error fetching orders from Firestore:', err);
       return [];

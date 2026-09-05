@@ -38,9 +38,9 @@ export const OrdersView: React.FC = () => {
   const [payoutCard, setPayoutCard] = useState(store?.sellerCardNumber || '');
   const [isSubmittingPayout, setIsSubmittingPayout] = useState(false);
 
-  const statuses: ('All' | OrderStatus)[] = [
+  const statuses: ('All' | OrderStatus | 'confirmed')[] = [
     'All',
-    'Pending',
+    'confirmed' as any,
     'Paid',
     'Processing',
     'Supplier Ordered',
@@ -49,14 +49,17 @@ export const OrdersView: React.FC = () => {
     'Cancelled',
   ];
 
-  const filteredOrders = orders.filter((o) => {
-    const matchSearch =
-      o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-      o.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      o.customerPhone.includes(search);
-    const matchStatus = statusFilter === 'All' || o.orderStatus === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  // STRICT BUSINESS RULE: Sellers ONLY see orders whose payment is verified and paid
+  const filteredOrders = orders
+    .filter((o) => o.paymentStatus === 'paid' || o.paymentStatus === 'Paid')
+    .filter((o) => {
+      const matchSearch =
+        o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
+        o.customerName.toLowerCase().includes(search.toLowerCase()) ||
+        o.customerPhone.includes(search);
+      const matchStatus = statusFilter === 'All' || o.orderStatus === statusFilter;
+      return matchSearch && matchStatus;
+    });
 
   const handleRequestDeliveryPayout = async (order: Order) => {
     if (!payoutCard.trim()) {
@@ -103,10 +106,12 @@ export const OrdersView: React.FC = () => {
     }
   };
 
-  const getStatusBadge = (status: OrderStatus) => {
+  const getStatusBadge = (status: OrderStatus | 'confirmed') => {
     switch (status) {
+      case 'confirmed' as any:
+        return 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold';
       case 'Paid':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-100 text-blue-800 border-blue-200 font-semibold';
       case 'Supplier Ordered':
         return 'bg-indigo-100 text-indigo-800 border-indigo-200 font-semibold';
       case 'Shipped':
@@ -212,7 +217,14 @@ export const OrdersView: React.FC = () => {
                   {filteredOrders.map((order) => (
                     <tr key={order.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3.5 px-4">
-                        <p className="font-mono font-bold text-slate-900">{order.orderNumber}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-mono font-bold text-slate-900">{order.orderNumber}</p>
+                          {(order.orderStatus === 'confirmed' || order.orderStatus === 'Pending') && (
+                            <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">
+                              New Order
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-slate-400 mt-0.5">{order.createdAt.split('T')[0]}</p>
                       </td>
 

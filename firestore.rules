@@ -40,7 +40,11 @@ service cloud.firestore {
 
     // Orders: Public customers can place orders and get order receipt; seller and admin can manage
     match /orders/{orderId} {
-      allow read, write: if true;
+      allow create: if true;
+      allow get: if true;
+      allow update: if true;
+      allow list: if true;
+      allow delete: if isAuthenticated() && (isAdmin() || resource.data.ownerId == request.auth.uid);
     }
 
     // Customers: Authenticated sellers and store dashboards

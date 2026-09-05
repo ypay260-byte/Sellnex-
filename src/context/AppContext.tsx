@@ -897,7 +897,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         // 3. Default routing for standard app routes
-        const publicRoutes = ['landing', 'auth', 'onboarding', 'pricing', 'checkout', 'order-success', 'product-detail', 'public-store', 'admin-panel', 'admin', 'store'];
+        const publicRoutes = [
+          'landing',
+          'auth',
+          'onboarding',
+          'pricing',
+          'checkout',
+          'order-success',
+          'product-detail',
+          'public-product',
+          'public-store',
+          'admin-panel',
+          'admin',
+          'store',
+        ];
         const user = Storage.getCurrentUser();
         const routeName = routeInfo.route || 'landing';
 
@@ -928,7 +941,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [loadPublicStoreData]);
 
   const navigateTo = (route: string, params: Record<string, string> = {}) => {
-    const publicRoutes = ['landing', 'auth', 'onboarding', 'pricing', 'checkout', 'order-success', 'product-detail', 'public-store', 'admin-panel', 'admin', 'store'];
+    const publicRoutes = [
+      'landing',
+      'auth',
+      'onboarding',
+      'pricing',
+      'checkout',
+      'order-success',
+      'product-detail',
+      'public-product',
+      'public-store',
+      'admin-panel',
+      'admin',
+      'store',
+    ];
     const activeUser = currentUser || Storage.getCurrentUser();
     let targetRoute = route === 'admin' ? 'admin-panel' : route;
 
@@ -1380,10 +1406,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
 
-    const nextOrders = [newOrder, ...orders];
-    setOrdersState(nextOrders);
-    Storage.setOrders(nextOrders);
     await firestoreService.saveOrder(newOrder);
+    
+    // CRITICAL ISOLATION: Unverified orders must NOT appear in the seller's dashboard.
+    // Only paid orders are added to the seller's active orders state.
+    if (newOrder.paymentStatus === 'paid' || newOrder.paymentStatus === 'Paid') {
+      const nextOrders = [newOrder, ...orders];
+      setOrdersState(nextOrders);
+      Storage.setOrders(nextOrders);
+    }
 
     // Sync Customer in Firestore
     const existingCust = customers.find(

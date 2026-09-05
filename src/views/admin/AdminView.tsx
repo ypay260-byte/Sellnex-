@@ -409,6 +409,7 @@ export const AdminView: React.FC = () => {
                   plans={plans}
                   users={users}
                   orders={orders}
+                  stores={stores}
                   adminEmail={currentUser.email}
                   onRefresh={loadAllAdminData}
                   showToast={showToast}
