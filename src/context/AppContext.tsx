@@ -1357,14 +1357,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
+    const resolvedShippingAddress = orderData.shippingAddress || orderData.deliveryAddress || {
+      fullName: orderData.customerName,
+      phone: orderData.customerPhone,
+      region: 'Toshkent shahri',
+      district: '',
+      streetAddress: '',
+    };
+
     const newOrder: Order = {
       ...orderData,
       id: `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       storeId: targetStoreId,
       ownerId: resolvedOwnerId || store.ownerId || currentUser?.id || '',
+      customerId: orderData.customerId || currentUser?.id || undefined,
       orderNumber,
       orderStatus: initialStatus,
       timeline: initialTimeline,
+      quantity: orderData.quantity || orderData.items.reduce((acc, it) => acc + (it.quantity || 1), 0),
+      deliveryAddress: orderData.deliveryAddress || resolvedShippingAddress,
+      shippingAddress: resolvedShippingAddress,
       createdAt: new Date().toISOString(),
     };
 
@@ -1387,13 +1399,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: existingCust.ordersCount + 1 >= 3 ? 'VIP' : 'Active',
       };
     } else {
+      const regionText = newOrder.shippingAddress?.region || '';
+      const districtText = newOrder.shippingAddress?.district || (newOrder.shippingAddress as any)?.city || '';
       updatedCust = {
         id: `cust_${Date.now()}`,
         storeId: newOrder.storeId,
         name: newOrder.customerName,
         phone: newOrder.customerPhone,
         email: newOrder.customerEmail,
-        city: `${newOrder.shippingAddress.region} (${newOrder.shippingAddress.district})`,
+        city: districtText ? `${regionText} (${districtText})` : regionText,
         ordersCount: 1,
         totalSpent: newOrder.totalAmount,
         lastOrderDate: new Date().toISOString().split('T')[0],

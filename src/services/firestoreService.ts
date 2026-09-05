@@ -527,6 +527,115 @@ export const firestoreService = {
     await updateDoc(docRef, { ...updates, updatedAt: new Date().toISOString() });
   },
 
+  async getOrderById(orderId: string): Promise<Order | null> {
+    try {
+      if (!orderId) return null;
+      const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as Order;
+      }
+      return null;
+    } catch (err) {
+      console.error('Error fetching order by ID:', err);
+      return null;
+    }
+  },
+
+  onOrderSnapshot(orderId: string, callback: (order: Order | null) => void): Unsubscribe {
+    const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
+    return onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          callback({ id: docSnap.id, ...docSnap.data() } as Order);
+        } else {
+          callback(null);
+        }
+      },
+      (err) => {
+        console.warn('Error listening to order snapshot:', err);
+      }
+    );
+  },
+
+  async submitOrderReceipt(
+    orderId: string,
+    receiptUrl: string,
+    receiptFileName: string,
+    receiptFileType: string,
+    txNumber?: string
+  ): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
+    const existing = await this.getOrderById(orderId);
+    const newTimeline = [
+      ...(existing?.timeline || []),
+      {
+        status: 'Pending' as const,
+        timestamp: new Date().toISOString(),
+        title: "To'lov cheki yuklandi",
+        description: `Mijoz to'lov chekini (${receiptFileName}) yukladi va tasdiqlashga yubordi.`,
+      },
+    ];
+
+    await updateDoc(docRef, {
+      receiptUrl,
+      receiptFileName,
+      receiptFileType,
+      receiptTxNumber: txNumber || '',
+      receiptUploadedAt: new Date().toISOString(),
+      paymentStatus: 'pending_verification',
+      timeline: newTimeline,
+      updatedAt: new Date().toISOString(),
+    });
+  },
+
+  async confirmOrderPayment(orderId: string, adminEmail: string): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
+    const existing = await this.getOrderById(orderId);
+    const newTimeline = [
+      ...(existing?.timeline || []),
+      {
+        status: 'confirmed' as const,
+        timestamp: new Date().toISOString(),
+        title: "To'lov tasdiqlandi (Admin)",
+        description: `Sellnex platforma administratori (${adminEmail}) to'lovni tasdiqladi.`,
+      },
+    ];
+
+    await updateDoc(docRef, {
+      paymentStatus: 'paid',
+      orderStatus: 'confirmed',
+      verifiedBy: adminEmail,
+      verifiedAt: new Date().toISOString(),
+      timeline: newTimeline,
+      updatedAt: new Date().toISOString(),
+    });
+  },
+
+  async rejectOrderPayment(orderId: string, adminEmail: string, reason?: string): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
+    const existing = await this.getOrderById(orderId);
+    const newTimeline = [
+      ...(existing?.timeline || []),
+      {
+        status: 'Pending' as const,
+        timestamp: new Date().toISOString(),
+        title: "To'lov cheki rad etildi (Admin)",
+        description: reason || "To'lov cheki ma'lumotlari tasdiqlanmadi. Yangi chek talab qilinadi.",
+      },
+    ];
+
+    await updateDoc(docRef, {
+      paymentStatus: 'rejected',
+      receiptRejectedReason: reason || "To‘lov cheki tasdiqlanmadi. Iltimos, yangi chek yuklang.",
+      verifiedBy: adminEmail,
+      verifiedAt: new Date().toISOString(),
+      timeline: newTimeline,
+      updatedAt: new Date().toISOString(),
+    });
+  },
+
   async getOrdersByStore(storeId: string): Promise<Order[]> {
     try {
       if (!storeId) return [];
@@ -949,7 +1058,7 @@ export const firestoreService = {
     }
   },
 
-  // === FIREBASE STORAGE FOR IMAGES ===
+  // === FIREBASE STORAGE FOR IMAGES & RECEIPTS ===
   async uploadImage(path: string, fileOrDataUrl: File | Blob | string): Promise<string> {
     try {
       const storageRef = ref(storage, path);
@@ -966,12 +1075,27 @@ export const firestoreService = {
         return await getDownloadURL(snapshot.ref);
       }
     } catch (err) {
-      console.warn('Firebase storage upload fallback (using provided asset directly):', err);
+      console.warn('Firebase storage upload fallback:', err);
       if (typeof fileOrDataUrl === 'string') {
         return fileOrDataUrl;
       }
-      return 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+      if (typeof window !== 'undefined' && (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob)) {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve((reader.result as string) || '');
+          reader.onerror = () => resolve('');
+          reader.readAsDataURL(fileOrDataUrl);
+        });
+      }
+      return '';
     }
+  },
+
+  async uploadReceipt(orderId: string, file: File): Promise<string> {
+    const extension = file.name.split('.').pop() || 'jpg';
+    const cleanFileName = `receipt_${orderId}_${Date.now()}.${extension}`;
+    const storagePath = `orders/${orderId}/receipts/${cleanFileName}`;
+    return await this.uploadImage(storagePath, file);
   },
 };
 

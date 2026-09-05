@@ -141,6 +141,7 @@ export interface Product {
 
 export type OrderStatus =
   | 'Pending'
+  | 'confirmed'
   | 'Paid'
   | 'Processing'
   | 'Supplier Ordered'
@@ -150,9 +151,17 @@ export type OrderStatus =
   | 'Refunded'
   | 'Disputed';
 
-export type PaymentMethod = 'Click' | 'Payme' | 'Uzum Bank' | 'Cash on Delivery' | 'P2P Card Transfer';
+export type PaymentMethod = 'Click' | 'Payme' | 'Uzum Bank' | 'Cash on Delivery' | 'P2P Card Transfer' | 'Sellnex Card';
 
-export type PaymentStatus = 'Pending' | 'Paid' | 'Failed' | 'Refunded';
+export type PaymentStatus =
+  | 'Pending'
+  | 'pending_payment'
+  | 'pending_verification'
+  | 'paid'
+  | 'Paid'
+  | 'rejected'
+  | 'Failed'
+  | 'Refunded';
 
 export interface OrderItem {
   productId: string;
@@ -169,12 +178,14 @@ export interface OrderItem {
 export interface OrderShippingAddress {
   fullName: string;
   phone: string;
-  country: string;
+  country?: string;
   region: string;
   district: string;
   streetAddress: string;
+  zipCode?: string;
   apartment?: string;
   deliveryNotes?: string;
+  notes?: string;
 }
 
 export interface OrderTimelineEvent {
@@ -189,11 +200,14 @@ export interface Order {
   orderNumber: string; // e.g. #SL-1024
   storeId: string;
   ownerId?: string;
+  customerId?: string;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
+  deliveryAddress?: OrderShippingAddress;
   shippingAddress: OrderShippingAddress;
   items: OrderItem[];
+  quantity?: number;
   subtotal: number;
   shippingFee: number;
   paymentFee: number;
@@ -203,6 +217,14 @@ export interface Order {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   orderStatus: OrderStatus;
+  deliveryMethod?: string;
+  receiptUrl?: string;
+  receiptFileName?: string;
+  receiptFileType?: string;
+  receiptUploadedAt?: string;
+  receiptRejectedReason?: string;
+  verifiedBy?: string;
+  verifiedAt?: string;
   escrowStatus?: 'pending_payment' | 'paid_held_in_escrow' | 'delivery_submitted' | 'payout_released' | 'refunded';
   deliveryProofNote?: string;
   deliveryProofPhoto?: string;
@@ -215,6 +237,7 @@ export interface Order {
   deliveryCourier?: string;
   timeline: OrderTimelineEvent[];
   createdAt: string;
+  updatedAt?: string;
   partnerLinkId?: string;
 }
 

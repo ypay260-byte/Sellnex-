@@ -61,7 +61,10 @@ const MainAppContent: React.FC = () => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // If user is not logged in and attempts to access protected seller views, route to landing
-  const isProtectedRoute = !PUBLIC_ROUTES.includes(currentRoute);
+  const isProtectedRoute =
+    !PUBLIC_ROUTES.includes(currentRoute) &&
+    !currentRoute.startsWith('store/') &&
+    !currentRoute.startsWith('s/');
 
   useEffect(() => {
     if (!isLoadingAuth && !currentUser && isProtectedRoute) {
