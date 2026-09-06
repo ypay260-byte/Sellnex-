@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { firestoreService } from '../services/firestoreService';
 import { AdminSettings, Order } from '../types';
@@ -39,6 +39,7 @@ export const CheckoutView: React.FC = () => {
     publicStore,
     cart,
     cartTotal,
+    cartSubtotal,
     createOrder,
     clearCart,
     navigateTo,
@@ -49,6 +50,11 @@ export const CheckoutView: React.FC = () => {
   } = useApp();
 
   const activeStore = publicStore || store;
+
+  // Safe Cart Items validation
+  const safeCart = useMemo(() => {
+    return Array.isArray(cart) ? cart.filter((it) => it && it.product && it.product.id) : [];
+  }, [cart]);
 
   // Step state: 'form' | 'payment'
   const [currentStep, setCurrentStep] = useState<'form' | 'payment'>('form');
@@ -160,8 +166,22 @@ export const CheckoutView: React.FC = () => {
     Pickup: 0,
   };
 
-  const currentDeliveryCost = deliveryPrices[deliveryMethod];
-  const grandTotal = (cartTotal || 0) + currentDeliveryCost;
+  const safeCartSubtotal = useMemo(() => {
+    if (typeof cartTotal === 'number' && !isNaN(cartTotal) && cartTotal > 0) {
+      return cartTotal;
+    }
+    if (typeof cartSubtotal === 'number' && !isNaN(cartSubtotal) && cartSubtotal > 0) {
+      return cartSubtotal;
+    }
+    return safeCart.reduce((sum, it) => {
+      const p = Number(it?.product?.sellingPrice) || 0;
+      const q = Number(it?.quantity) || 1;
+      return sum + p * q;
+    }, 0);
+  }, [cartTotal, cartSubtotal, safeCart]);
+
+  const currentDeliveryCost = deliveryPrices[deliveryMethod] ?? 25000;
+  const grandTotal = safeCartSubtotal + currentDeliveryCost;
 
   // Sellnex Payment Card from Admin Settings
   const sellnexCardNumber = adminSettings?.p2pCardNumber || '8600 3141 7549 7736';
@@ -217,7 +237,7 @@ export const CheckoutView: React.FC = () => {
       return;
     }
 
-    if (!cart || cart.length === 0) {
+    if (!safeCart || safeCart.length === 0) {
       showToast('Savat bo‘sh', 'Xarid qilish uchun avval mahsulot tanlang.', 'error');
       return;
     }
@@ -225,23 +245,6 @@ export const CheckoutView: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      const orderItems = cart.map((item) => ({
-        productId: item.product.id,
-        title: item.product.title,
-        image:
-          item.product.images?.[0] ||
-          'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop&q=80',
-        sellingPrice: item.product.sellingPrice,
-        quantity: item.quantity,
-        variant: item.selectedVariant,
-        supplierCost: item.product.supplierCost || Math.round(item.product.sellingPrice * 0.7),
-        profit:
-          item.product.sellingPrice - (item.product.supplierCost || Math.round(item.product.sellingPrice * 0.7)),
-        supplier: item.product.supplier || 'Sellnex Warehouse',
-      }));
-
-      const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
-
       const deliveryAddr = {
         fullName: customerName.trim(),
         phone: phone.trim(),
@@ -252,47 +255,113 @@ export const CheckoutView: React.FC = () => {
         notes: notes.trim() || undefined,
       };
 
-      const resolvedStoreId =
-        activeStore?.id ||
-        routeParams.storeId ||
-        (cart.length > 0 ? cart[0].product.storeId : '') ||
-        store.id;
-      const resolvedOwnerId =
-        activeStore?.ownerId ||
-        publicStore?.ownerId ||
-        store.ownerId ||
-        '';
+      // Group safeCart items by storeId to ensure correct store & owner isolation
+      const storeMap: Record<string, typeof safeCart> = {};
+      for (const item of safeCart) {
+        const sId =
+          item.product?.storeId ||
+          activeStore?.id ||
+          routeParams.storeId ||
+          store?.id ||
+          'sellnex_store';
+        if (!storeMap[sId]) {
+          storeMap[sId] = [];
+        }
+        storeMap[sId].push(item);
+      }
 
-      const created = await createOrder({
-        storeId: resolvedStoreId,
-        ownerId: resolvedOwnerId,
-        customerId: currentUser?.id || undefined,
-        customerName: customerName.trim(),
-        customerPhone: phone.trim(),
-        customerEmail: email.trim() || undefined,
-        deliveryAddress: deliveryAddr,
-        shippingAddress: deliveryAddr,
-        items: orderItems,
-        quantity: totalQuantity,
-        subtotal: cartTotal,
-        shippingFee: currentDeliveryCost,
-        paymentFee: 0,
-        totalAmount: grandTotal,
-        totalSupplierCost: orderItems.reduce((acc, it) => acc + it.supplierCost * it.quantity, 0),
-        totalProfit: orderItems.reduce((acc, it) => acc + it.profit * it.quantity, 0),
-        paymentMethod: 'Sellnex Card',
-        paymentStatus: 'Pending',
-        orderStatus: 'Pending',
-        deliveryMethod,
-      });
+      const storeIds = Object.keys(storeMap);
+      let primaryCreatedOrder: Order | null = null;
 
-      setActiveOrder(created);
-      clearCart();
-      setCurrentStep('payment');
-      showToast('Buyurtma yaratildi', 'Endi to‘lovni amalga oshirib, chekni yuklang.', 'info');
+      for (let i = 0; i < storeIds.length; i++) {
+        const currentStoreId = storeIds[i];
+        const currentItems = storeMap[currentStoreId];
+
+        const orderItems = currentItems.map((item) => {
+          const sellingPrice = Number(item.product?.sellingPrice) || 0;
+          const quantity = Number(item.quantity) || 1;
+          const supplierCost = Number(item.product?.supplierCost) || Math.round(sellingPrice * 0.7);
+          const profit = sellingPrice - supplierCost;
+
+          return {
+            productId: item.product.id,
+            title: item.product.title,
+            image:
+              item.product.images?.[0] ||
+              'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop&q=80',
+            sellingPrice,
+            quantity,
+            variant: item.selectedVariant,
+            supplierCost,
+            profit,
+            supplier: item.product.supplier || 'Sellnex Warehouse',
+          };
+        });
+
+        const totalQuantity = orderItems.reduce((sum, it) => sum + it.quantity, 0);
+        const orderSubtotal = orderItems.reduce((sum, it) => sum + it.sellingPrice * it.quantity, 0);
+        // Delivery cost assigned to the first order, 0 for split orders
+        const allocatedShippingFee = i === 0 ? currentDeliveryCost : 0;
+        const orderTotal = orderSubtotal + allocatedShippingFee;
+
+        // Resolve store owner
+        let currentOwnerId = '';
+        if (activeStore && (activeStore.id === currentStoreId || activeStore.slug === currentStoreId)) {
+          currentOwnerId = activeStore.ownerId || '';
+        } else if (publicStore && (publicStore.id === currentStoreId || publicStore.slug === currentStoreId)) {
+          currentOwnerId = publicStore.ownerId || '';
+        } else if (store && (store.id === currentStoreId || store.slug === currentStoreId)) {
+          currentOwnerId = store.ownerId || '';
+        }
+
+        if (!currentOwnerId) {
+          try {
+            const fetchedStore = await firestoreService.getStoreByIdOrSlug(currentStoreId);
+            if (fetchedStore?.ownerId) {
+              currentOwnerId = fetchedStore.ownerId;
+            }
+          } catch {
+            // fallback inside createOrder
+          }
+        }
+
+        const created = await createOrder({
+          storeId: currentStoreId,
+          ownerId: currentOwnerId,
+          customerId: currentUser?.id || undefined,
+          customerName: customerName.trim(),
+          customerPhone: phone.trim(),
+          customerEmail: email.trim() || undefined,
+          deliveryAddress: deliveryAddr,
+          shippingAddress: deliveryAddr,
+          items: orderItems,
+          quantity: totalQuantity,
+          subtotal: orderSubtotal,
+          shippingFee: allocatedShippingFee,
+          paymentFee: 0,
+          totalAmount: orderTotal,
+          totalSupplierCost: orderItems.reduce((acc, it) => acc + it.supplierCost * it.quantity, 0),
+          totalProfit: orderItems.reduce((acc, it) => acc + it.profit * it.quantity, 0),
+          paymentMethod: 'Sellnex Card',
+          paymentStatus: 'Pending',
+          orderStatus: 'Pending',
+          deliveryMethod,
+        });
+
+        if (!primaryCreatedOrder) {
+          primaryCreatedOrder = created;
+        }
+      }
+
+      if (primaryCreatedOrder) {
+        setActiveOrder(primaryCreatedOrder);
+        clearCart();
+        setCurrentStep('payment');
+        showToast('Buyurtma yaratildi', 'Endi to‘lovni amalga oshirib, chekni yuklang.', 'info');
+      }
     } catch (err: any) {
       console.error('Order creation error:', err);
-      showToast('Xatolik yuz berdi', err.message || 'Buyurtma yaratishda xatolik', 'error');
+      showToast('Xatolik yuz berdi', err?.message || 'Buyurtma yaratishda xatolik yuz berdi.', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -426,7 +495,7 @@ export const CheckoutView: React.FC = () => {
   const primaryColor = activeStore?.theme?.primaryColor || activeStore?.primaryColor || '#2563eb';
 
   // Empty cart fallback (only if not already in payment step with active order)
-  if (currentStep === 'form' && (!cart || cart.length === 0)) {
+  if (currentStep === 'form' && (!safeCart || safeCart.length === 0)) {
     return (
       <div id="checkout-view-empty" className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-lg border border-slate-200 space-y-4">
@@ -438,14 +507,15 @@ export const CheckoutView: React.FC = () => {
             Buyurtma berish uchun avval do‘kondan o‘zingizga ma’qul mahsulotni savatga qo‘shing.
           </p>
           <button
+            id="checkout-empty-back-btn"
             onClick={() =>
               navigateTo('public-store', {
-                storeSlug: activeStore?.slug || store.slug,
-                storeId: activeStore?.id || store.id,
+                storeSlug: activeStore?.slug || store?.slug || routeParams.storeSlug || '',
+                storeId: activeStore?.id || store?.id || routeParams.storeId || '',
               })
             }
             style={{ backgroundColor: primaryColor }}
-            className="w-full py-3.5 rounded-xl text-white font-bold text-xs shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-xl text-white font-bold text-xs shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Do‘konga qaytish</span>
@@ -832,9 +902,9 @@ export const CheckoutView: React.FC = () => {
               <div className="sm:col-span-2">
                 <span className="text-slate-400 block">Manzil:</span>
                 <span className="text-slate-900 font-medium">
-                  {activeOrder.deliveryAddress?.region || activeOrder.shippingAddress.region},{' '}
-                  {activeOrder.deliveryAddress?.district || activeOrder.shippingAddress.district},{' '}
-                  {activeOrder.deliveryAddress?.streetAddress || activeOrder.shippingAddress.streetAddress}
+                  {activeOrder.deliveryAddress?.region || activeOrder.shippingAddress?.region || 'Toshkent shahri'},{' '}
+                  {activeOrder.deliveryAddress?.district || activeOrder.shippingAddress?.district || ''},{' '}
+                  {activeOrder.deliveryAddress?.streetAddress || activeOrder.shippingAddress?.streetAddress || ''}
                   {activeOrder.deliveryAddress?.zipCode ? ` (Pochta indeksi: ${activeOrder.deliveryAddress.zipCode})` : ''}
                 </span>
               </div>
@@ -857,8 +927,8 @@ export const CheckoutView: React.FC = () => {
             id="checkout-back-to-store"
             onClick={() =>
               navigateTo('public-store', {
-                storeSlug: activeStore?.slug || store.slug,
-                storeId: activeStore?.id || store.id,
+                storeSlug: activeStore?.slug || store?.slug || routeParams.storeSlug || '',
+                storeId: activeStore?.id || store?.id || routeParams.storeId || '',
               })
             }
             className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-[44px] py-1"
@@ -1074,29 +1144,29 @@ export const CheckoutView: React.FC = () => {
               <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4 sticky top-24">
                 <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
                   <ShoppingBag className="w-4 h-4 text-slate-900" />
-                  <span>Buyurtma tarkibi ({cart.length} ta mahsulot)</span>
+                  <span>Buyurtma tarkibi ({safeCart.length} ta mahsulot)</span>
                 </h3>
 
                 {/* Cart Items Summary */}
                 <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 pr-1">
-                  {cart.map((item, idx) => (
-                    <div key={`${item.product.id}-${idx}`} className="py-3 first:pt-0 flex items-center gap-3 text-xs">
+                  {safeCart.map((item, idx) => (
+                    <div key={`${item.product?.id || idx}-${idx}`} className="py-3 first:pt-0 flex items-center gap-3 text-xs">
                       <img
                         src={
-                          item.product.images?.[0] ||
+                          item.product?.images?.[0] ||
                           'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&auto=format&fit=crop&q=80'
                         }
-                        alt={item.product.title}
+                        alt={item.product?.title || 'Mahsulot'}
                         className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-900 truncate">{item.product.title}</p>
+                        <p className="font-bold text-slate-900 truncate">{item.product?.title || 'Mahsulot'}</p>
                         <p className="text-[11px] text-slate-400">
                           Soni: {item.quantity} {item.selectedVariant ? `• ${item.selectedVariant}` : ''}
                         </p>
                       </div>
                       <span className="font-bold text-slate-900">
-                        {formatMoney(item.product.sellingPrice * item.quantity)}
+                        {formatMoney((Number(item.product?.sellingPrice) || 0) * (Number(item.quantity) || 1))}
                       </span>
                     </div>
                   ))}
@@ -1106,7 +1176,7 @@ export const CheckoutView: React.FC = () => {
                 <div className="border-t border-slate-200 pt-3 space-y-2 text-xs text-slate-600">
                   <div className="flex justify-between">
                     <span>Mahsulotlar narxi:</span>
-                    <span className="font-semibold text-slate-900">{formatMoney(cartTotal)}</span>
+                    <span className="font-semibold text-slate-900">{formatMoney(safeCartSubtotal)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Yetkazib berish ({deliveryMethod}):</span>
@@ -1134,7 +1204,7 @@ export const CheckoutView: React.FC = () => {
                 <button
                   id="checkout-proceed-btn"
                   type="submit"
-                  disabled={isProcessing || cart.length === 0}
+                  disabled={isProcessing || safeCart.length === 0}
                   style={{ backgroundColor: primaryColor }}
                   className="w-full py-4 rounded-xl text-white font-extrabold text-sm sm:text-base shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.01] flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >

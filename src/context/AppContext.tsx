@@ -189,6 +189,7 @@ interface AppContextType {
   removeFromCart: (productId: string, variant?: string) => void;
   updateCartQuantity: (productId: string, quantity: number, variant?: string) => void;
   clearCart: () => void;
+  cartTotal: number;
   cartTotalCount: number;
   cartSubtotal: number;
 
@@ -208,7 +209,7 @@ interface AppContextType {
   setIsSearchOpen: (open: boolean) => void;
 
   // Formatting helpers
-  formatMoney: (amount: number) => string;
+  formatMoney: (amount: number | string | null | undefined) => string;
 
   // Theme
   isDarkMode: boolean;
@@ -241,6 +242,55 @@ export function parseLocationRoute(
   const searchParams = new URLSearchParams(rawSearch || '');
   const hashQueryIndex = rawHashVal.indexOf('?');
   const hashParams = hashQueryIndex !== -1 ? new URLSearchParams(rawHashVal.slice(hashQueryIndex)) : null;
+
+  // 0. Priority checkout and order-success detection (Hash or Search)
+  if (
+    lowerHash === 'checkout' ||
+    lowerHash.startsWith('checkout') ||
+    searchParams.get('route') === 'checkout' ||
+    lowerPath === 'checkout'
+  ) {
+    const sId =
+      hashParams?.get('storeId') ||
+      searchParams.get('storeId') ||
+      hashParams?.get('store') ||
+      searchParams.get('store') ||
+      '';
+    const sSlug =
+      hashParams?.get('storeSlug') ||
+      searchParams.get('storeSlug') ||
+      sId;
+    const oId =
+      hashParams?.get('orderId') ||
+      searchParams.get('orderId') ||
+      '';
+    return {
+      route: 'checkout',
+      params: { storeId: sId, storeSlug: sSlug, orderId: oId },
+      storeIdToLoad: sId || undefined,
+    };
+  }
+
+  if (
+    lowerHash === 'order-success' ||
+    lowerHash.startsWith('order-success') ||
+    searchParams.get('route') === 'order-success' ||
+    lowerPath === 'order-success'
+  ) {
+    const sId =
+      hashParams?.get('storeId') ||
+      searchParams.get('storeId') ||
+      '';
+    const oId =
+      hashParams?.get('orderId') ||
+      searchParams.get('orderId') ||
+      '';
+    return {
+      route: 'order-success',
+      params: { storeId: sId, orderId: oId },
+      storeIdToLoad: sId || undefined,
+    };
+  }
 
   // 1. Direct Store Pathname matching: /store/:storeId, /store/:storeId/product/:productId, /s/:storeId
   if (lowerPath.startsWith('store/') || lowerPath.startsWith('s/')) {
@@ -999,6 +1049,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       lastLoadedStoreKeyRef.current = `${sId}_${pId}`;
       loadPublicStoreData(sId, pId);
+    } else if (targetRoute === 'checkout') {
+      const sId = params.storeId || params.storeSlug || publicStore?.slug || publicStore?.id || store.slug || store.id || '';
+      const oId = params.orderId || '';
+      const q = new URLSearchParams();
+      if (sId) q.set('storeId', sId);
+      if (oId) q.set('orderId', oId);
+      const queryStr = q.toString() ? `?${q.toString()}` : '';
+      try {
+        window.history.pushState(null, '', `/#checkout${queryStr}`);
+      } catch {
+        window.location.hash = `checkout${queryStr}`;
+      }
+    } else if (targetRoute === 'order-success') {
+      const sId = params.storeId || params.storeSlug || publicStore?.slug || publicStore?.id || store.slug || store.id || '';
+      const oId = params.orderId || '';
+      const q = new URLSearchParams();
+      if (sId) q.set('storeId', sId);
+      if (oId) q.set('orderId', oId);
+      const queryStr = q.toString() ? `?${q.toString()}` : '';
+      try {
+        window.history.pushState(null, '', `/#order-success${queryStr}`);
+      } catch {
+        window.location.hash = `order-success${queryStr}`;
+      }
     } else {
       try {
         if (window.location.pathname.startsWith('/store/') || window.location.pathname.startsWith('/s/')) {
@@ -1383,6 +1457,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
+    if (!resolvedOwnerId && targetStoreId) {
+      try {
+        const fetchedStore = await firestoreService.getStoreByIdOrSlug(targetStoreId);
+        if (fetchedStore?.ownerId) {
+          resolvedOwnerId = fetchedStore.ownerId;
+        }
+      } catch (storeLookupErr) {
+        console.warn('Could not resolve store owner from Firestore:', storeLookupErr);
+      }
+    }
+
     const resolvedShippingAddress = orderData.shippingAddress || orderData.deliveryAddress || {
       fullName: orderData.customerName,
       phone: orderData.customerPhone,
@@ -1669,15 +1754,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     Storage.setCart([]);
   };
 
-  const cartTotalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartSubtotal = cart.reduce((sum, item) => sum + item.product.sellingPrice * item.quantity, 0);
+  const cartTotalCount = (cart || []).reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0);
+  const cartSubtotal = (cart || []).reduce((sum, item) => {
+    const price = Number(item?.product?.sellingPrice) || 0;
+    const qty = Number(item?.quantity) || 1;
+    return sum + price * qty;
+  }, 0);
+  const cartTotal = cartSubtotal;
 
-  const formatMoney = (amount: number): string => {
-    if (store.currency === 'USD') {
-      const usdAmount = amount / 12800;
+  const formatMoney = (amount: number | string | null | undefined): string => {
+    const num = typeof amount === 'number' && !isNaN(amount) ? amount : (Number(amount) || 0);
+    if (store?.currency === 'USD') {
+      const usdAmount = num / 12800;
       return `$${usdAmount.toFixed(2)}`;
     }
-    return `${amount.toLocaleString()} UZS`;
+    return `${num.toLocaleString()} UZS`;
   };
 
   const toggleDarkMode = () => {
@@ -1768,6 +1859,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         removeFromCart,
         updateCartQuantity,
         clearCart,
+        cartTotal,
         cartTotalCount,
         cartSubtotal,
         currentRoute,

@@ -99,8 +99,8 @@ export const OrderSuccessView: React.FC = () => {
           <button
             onClick={() =>
               navigateTo('public-store', {
-                storeSlug: activeStore?.slug || store.slug,
-                storeId: activeStore?.id || store.id,
+                storeSlug: activeStore?.slug || store?.slug || routeParams.storeSlug || '',
+                storeId: activeStore?.id || store?.id || routeParams.storeId || '',
               })
             }
             className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors"
@@ -112,7 +112,7 @@ export const OrderSuccessView: React.FC = () => {
     );
   }
 
-  const primaryColor = activeStore?.theme?.primaryColor || activeStore?.primaryColor || store.primaryColor || '#2563eb';
+  const primaryColor = activeStore?.theme?.primaryColor || activeStore?.primaryColor || store?.primaryColor || '#2563eb';
   const isPaid = order.paymentStatus === 'paid' || order.paymentStatus === 'Paid';
   const isPendingVerification = order.paymentStatus === 'pending_verification';
   const isRejected = order.paymentStatus === 'rejected';
@@ -543,8 +543,8 @@ export const OrderSuccessView: React.FC = () => {
             id="success-continue-shopping"
             onClick={() =>
               navigateTo('public-store', {
-                storeSlug: activeStore?.slug || store.slug,
-                storeId: activeStore?.id || store.id,
+                storeSlug: activeStore?.slug || store?.slug || routeParams.storeSlug || '',
+                storeId: activeStore?.id || store?.id || routeParams.storeId || '',
               })
             }
             className="flex-1 py-3.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 font-bold text-xs text-slate-800 shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"

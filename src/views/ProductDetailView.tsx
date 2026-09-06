@@ -204,7 +204,12 @@ export const ProductDetailView: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
           <button
             id="back-to-catalog-btn"
-            onClick={() => navigateTo('public-store', { storeId: activeStore.id, storeSlug: activeStore.slug })}
+            onClick={() =>
+              navigateTo('public-store', {
+                storeId: activeStore?.id || product.storeId || '',
+                storeSlug: activeStore?.slug || product.storeId || '',
+              })
+            }
             className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -212,12 +217,14 @@ export const ProductDetailView: React.FC = () => {
           </button>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black text-slate-800 truncate">{activeStore.name || activeStore.storeName}</span>
+            <span className="text-xs font-black text-slate-800 truncate">
+              {activeStore?.name || activeStore?.storeName || 'Store'}
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => copyProductLink(product.id, activeStore.id || activeStore.slug)}
+              onClick={() => copyProductLink(product.id, activeStore?.id || activeStore?.slug || product.storeId || '')}
               className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
               title="Copy Link"
             >
@@ -228,7 +235,7 @@ export const ProductDetailView: React.FC = () => {
                 openShareModal({
                   title: `Share "${product.title}"`,
                   subtitle: 'Share direct product link on Instagram, Telegram, or WhatsApp.',
-                  url: getProductUrl(activeStore.id || activeStore.slug, product.id),
+                  url: getProductUrl(activeStore?.id || activeStore?.slug || product.storeId || '', product.id),
                   productTitle: product.title,
                   productPrice: product.sellingPrice,
                   productImage: product.images[0],
@@ -241,7 +248,12 @@ export const ProductDetailView: React.FC = () => {
             </button>
             <button
               id="detail-checkout-shortcut"
-              onClick={() => navigateTo('checkout', { storeId: activeStore.id, storeSlug: activeStore.slug })}
+              onClick={() =>
+                navigateTo('checkout', {
+                  storeId: activeStore?.id || product.storeId || '',
+                  storeSlug: activeStore?.slug || product.storeId || '',
+                })
+              }
               style={{ backgroundColor: primaryColor }}
               className="px-3 py-1.5 rounded-xl text-white font-bold text-xs shadow-xs flex items-center gap-1.5"
             >
@@ -254,8 +266,16 @@ export const ProductDetailView: React.FC = () => {
 
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4 pb-2 text-xs text-slate-400 flex items-center gap-1.5">
-        <span className="cursor-pointer hover:underline" onClick={() => navigateTo('public-store', { storeId: activeStore.id, storeSlug: activeStore.slug })}>
-          {activeStore.name || activeStore.storeName}
+        <span
+          className="cursor-pointer hover:underline"
+          onClick={() =>
+            navigateTo('public-store', {
+              storeId: activeStore?.id || product.storeId || '',
+              storeSlug: activeStore?.slug || product.storeId || '',
+            })
+          }
+        >
+          {activeStore?.name || activeStore?.storeName || 'Store'}
         </span>
         <ChevronRight className="w-3 h-3" />
         <span>{product.category}</span>
