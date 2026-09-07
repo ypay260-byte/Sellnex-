@@ -534,6 +534,8 @@ export const CheckoutView: React.FC = () => {
 
   // Step 2: Upload Receipt to Firebase Storage & Submit Payment Verification
   const handleSubmitPaymentConfirmation = async () => {
+    if (isUploadingReceipt) return;
+
     if (!receiptFile) {
       setReceiptError("To‘lov chekini yuklash MAJBURIY. Iltimos, chek faylini tanlang.");
       showToast('Chek yuklanmagan', "Iltimos, to‘lov chekini yuklang.", 'warning');
@@ -549,10 +551,10 @@ export const CheckoutView: React.FC = () => {
     setReceiptError(null);
 
     try {
-      // 1. Upload to real Firebase Storage (with fallback)
+      // 1. Upload to real Firebase Storage (with base64 fallback)
       const downloadUrl = await firestoreService.uploadReceipt(activeOrder.id, receiptFile);
 
-      // 2. Submit to Firestore with paymentStatus = 'pending_verification'
+      // 2. Submit to Firestore with paymentStatus = 'pending_verification' & orderStatus = 'pending_payment_verification'
       await firestoreService.submitOrderReceipt(
         activeOrder.id,
         downloadUrl,
@@ -562,34 +564,55 @@ export const CheckoutView: React.FC = () => {
       );
 
       // 3. Update local state
-      setActiveOrder((prev) =>
-        prev
-          ? {
-              ...prev,
-              paymentStatus: 'pending_verification',
-              receiptUrl: downloadUrl,
-              receiptFileName: receiptFile.name,
-              receiptFileType: receiptFile.type,
-              receiptTxNumber: txReceiptNumber.trim() || undefined,
-            }
-          : null
-      );
+      const updatedOrder: Order = {
+        ...activeOrder,
+        paymentStatus: 'pending_verification',
+        orderStatus: 'pending_payment_verification',
+        receiptUrl: downloadUrl,
+        receiptFileName: receiptFile.name,
+        receiptFileType: receiptFile.type,
+        receiptTxNumber: txReceiptNumber.trim() || undefined,
+        receiptUploadedAt: new Date().toISOString(),
+      };
+      setActiveOrder(updatedOrder);
+
+      // 4. Clear cart immediately
+      clearCart();
+
+      // 5. Store order ID and order snapshot in localStorage for page refresh persistence
+      try {
+        localStorage.setItem('sellnex_last_order_id', activeOrder.id);
+        localStorage.setItem(`sellnex_order_${activeOrder.id}`, JSON.stringify(updatedOrder));
+      } catch {
+        // ignore
+      }
 
       try {
-        confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
+        confetti({ particleCount: 70, spread: 70, origin: { y: 0.5 } });
       } catch {
         // ignore
       }
 
       showToast(
-        'To‘lovingiz qabul qilindi',
-        'To‘lovingiz qabul qilindi. Tez orada tekshiriladi (5-15 daqiqa).',
+        'Buyurtmangiz qabul qilindi!',
+        'To‘lov chekingiz bosh administrator tomonidan tekshiriladi.',
         'success'
       );
+
+      // 6. Seamlessly redirect customer to Order Success page
+      const targetStoreId =
+        activeStore?.slug || activeStore?.id || publicStore?.slug || publicStore?.id || store?.slug || store?.id || '';
+
+      navigateTo('order-success', {
+        orderId: activeOrder.id,
+        storeId: targetStoreId,
+        storeSlug: targetStoreId,
+      });
     } catch (err: any) {
-      console.error('Error uploading receipt:', err);
-      setReceiptError(err.message || 'Chekni yuklashda xatolik yuz berdi.');
-      showToast('Xatolik', 'Chekni yuklashda xatolik yuz berdi.', 'error');
+      console.error('Error uploading receipt & submitting payment:', err);
+      const errMsg = 'Buyurtmani yuborishda muammo yuz berdi. Qayta urinib ko‘ring.';
+      setReceiptError(errMsg);
+      showToast('Xatolik', errMsg, 'error');
     } finally {
       setIsUploadingReceipt(false);
     }
@@ -992,7 +1015,7 @@ export const CheckoutView: React.FC = () => {
                   ) : (
                     <>
                       <CheckCircle2 className="w-5 h-5" />
-                      <span>To‘lovni tasdiqlash</span>
+                      <span>To‘lovni tasdiqlashga yuborish</span>
                     </>
                   )}
                 </button>

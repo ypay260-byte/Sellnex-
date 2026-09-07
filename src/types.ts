@@ -150,6 +150,7 @@ export interface Product {
 
 export type OrderStatus =
   | 'Pending'
+  | 'pending_payment_verification'
   | 'confirmed'
   | 'Paid'
   | 'Processing'

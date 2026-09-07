@@ -593,6 +593,7 @@ export const firestoreService = {
       receiptTxNumber: txNumber || '',
       receiptUploadedAt: new Date().toISOString(),
       paymentStatus: 'pending_verification',
+      orderStatus: 'pending_payment_verification',
       timeline: newTimeline,
       updatedAt: new Date().toISOString(),
     });

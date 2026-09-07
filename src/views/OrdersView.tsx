@@ -50,16 +50,18 @@ export const OrdersView: React.FC = () => {
   ];
 
   // STRICT BUSINESS RULE: Sellers ONLY see orders whose payment is verified and paid
-  const filteredOrders = orders
-    .filter((o) => o.paymentStatus === 'paid' || o.paymentStatus === 'Paid')
-    .filter((o) => {
-      const matchSearch =
-        o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-        o.customerName.toLowerCase().includes(search.toLowerCase()) ||
-        o.customerPhone.includes(search);
-      const matchStatus = statusFilter === 'All' || o.orderStatus === statusFilter;
-      return matchSearch && matchStatus;
-    });
+  const sellerVisibleOrders = orders.filter(
+    (o) => (o.paymentStatus === 'paid' || o.paymentStatus === 'Paid') && o.orderStatus !== 'pending_payment_verification'
+  );
+
+  const filteredOrders = sellerVisibleOrders.filter((o) => {
+    const matchSearch =
+      o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
+      o.customerName.toLowerCase().includes(search.toLowerCase()) ||
+      o.customerPhone.includes(search);
+    const matchStatus = statusFilter === 'All' || o.orderStatus === statusFilter;
+    return matchSearch && matchStatus;
+  });
 
   const handleRequestDeliveryPayout = async (order: Order) => {
     if (!payoutCard.trim()) {
@@ -171,7 +173,7 @@ export const OrdersView: React.FC = () => {
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              {s} {s === 'All' ? `(${orders.length})` : `(${orders.filter((o) => o.orderStatus === s).length})`}
+              {s} {s === 'All' ? `(${sellerVisibleOrders.length})` : `(${sellerVisibleOrders.filter((o) => o.orderStatus === s).length})`}
             </button>
           ))}
         </div>

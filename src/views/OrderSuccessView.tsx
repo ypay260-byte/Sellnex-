@@ -6,24 +6,20 @@ import {
   CheckCircle2,
   Package,
   Truck,
-  ArrowRight,
   ShoppingBag,
   ExternalLink,
   CreditCard,
   MapPin,
   Clock,
-  RotateCw,
-  Store as StoreIcon,
   XCircle,
-  FileCheck,
-  Upload,
   FileText,
+  Upload,
   Trash2,
   AlertTriangle,
   Copy,
   Check,
   ShieldCheck,
-  Lock,
+  RotateCw,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -31,13 +27,43 @@ export const OrderSuccessView: React.FC = () => {
   const { store, publicStore, orders, routeParams, navigateTo, formatMoney, showToast } = useApp();
 
   const activeStore = publicStore || store;
-  const orderId = routeParams.orderId;
+
+  // Resolve Order ID from routeParams, URL hash/query parameters, or localStorage
+  const rawOrderId =
+    routeParams.orderId ||
+    (typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('orderId') ||
+        new URLSearchParams(
+          window.location.hash.includes('?') ? window.location.hash.slice(window.location.hash.indexOf('?')) : ''
+        ).get('orderId')
+      : null) ||
+    (typeof window !== 'undefined' ? localStorage.getItem('sellnex_last_order_id') : null) ||
+    '';
 
   const [order, setOrder] = useState<Order | null>(() => {
-    return orders.find((o) => o.id === orderId) || (orders.length > 0 ? orders[0] : null);
+    if (rawOrderId) {
+      const found = orders.find((o) => o.id === rawOrderId || o.orderNumber === rawOrderId);
+      if (found) return found;
+      try {
+        const local = localStorage.getItem(`sellnex_order_${rawOrderId}`);
+        if (local) return JSON.parse(local);
+      } catch {
+        // ignore
+      }
+    }
+    try {
+      const lastId = localStorage.getItem('sellnex_last_order_id');
+      if (lastId) {
+        const localLast = localStorage.getItem(`sellnex_order_${lastId}`);
+        if (localLast) return JSON.parse(localLast);
+      }
+    } catch {
+      // ignore
+    }
+    return orders.length > 0 ? orders[0] : null;
   });
 
-  // Re-upload state if rejected or pending
+  // Re-upload state ONLY if rejected or missing receipt
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
@@ -56,34 +82,52 @@ export const OrderSuccessView: React.FC = () => {
 
   // Fetch and Subscribe to order updates in real-time
   useEffect(() => {
-    if (!orderId) return;
+    const targetId = rawOrderId || (order ? order.id : '');
+    if (!targetId) return;
 
-    // Direct fetch first
-    firestoreService.getOrderById(orderId).then((fetched) => {
-      if (fetched) setOrder(fetched);
+    // Fetch latest from Firestore
+    firestoreService.getOrderById(targetId).then((fetched) => {
+      if (fetched) {
+        setOrder(fetched);
+        try {
+          localStorage.setItem(`sellnex_order_${targetId}`, JSON.stringify(fetched));
+        } catch {
+          // ignore
+        }
+      }
     });
 
-    // Real-time listener
-    const unsubscribe = firestoreService.onOrderSnapshot(orderId, (updated) => {
+    // Real-time snapshot listener
+    const unsubscribe = firestoreService.onOrderSnapshot(targetId, (updated) => {
       if (updated) {
         setOrder((prev) => {
-          if (prev && updated.paymentStatus === 'paid' && prev.paymentStatus !== 'paid') {
+          if (
+            prev &&
+            (updated.paymentStatus === 'paid' || updated.paymentStatus === 'Paid') &&
+            prev.paymentStatus !== 'paid' &&
+            prev.paymentStatus !== 'Paid'
+          ) {
             try {
               confetti({ particleCount: 90, spread: 70, origin: { y: 0.5 } });
             } catch {
               // ignore
             }
-            showToast('To‘lov tasdiqlandi!', 'Buyurtmangiz to‘lovi tasdiqlandi va qabul qilindi.', 'success');
+            showToast('To‘lov tasdiqlandi!', 'To‘lovingiz tasdiqlandi va buyurtma sotuvchiga yuborildi.', 'success');
           }
           return updated;
         });
+        try {
+          localStorage.setItem(`sellnex_order_${targetId}`, JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
       }
     });
 
     return () => {
       unsubscribe();
     };
-  }, [orderId]);
+  }, [rawOrderId, order?.id]);
 
   if (!order) {
     return (
@@ -92,32 +136,34 @@ export const OrderSuccessView: React.FC = () => {
           <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto">
             <ShoppingBag className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-black text-slate-900">Buyurtma topilmadi</h2>
+          <h2 className="text-xl font-black text-slate-900">Buyurtma yuklanmoqda...</h2>
           <p className="text-xs text-slate-500">
-            Hozircha buyurtma ma’lumotlari mavjud emas yoki tizimga kiritilmagan.
+            Buyurtma ma’lumotlari qabul qilinmoqda. Bir necha soniya kuting.
           </p>
-          <button
-            onClick={() =>
-              navigateTo('public-store', {
-                storeSlug: activeStore?.slug || store?.slug || routeParams.storeSlug || '',
-                storeId: activeStore?.id || store?.id || routeParams.storeId || '',
-              })
-            }
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors"
-          >
-            Do‘konga qaytish
-          </button>
+          <div className="pt-2">
+            <button
+              onClick={() =>
+                navigateTo('public-store', {
+                  storeSlug: activeStore?.slug || store?.slug || routeParams.storeSlug || '',
+                  storeId: activeStore?.id || store?.id || routeParams.storeId || '',
+                })
+              }
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
+            >
+              Do‘konga qaytish
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   const primaryColor = activeStore?.theme?.primaryColor || activeStore?.primaryColor || store?.primaryColor || '#2563eb';
-  const isPaid = order.paymentStatus === 'paid' || order.paymentStatus === 'Paid';
-  const isPendingVerification = order.paymentStatus === 'pending_verification';
+  const isPaid = order.paymentStatus === 'paid' || order.paymentStatus === 'Paid' || order.orderStatus === 'confirmed';
+  const isPendingVerification = order.paymentStatus === 'pending_verification' || order.orderStatus === 'pending_payment_verification';
   const isRejected = order.paymentStatus === 'rejected';
 
-  // Sellnex Payment Card from Admin Settings
+  // Card details from Admin Settings (or defaults)
   const sellnexCardNumber = adminSettings?.p2pCardNumber || '8600 3141 7549 7736';
   const sellnexCardHolder = adminSettings?.p2pCardHolder || 'Sellnex Bosh Administratsiyasi';
   const sellnexBankName = adminSettings?.p2pBankName || 'Milliy Bank / Uzcard Humo';
@@ -160,7 +206,7 @@ export const OrderSuccessView: React.FC = () => {
     }
   };
 
-  const handleSubmitReceipt = async () => {
+  const handleSubmitNewReceipt = async () => {
     if (!receiptFile || !order) return;
     setIsUploading(true);
     setReceiptError(null);
@@ -175,25 +221,32 @@ export const OrderSuccessView: React.FC = () => {
         txReceiptNumber.trim() || undefined
       );
 
-      setOrder((prev) =>
-        prev
-          ? {
-              ...prev,
-              paymentStatus: 'pending_verification',
-              receiptUrl: downloadUrl,
-              receiptFileName: receiptFile.name,
-              receiptFileType: receiptFile.type,
-              receiptTxNumber: txReceiptNumber.trim() || undefined,
-            }
-          : null
-      );
+      const updated = {
+        ...order,
+        paymentStatus: 'pending_verification' as const,
+        orderStatus: 'pending_payment_verification' as const,
+        receiptUrl: downloadUrl,
+        receiptFileName: receiptFile.name,
+        receiptFileType: receiptFile.type,
+        receiptTxNumber: txReceiptNumber.trim() || undefined,
+        receiptUploadedAt: new Date().toISOString(),
+      };
+      setOrder(updated);
+
+      try {
+        localStorage.setItem(`sellnex_order_${order.id}`, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
 
       setReceiptFile(null);
       setReceiptPreview(null);
       showToast('Chek yuklandi', 'To‘lov cheki tekshirish uchun yuborildi.', 'success');
     } catch (err: any) {
-      setReceiptError(err.message || 'Chek yuklashda xatolik yuz berdi');
-      showToast('Xatolik', 'Chek yuklashda xatolik yuz berdi', 'error');
+      console.error('Error submitting re-upload receipt:', err);
+      const errMsg = 'Buyurtmani yuborishda muammo yuz berdi. Qayta urinib ko‘ring.';
+      setReceiptError(errMsg);
+      showToast('Xatolik', errMsg, 'error');
     } finally {
       setIsUploading(false);
     }
@@ -209,86 +262,164 @@ export const OrderSuccessView: React.FC = () => {
     .filter(Boolean)
     .join(', ');
 
+  const formattedOrderNumber = `#${(order.orderNumber || order.id).replace(/^#/, '')}`;
+
   return (
     <div id="order-success-root" className="min-h-screen bg-slate-50 py-8 sm:py-12 px-3 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto w-full space-y-6">
-        {/* Status Header */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl text-center space-y-4">
-          {isPaid ? (
-            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-md shadow-emerald-500/20">
-              <CheckCircle2 className="w-9 h-9" />
+        {/* ======================================================== */}
+        {/* MAIN ORDER SUCCESS STATUS CARD */}
+        {/* ======================================================== */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl space-y-5">
+          {/* Header Icon & Title */}
+          <div className="text-center space-y-3">
+            <div
+              className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-md transition-all ${
+                isPaid
+                  ? 'bg-emerald-100 text-emerald-600 shadow-emerald-500/20'
+                  : isPendingVerification
+                  ? 'bg-amber-100 text-amber-700 shadow-amber-500/20 animate-pulse'
+                  : isRejected
+                  ? 'bg-rose-100 text-rose-600 shadow-rose-500/20'
+                  : 'bg-emerald-100 text-emerald-600 shadow-emerald-500/20'
+              }`}
+            >
+              {isPaid ? (
+                <CheckCircle2 className="w-10 h-10" />
+              ) : isPendingVerification ? (
+                <Clock className="w-10 h-10" />
+              ) : isRejected ? (
+                <XCircle className="w-10 h-10" />
+              ) : (
+                <CheckCircle2 className="w-10 h-10" />
+              )}
             </div>
-          ) : isPendingVerification ? (
-            <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-md animate-pulse">
-              <Clock className="w-9 h-9" />
+
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              ✅ Buyurtmangiz qabul qilindi!
+            </h1>
+
+            <p className="text-sm font-bold text-slate-700 font-mono">
+              Buyurtma raqami:{' '}
+              <span className="text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
+                {formattedOrderNumber}
+              </span>
+            </p>
+          </div>
+
+          {/* ======================================================== */}
+          {/* EXACT REQUIRED STATUS METRICS */}
+          {/* ======================================================== */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-semibold text-slate-500 block uppercase tracking-wider">
+                  To‘lov holati
+                </span>
+                <span
+                  className={`text-sm font-extrabold flex items-center gap-1.5 mt-0.5 ${
+                    isPaid
+                      ? 'text-emerald-700'
+                      : isPendingVerification
+                      ? 'text-amber-700'
+                      : isRejected
+                      ? 'text-rose-700'
+                      : 'text-amber-700'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isPaid
+                        ? 'bg-emerald-500'
+                        : isPendingVerification
+                        ? 'bg-amber-500 animate-ping'
+                        : isRejected
+                        ? 'bg-rose-500'
+                        : 'bg-amber-500'
+                    }`}
+                  />
+                  {isPaid
+                    ? 'Tasdiqlangan'
+                    : isPendingVerification
+                    ? 'Tekshirilmoqda'
+                    : isRejected
+                    ? 'Rad etilgan'
+                    : 'Tekshirilmoqda'}
+                </span>
+              </div>
+              <div
+                className={`p-2 rounded-xl ${
+                  isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                }`}
+              >
+                {isPaid ? <Check className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+              </div>
             </div>
-          ) : isRejected ? (
-            <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-md">
-              <XCircle className="w-9 h-9" />
+
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-semibold text-slate-500 block uppercase tracking-wider">
+                  Buyurtma holati
+                </span>
+                <span
+                  className={`text-sm font-extrabold flex items-center gap-1.5 mt-0.5 ${
+                    isPaid ? 'text-emerald-700' : 'text-blue-700'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isPaid ? 'bg-emerald-500' : 'bg-blue-500 animate-pulse'
+                    }`}
+                  />
+                  {isPaid ? 'Tasdiqlangan' : 'To‘lov tasdig‘i kutilmoqda'}
+                </span>
+              </div>
+              <div
+                className={`p-2 rounded-xl ${
+                  isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                }`}
+              >
+                {isPaid ? <Package className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+              </div>
             </div>
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto shadow-md">
-              <CreditCard className="w-9 h-9" />
+          </div>
+
+          {/* ======================================================== */}
+          {/* EXACT REQUIRED EXPLANATION BANNER */}
+          {/* ======================================================== */}
+          <div className="bg-blue-50/80 border-2 border-blue-200 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs sm:text-sm font-bold text-blue-950 leading-relaxed">
+                “Chekingiz bosh administrator tomonidan tekshiriladi. To‘lov tasdiqlangandan so‘ng buyurtma sotuvchiga yuboriladi.”
+              </p>
+              <p className="text-[11px] text-blue-700/80 font-medium">
+                Tekshirish jarayoni odatda 5–15 daqiqa davom etadi. Chek tasdiqlangach ushbu sahifa avtomatik ravishda yangilanadi.
+              </p>
+            </div>
+          </div>
+
+          {/* Rejection Warning (if rejected by admin) */}
+          {isRejected && order.receiptRejectedReason && (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-rose-900">To‘lov cheki rad etildi:</p>
+                <p className="text-xs text-rose-700 mt-0.5">{order.receiptRejectedReason}</p>
+                <p className="text-[11px] text-rose-600 font-semibold mt-1">
+                  Iltimos, pastdagi shakl orqali haqiqiy to‘lov chekini qaytadan yuklang.
+                </p>
+              </div>
             </div>
           )}
 
-          <div>
-            <span
-              className={`text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border ${
-                isPaid
-                  ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                  : isPendingVerification
-                  ? 'text-amber-800 bg-amber-100 border-amber-300'
-                  : isRejected
-                  ? 'text-rose-700 bg-rose-50 border-rose-200'
-                  : 'text-blue-700 bg-blue-50 border-blue-200'
-              }`}
-            >
-              {isPaid
-                ? 'To‘lov Tasdiqlandi'
-                : isPendingVerification
-                ? 'Chek Tekshirilmoqda'
-                : isRejected
-                ? 'To‘lov Rad Etildi'
-                : 'To‘lov Kutilmoqda'}
-            </span>
-
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
-              {isPaid
-                ? 'Xaridingiz uchun tashakkur!'
-                : isPendingVerification
-                ? 'To‘lov chekingiz tekshirilmoqda...'
-                : isRejected
-                ? 'To‘lov cheki tasdiqlanmadi'
-                : 'Buyurtmangiz qabul qilindi!'}
-            </h1>
-
-            <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-md mx-auto">
-              Buyurtma raqami: <strong className="text-slate-900 font-mono">{order.orderNumber}</strong>.
-              {isPaid
-                ? ' Buyurtma tasdiqlandi va yetkazib berish jarayoniga topshirildi.'
-                : isPendingVerification
-                ? ' Administrator to‘lovingizni tekshirmoqda (5-15 daqiqa). Sahifa avtomatik yangilanadi.'
-                : isRejected
-                ? ' Chek tasdiqlanmadi. Iltimos, haqiqiy to‘lov chekini qaytadan yuklang.'
-                : ' To‘lovni amalga oshirib, chekni yuklashingiz so‘raladi.'}
-            </p>
-
-            {isRejected && order.receiptRejectedReason && (
-              <p className="text-xs font-semibold text-rose-700 bg-rose-50 p-2.5 rounded-xl border border-rose-200 mt-2 max-w-md mx-auto">
-                Rad etilish sababi: {order.receiptRejectedReason}
-              </p>
-            )}
-          </div>
-
-          {/* Fulfillment Stepper */}
-          <div className="pt-6 border-t border-slate-100">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
-              Yetkazib berish bosqichlari
-            </h3>
+          {/* Stepper Progress */}
+          <div className="pt-4 border-t border-slate-100">
             <div className="grid grid-cols-4 gap-2 text-center text-xs">
               <div className="space-y-1">
-                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto text-xs font-bold">
+                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto text-xs font-bold shadow-xs">
                   ✓
                 </div>
                 <p className="font-bold text-slate-900 text-[11px]">Buyurtma</p>
@@ -297,19 +428,19 @@ export const OrderSuccessView: React.FC = () => {
 
               <div className="space-y-1">
                 <div
-                  className={`w-8 h-8 rounded-full text-white flex items-center justify-center mx-auto text-xs font-bold ${
+                  className={`w-8 h-8 rounded-full text-white flex items-center justify-center mx-auto text-xs font-bold shadow-xs ${
                     isPaid ? 'bg-emerald-600' : isPendingVerification ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'
                   }`}
                 >
                   {isPaid ? '✓' : isPendingVerification ? '⏳' : '2'}
                 </div>
-                <p className="font-bold text-slate-900 text-[11px]">To‘lov</p>
+                <p className="font-bold text-slate-900 text-[11px]">Chek</p>
                 <p
-                  className={`text-[10px] font-medium ${
+                  className={`text-[10px] font-bold ${
                     isPaid ? 'text-emerald-600' : isPendingVerification ? 'text-amber-600' : 'text-slate-400'
                   }`}
                 >
-                  {isPaid ? 'Tasdiqlandi' : isPendingVerification ? 'Kutilmoqda' : 'Kutilmoqda'}
+                  {isPaid ? 'Tasdiqlandi' : 'Tekshirilmoqda'}
                 </p>
               </div>
 
@@ -321,27 +452,82 @@ export const OrderSuccessView: React.FC = () => {
                 >
                   <Package className="w-4 h-4" />
                 </div>
-                <p className="font-bold text-slate-700 text-[11px]">Yig‘ish</p>
-                <p className="text-[10px] text-slate-400">{isPaid ? 'Jarayonda' : 'Navbatda'}</p>
+                <p className="font-bold text-slate-700 text-[11px]">Sotuvchi</p>
+                <p className="text-[10px] text-slate-400">{isPaid ? 'Buyurtma yuborildi' : 'To‘lovdan so‘ng'}</p>
               </div>
 
               <div className="space-y-1 opacity-60">
                 <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center mx-auto text-xs font-bold">
                   <Truck className="w-4 h-4" />
                 </div>
-                <p className="font-bold text-slate-700 text-[11px]">Kuryer</p>
-                <p className="text-[10px] text-slate-400">Yetkazish</p>
+                <p className="font-bold text-slate-700 text-[11px]">Yetkazish</p>
+                <p className="text-[10px] text-slate-400">Kuryer</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* RE-UPLOAD RECEIPT FORM IF PENDING / REJECTED */}
-        {(!isPaid || isRejected) && (
+        {/* ======================================================== */}
+        {/* SUBMITTED RECEIPT INFO CARD (Visible when receipt is already uploaded) */}
+        {/* ======================================================== */}
+        {order.receiptUrl && !isRejected && (
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-emerald-600" />
+                <span>Yuklangan To‘lov Cheki</span>
+              </h3>
+              <span
+                className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${
+                  isPaid
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                }`}
+              >
+                {isPaid ? 'Tasdiqlangan' : 'Bosh Admin Tekshiruvi Kutilmoqda'}
+              </span>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-xs text-slate-900 truncate">
+                    {order.receiptFileName || 'To‘lov cheki hujjati'}
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Yuklangan vaqt:{' '}
+                    {new Date(order.receiptUploadedAt || order.updatedAt || order.createdAt).toLocaleTimeString('uz-UZ', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <a
+                href={order.receiptUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-blue-600 text-xs font-bold border border-slate-200 flex items-center gap-1 shrink-0 transition-colors shadow-2xs cursor-pointer"
+              >
+                <span>Ko‘rish</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* RE-UPLOAD RECEIPT FORM (ONLY IF REJECTED OR NO RECEIPT) */}
+        {/* ======================================================== */}
+        {(!order.receiptUrl || isRejected) && (
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md space-y-4">
             <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-emerald-600" />
-              <span>To‘lov va Chek Yuklash</span>
+              <span>To‘lov va Chekni Qaytadan Yuklash</span>
             </h3>
 
             {/* Sellnex Card Details */}
@@ -413,7 +599,7 @@ export const OrderSuccessView: React.FC = () => {
                     setReceiptFile(null);
                     setReceiptPreview(null);
                   }}
-                  className="p-1 text-rose-600 hover:text-rose-800"
+                  className="p-1 text-rose-600 hover:text-rose-800 cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -428,7 +614,7 @@ export const OrderSuccessView: React.FC = () => {
 
             <button
               disabled={!receiptFile || isUploading}
-              onClick={handleSubmitReceipt}
+              onClick={handleSubmitNewReceipt}
               style={{ backgroundColor: receiptFile ? primaryColor : undefined }}
               className={`w-full py-3.5 rounded-xl text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 !receiptFile ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'hover:scale-[1.01]'
@@ -442,19 +628,21 @@ export const OrderSuccessView: React.FC = () => {
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>To‘lov chekini tasdiqlash uchun yuborish</span>
+                  <span>To‘lovni tasdiqlashga yuborish</span>
                 </>
               )}
             </button>
           </div>
         )}
 
-        {/* Order Details Receipt Card */}
+        {/* ======================================================== */}
+        {/* ORDER DETAILS RECEIPT CARD */}
+        {/* ======================================================== */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 text-xs">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
               <p className="text-slate-400">Buyurtma Raqami</p>
-              <p className="font-mono font-bold text-sm text-slate-900">{order.orderNumber}</p>
+              <p className="font-mono font-bold text-sm text-slate-900">{formattedOrderNumber}</p>
             </div>
             <div className="text-right">
               <p className="text-slate-400">Taxminiy Yetkazish</p>
@@ -485,19 +673,15 @@ export const OrderSuccessView: React.FC = () => {
                   isPaid ? 'text-emerald-600' : isPendingVerification ? 'text-amber-600' : 'text-slate-500'
                 }`}
               >
-                To‘lov: {order.paymentStatus || 'Kutilmoqda'}
+                To‘lov:{' '}
+                {isPaid
+                  ? 'Tasdiqlangan'
+                  : isPendingVerification
+                  ? 'Tekshirilmoqda'
+                  : isRejected
+                  ? 'Rad etilgan'
+                  : 'Kutilmoqda'}
               </p>
-              {order.receiptUrl && (
-                <a
-                  href={order.receiptUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-blue-600 hover:underline font-bold pt-1"
-                >
-                  <span>Yuklangan chekni ko‘rish</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
             </div>
           </div>
 
@@ -550,7 +734,7 @@ export const OrderSuccessView: React.FC = () => {
             className="flex-1 py-3.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 font-bold text-xs text-slate-800 shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
             <ShoppingBag className="w-4 h-4" />
-            <span>Xaridni davom ettirish</span>
+            <span>Do‘konga qaytish va xaridni davom ettirish</span>
           </button>
         </div>
       </div>

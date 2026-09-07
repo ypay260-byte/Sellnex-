@@ -966,15 +966,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (!user && !publicRoutes.includes(routeName)) {
           setCurrentRoute('landing');
+          setRouteParams({});
           if (window.location.pathname === '/' || window.location.pathname === '') {
             window.location.hash = 'landing';
           }
         } else {
           if ((routeName === 'admin' || routeName === 'admin-panel') && user && user.role !== 'admin') {
             setCurrentRoute('dashboard');
+            setRouteParams({});
             window.location.hash = 'dashboard';
             return;
           }
+          setRouteParams(routeInfo.params || {});
           setCurrentRoute(routeName === 'admin' ? 'admin-panel' : routeName);
         }
       } catch (err) {
@@ -1436,7 +1439,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
 
-    let initialStatus: OrderStatus = orderData.paymentStatus === 'Paid' ? 'Paid' : 'Pending';
+    let initialStatus: OrderStatus = orderData.orderStatus || (orderData.paymentStatus === 'Paid' ? 'Paid' : 'pending_payment_verification');
     if (automation.autoSupplierOrder && orderData.paymentStatus === 'Paid') {
       initialStatus = 'Supplier Ordered';
       initialTimeline.push({
