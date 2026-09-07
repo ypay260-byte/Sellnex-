@@ -62,6 +62,22 @@ export const INITIAL_STORE: Store = {
     phone: '+998 90 123 45 67',
   },
   published: true,
+  deliveryOptions: [
+    {
+      id: 'opt_standard',
+      name: 'Standart yetkazish',
+      estimatedTime: '1–2 ish kuni',
+      price: 25000,
+      enabled: true,
+    },
+    {
+      id: 'opt_express',
+      name: 'Tezkor yetkazish',
+      estimatedTime: '24 soat ichida',
+      price: 45000,
+      enabled: true,
+    },
+  ],
   createdAt: '2026-01-16T12:00:00Z',
 };
 

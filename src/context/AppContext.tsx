@@ -1488,6 +1488,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       quantity: orderData.quantity || orderData.items.reduce((acc, it) => acc + (it.quantity || 1), 0),
       deliveryAddress: orderData.deliveryAddress || resolvedShippingAddress,
       shippingAddress: resolvedShippingAddress,
+      deliveryMethod: orderData.deliveryName || orderData.deliveryMethod || 'Standart yetkazish',
+      deliveryName: orderData.deliveryName || orderData.deliveryMethod || 'Standart yetkazish',
+      deliveryTime: orderData.deliveryTime || '1–2 ish kuni',
+      deliveryPrice: typeof orderData.deliveryPrice === 'number' ? orderData.deliveryPrice : (orderData.shippingFee || 25000),
+      shippingFee: typeof orderData.deliveryPrice === 'number' ? orderData.deliveryPrice : (orderData.shippingFee || 25000),
       createdAt: new Date().toISOString(),
     };
 

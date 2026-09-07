@@ -76,7 +76,14 @@ function sanitizeData<T extends Record<string, any>>(obj: T): Record<string, any
   const result: Record<string, any> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value === undefined) continue;
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    if (Array.isArray(value)) {
+      result[key] = value.map((item) => {
+        if (item !== null && typeof item === 'object') {
+          return sanitizeData(item);
+        }
+        return item;
+      });
+    } else if (value !== null && typeof value === 'object') {
       result[key] = sanitizeData(value);
     } else {
       result[key] = value;
@@ -524,7 +531,8 @@ export const firestoreService = {
 
   async updateOrder(orderId: string, updates: Partial<Order>): Promise<void> {
     const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
-    await updateDoc(docRef, { ...updates, updatedAt: new Date().toISOString() });
+    const cleaned = sanitizeData({ ...updates, updatedAt: new Date().toISOString() });
+    await updateDoc(docRef, cleaned);
   },
 
   async getOrderById(orderId: string): Promise<Order | null> {
@@ -672,7 +680,8 @@ export const firestoreService = {
 
   async saveOrder(order: Order): Promise<void> {
     const docRef = doc(db, COLLECTIONS.ORDERS, order.id);
-    await setDoc(docRef, { ...order, updatedAt: new Date().toISOString() }, { merge: true });
+    const cleaned = sanitizeData({ ...order, updatedAt: new Date().toISOString() });
+    await setDoc(docRef, cleaned, { merge: true });
   },
 
   // === CUSTOMERS OPERATIONS ===
@@ -693,7 +702,8 @@ export const firestoreService = {
 
   async saveCustomer(customer: Customer): Promise<void> {
     const docRef = doc(db, COLLECTIONS.CUSTOMERS, customer.id);
-    await setDoc(docRef, { ...customer, updatedAt: new Date().toISOString() }, { merge: true });
+    const cleaned = sanitizeData({ ...customer, updatedAt: new Date().toISOString() });
+    await setDoc(docRef, cleaned, { merge: true });
   },
 
   // === PARTNER LINKS OPERATIONS ===

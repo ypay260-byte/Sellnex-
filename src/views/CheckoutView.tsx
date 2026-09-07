@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { firestoreService } from '../services/firestoreService';
-import { AdminSettings, Order } from '../types';
+import { AdminSettings, Order, StoreDeliveryOption } from '../types';
 import {
   ShoppingBag,
   ShieldCheck,
@@ -71,8 +71,9 @@ export const CheckoutView: React.FC = () => {
   const [zipCode, setZipCode] = useState(''); // Optional ZIP code
   const [notes, setNotes] = useState('');
 
-  // Shipping & Delivery Method
-  const [deliveryMethod, setDeliveryMethod] = useState<'Standard' | 'Express' | 'Pickup'>('Standard');
+  // Store Delivery Options from Seller Settings
+  const [storeDeliveryOptions, setStoreDeliveryOptions] = useState<StoreDeliveryOption[]>([]);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string>('');
 
   // Receipt File and Upload State
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -160,11 +161,110 @@ export const CheckoutView: React.FC = () => {
     'Qoraqalpog‘iston Respublikasi',
   ];
 
-  const deliveryPrices = {
-    Standard: 25000,
-    Express: 45000,
-    Pickup: 0,
-  };
+  const DEFAULT_STORE_DELIVERY_OPTIONS: StoreDeliveryOption[] = useMemo(
+    () => [
+      {
+        id: 'opt_standard',
+        name: 'Standart yetkazish',
+        estimatedTime: '1–2 ish kuni',
+        price: 25000,
+        enabled: true,
+      },
+      {
+        id: 'opt_express',
+        name: 'Tezkor yetkazish',
+        estimatedTime: '24 soat ichida',
+        price: 45000,
+        enabled: true,
+      },
+    ],
+    []
+  );
+
+  // Load Store Delivery Options from store object or Firestore
+  useEffect(() => {
+    let isMounted = true;
+    const loadDelivery = async () => {
+      const targetStore = publicStore || store;
+      if (
+        targetStore?.deliveryOptions &&
+        Array.isArray(targetStore.deliveryOptions) &&
+        targetStore.deliveryOptions.length > 0
+      ) {
+        if (isMounted) {
+          setStoreDeliveryOptions(targetStore.deliveryOptions);
+        }
+        return;
+      }
+
+      const targetId =
+        safeCart[0]?.product?.storeId ||
+        routeParams.storeId ||
+        routeParams.storeSlug ||
+        targetStore?.id;
+      if (targetId) {
+        try {
+          const s = await firestoreService.getStoreByIdOrSlug(targetId);
+          if (
+            isMounted &&
+            s?.deliveryOptions &&
+            Array.isArray(s.deliveryOptions) &&
+            s.deliveryOptions.length > 0
+          ) {
+            setStoreDeliveryOptions(s.deliveryOptions);
+          }
+        } catch (e) {
+          console.warn('Could not fetch store delivery options:', e);
+        }
+      }
+    };
+    loadDelivery();
+    return () => {
+      isMounted = false;
+    };
+  }, [publicStore, store, safeCart, routeParams.storeId, routeParams.storeSlug]);
+
+  const availableDeliveryOptions: StoreDeliveryOption[] = useMemo(() => {
+    const raw =
+      storeDeliveryOptions.length > 0
+        ? storeDeliveryOptions
+        : activeStore?.deliveryOptions && activeStore.deliveryOptions.length > 0
+        ? activeStore.deliveryOptions
+        : DEFAULT_STORE_DELIVERY_OPTIONS;
+
+    // Strict filter: must be enabled and NEVER be pickup or olib ketish
+    const filtered = raw.filter((o) => {
+      if (o.enabled === false) return false;
+      const lower = (o.name || '').toLowerCase();
+      if (
+        lower.includes('pickup') ||
+        lower.includes('olib ketish') ||
+        lower.includes('filialdan')
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    return filtered.length > 0 ? filtered : DEFAULT_STORE_DELIVERY_OPTIONS;
+  }, [storeDeliveryOptions, activeStore?.deliveryOptions, DEFAULT_STORE_DELIVERY_OPTIONS]);
+
+  // Auto-select first delivery option
+  useEffect(() => {
+    if (availableDeliveryOptions.length > 0) {
+      if (!selectedDeliveryId || !availableDeliveryOptions.some((o) => o.id === selectedDeliveryId)) {
+        setSelectedDeliveryId(availableDeliveryOptions[0].id);
+      }
+    }
+  }, [availableDeliveryOptions, selectedDeliveryId]);
+
+  const selectedDeliveryOption = useMemo(() => {
+    return (
+      availableDeliveryOptions.find((o) => o.id === selectedDeliveryId) ||
+      availableDeliveryOptions[0] ||
+      DEFAULT_STORE_DELIVERY_OPTIONS[0]
+    );
+  }, [availableDeliveryOptions, selectedDeliveryId, DEFAULT_STORE_DELIVERY_OPTIONS]);
 
   const safeCartSubtotal = useMemo(() => {
     if (typeof cartTotal === 'number' && !isNaN(cartTotal) && cartTotal > 0) {
@@ -180,7 +280,7 @@ export const CheckoutView: React.FC = () => {
     }, 0);
   }, [cartTotal, cartSubtotal, safeCart]);
 
-  const currentDeliveryCost = deliveryPrices[deliveryMethod] ?? 25000;
+  const currentDeliveryCost = selectedDeliveryOption?.price ?? 25000;
   const grandTotal = safeCartSubtotal + currentDeliveryCost;
 
   // Sellnex Payment Card from Admin Settings
@@ -338,14 +438,17 @@ export const CheckoutView: React.FC = () => {
           quantity: totalQuantity,
           subtotal: orderSubtotal,
           shippingFee: allocatedShippingFee,
+          deliveryPrice: allocatedShippingFee,
+          deliveryName: selectedDeliveryOption.name,
+          deliveryTime: selectedDeliveryOption.estimatedTime,
+          deliveryMethod: selectedDeliveryOption.name,
           paymentFee: 0,
           totalAmount: orderTotal,
           totalSupplierCost: orderItems.reduce((acc, it) => acc + it.supplierCost * it.quantity, 0),
           totalProfit: orderItems.reduce((acc, it) => acc + it.profit * it.quantity, 0),
           paymentMethod: 'Sellnex Card',
-          paymentStatus: 'Pending',
+          paymentStatus: 'pending',
           orderStatus: 'Pending',
-          deliveryMethod,
         });
 
         if (!primaryCreatedOrder) {
@@ -479,8 +582,8 @@ export const CheckoutView: React.FC = () => {
       }
 
       showToast(
-        'To‘lov cheki yuborildi!',
-        'To‘lov cheki qabul qilindi va administrator tomonidan tekshirilmoqda.',
+        'To‘lovingiz qabul qilindi',
+        'To‘lovingiz qabul qilindi. Tez orada tekshiriladi (5-15 daqiqa).',
         'success'
       );
     } catch (err: any) {
@@ -661,17 +764,36 @@ export const CheckoutView: React.FC = () => {
               </p>
             </div>
 
-            {/* Total Amount to Transfer */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  O‘tkazilishi kerak bo‘lgan summa
+            {/* Buyurtma summasi */}
+            <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-200/70 pb-2">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-700">
+                  Buyurtma summasi
                 </span>
-                <p className="text-xs text-slate-400">Yetkazib berish xizmati bilan birga</p>
+                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                  {activeOrder.deliveryName || activeOrder.deliveryMethod || 'Standart yetkazish'}
+                </span>
               </div>
-              <span className="text-2xl sm:text-3xl font-black text-blue-600">
-                {formatMoney(activeOrder.totalAmount)}
-              </span>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span className="font-medium">Mahsulotlar:</span>
+                  <span className="font-bold text-slate-900">{formatMoney(activeOrder.subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span className="font-medium">
+                    Yetkazib berish ({activeOrder.deliveryName || activeOrder.deliveryMethod || 'Standart yetkazish'}):
+                  </span>
+                  <span className="font-bold text-slate-900">
+                    {formatMoney(activeOrder.deliveryPrice !== undefined ? activeOrder.deliveryPrice : activeOrder.shippingFee)}
+                  </span>
+                </div>
+                <div className="pt-2 border-t border-slate-200 flex items-baseline justify-between">
+                  <span className="font-black text-sm text-slate-800">Jami:</span>
+                  <span className="text-2xl sm:text-3xl font-black text-blue-600">
+                    {formatMoney(activeOrder.totalAmount)}
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Sellnex Payment Card Box */}
@@ -1105,33 +1227,44 @@ export const CheckoutView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Delivery Options */}
+                {/* Delivery Options from Seller */}
                 <div className="pt-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-2">Yetkazib berish usuli</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                    {[
-                      { id: 'Standard' as const, title: 'Standart Yetkazish', time: '1-2 ish kuni', price: 25000 },
-                      { id: 'Express' as const, title: 'Tezkor Kuryer', time: '24 soat ichida', price: 45000 },
-                      { id: 'Pickup' as const, title: 'Olib ketish punkti', time: 'Filialdan olish', price: 0 },
-                    ].map((m) => (
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Yetkazib berish tarifi <span className="text-rose-600">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-semibold">
+                      Sotuvchi tomonidan belgilangan
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                    {availableDeliveryOptions.map((opt) => (
                       <button
-                        key={m.id}
+                        key={opt.id}
                         type="button"
-                        onClick={() => setDeliveryMethod(m.id)}
-                        className={`p-3 rounded-xl border text-left transition-all min-h-[56px] cursor-pointer ${
-                          deliveryMethod === m.id
-                            ? 'border-blue-600 bg-blue-50/70 ring-1 ring-blue-600'
+                        onClick={() => setSelectedDeliveryId(opt.id)}
+                        className={`p-3.5 rounded-xl border text-left transition-all min-h-[64px] cursor-pointer flex items-center justify-between gap-3 ${
+                          selectedDeliveryOption.id === opt.id
+                            ? 'border-blue-600 bg-blue-50/70 ring-2 ring-blue-600 shadow-xs'
                             : 'border-slate-200 hover:bg-slate-50'
                         }`}
                       >
-                        <div className="flex items-center justify-between font-bold text-slate-900">
-                          <span>{m.title}</span>
-                          {deliveryMethod === m.id && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />}
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 font-extrabold text-slate-900">
+                            <span>{opt.name}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            {opt.estimatedTime}
+                          </p>
                         </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5">{m.time}</p>
-                        <p className="font-extrabold text-blue-700 mt-1">
-                          {m.price === 0 ? 'BEPUL' : formatMoney(m.price)}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-sm text-blue-700">
+                            {formatMoney(opt.price)}
+                          </span>
+                          {selectedDeliveryOption.id === opt.id && (
+                            <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                          )}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -1179,9 +1312,9 @@ export const CheckoutView: React.FC = () => {
                     <span className="font-semibold text-slate-900">{formatMoney(safeCartSubtotal)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Yetkazib berish ({deliveryMethod}):</span>
+                    <span>Yetkazib berish ({selectedDeliveryOption.name}):</span>
                     <span className="font-semibold text-slate-900">
-                      {currentDeliveryCost === 0 ? 'BEPUL' : formatMoney(currentDeliveryCost)}
+                      {formatMoney(currentDeliveryCost)}
                     </span>
                   </div>
                   <div className="flex justify-between text-slate-500">

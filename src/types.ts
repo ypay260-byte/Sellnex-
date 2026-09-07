@@ -91,8 +91,17 @@ export interface Store {
   sellerCardNumber?: string;
   sellerCardHolder?: string;
   sellerBankName?: string;
+  deliveryOptions?: StoreDeliveryOption[];
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface StoreDeliveryOption {
+  id: string;
+  name: string;
+  estimatedTime: string;
+  price: number;
+  enabled?: boolean;
 }
 
 export type BusinessMode = 'personal' | 'dropshipping';
@@ -218,6 +227,9 @@ export interface Order {
   paymentStatus: PaymentStatus;
   orderStatus: OrderStatus;
   deliveryMethod?: string;
+  deliveryName?: string;
+  deliveryTime?: string;
+  deliveryPrice?: number;
   receiptUrl?: string;
   receiptFileName?: string;
   receiptFileType?: string;
