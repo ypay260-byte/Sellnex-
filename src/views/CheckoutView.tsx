@@ -534,7 +534,10 @@ export const CheckoutView: React.FC = () => {
 
   // Step 2: Upload Receipt to Firebase Storage & Submit Payment Verification
   const handleSubmitPaymentConfirmation = async () => {
+    // 7. Duplicate submission prevention: immediately ignore subsequent clicks
     if (isUploadingReceipt) return;
+
+    console.log('SUBMIT_STARTED');
 
     if (!receiptFile) {
       setReceiptError("To‘lov chekini yuklash MAJBURIY. Iltimos, chek faylini tanlang.");
@@ -547,23 +550,49 @@ export const CheckoutView: React.FC = () => {
       return;
     }
 
+    // 1. Receipt file validation confirmed
+    console.log('FILE_VALIDATED');
+
     setIsUploadingReceipt(true);
     setReceiptError(null);
 
     try {
-      // 1. Upload to real Firebase Storage (with base64 fallback)
-      const downloadUrl = await firestoreService.uploadReceipt(activeOrder.id, receiptFile);
+      // 2 & 3. Storage Upload & Download URL retrieval with timeout
+      console.log('STORAGE_UPLOAD_STARTED');
+      let downloadUrl = '';
+      try {
+        const uploadTask = firestoreService.uploadReceipt(activeOrder.id, receiptFile);
+        const timeoutTask = new Promise<string>((_, reject) =>
+          setTimeout(() => reject(new Error('STORAGE_TIMEOUT')), 12000)
+        );
+        downloadUrl = await Promise.race([uploadTask, timeoutTask]);
+        console.log('STORAGE_UPLOAD_COMPLETED');
+      } catch (storageErr) {
+        console.error('RECEIPT_UPLOAD_ERROR', storageErr);
+        throw new Error('RECEIPT_UPLOAD_ERROR');
+      }
 
-      // 2. Submit to Firestore with paymentStatus = 'pending_verification' & orderStatus = 'pending_payment_verification'
-      await firestoreService.submitOrderReceipt(
-        activeOrder.id,
-        downloadUrl,
-        receiptFile.name,
-        receiptFile.type,
-        txReceiptNumber.trim() || undefined
-      );
+      // 4, 5, 6, 7. Firestore order update: paymentStatus, receiptUrl, orderStatus with timeout
+      console.log('FIRESTORE_UPDATE_STARTED');
+      try {
+        const updateTask = firestoreService.submitOrderReceipt(
+          activeOrder.id,
+          downloadUrl,
+          receiptFile.name,
+          receiptFile.type,
+          txReceiptNumber.trim() || undefined
+        );
+        const timeoutTask = new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error('FIRESTORE_TIMEOUT')), 10000)
+        );
+        await Promise.race([updateTask, timeoutTask]);
+        console.log('FIRESTORE_UPDATE_COMPLETED');
+      } catch (firestoreErr) {
+        console.error('FIRESTORE_UPDATE_ERROR', firestoreErr);
+        throw new Error('FIRESTORE_UPDATE_ERROR');
+      }
 
-      // 3. Update local state
+      // Update local state
       const updatedOrder: Order = {
         ...activeOrder,
         paymentStatus: 'pending_verification',
@@ -576,10 +605,10 @@ export const CheckoutView: React.FC = () => {
       };
       setActiveOrder(updatedOrder);
 
-      // 4. Clear cart immediately
+      // Clear cart immediately
       clearCart();
 
-      // 5. Store order ID and order snapshot in localStorage for page refresh persistence
+      // Store order ID and order snapshot in localStorage for page refresh persistence
       try {
         localStorage.setItem('sellnex_last_order_id', activeOrder.id);
         localStorage.setItem(`sellnex_order_${activeOrder.id}`, JSON.stringify(updatedOrder));
@@ -599,7 +628,8 @@ export const CheckoutView: React.FC = () => {
         'success'
       );
 
-      // 6. Seamlessly redirect customer to Order Success page
+      // 8. Seamlessly navigate customer to Order Success page
+      console.log('ORDER_SUCCESS_NAVIGATION');
       const targetStoreId =
         activeStore?.slug || activeStore?.id || publicStore?.slug || publicStore?.id || store?.slug || store?.id || '';
 
@@ -609,11 +639,12 @@ export const CheckoutView: React.FC = () => {
         storeSlug: targetStoreId,
       });
     } catch (err: any) {
-      console.error('Error uploading receipt & submitting payment:', err);
-      const errMsg = 'Buyurtmani yuborishda muammo yuz berdi. Qayta urinib ko‘ring.';
+      console.error('Receipt submission error occurred:', err);
+      const errMsg = 'Chekni yuborishda muammo yuz berdi. Internet aloqangizni tekshirib, qayta urinib ko‘ring.';
       setReceiptError(errMsg);
       showToast('Xatolik', errMsg, 'error');
     } finally {
+      // 2. Infinite loading prevention: isUploadingReceipt is ALWAYS reset to false
       setIsUploadingReceipt(false);
     }
   };

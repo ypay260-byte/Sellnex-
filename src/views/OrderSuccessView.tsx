@@ -207,19 +207,47 @@ export const OrderSuccessView: React.FC = () => {
   };
 
   const handleSubmitNewReceipt = async () => {
-    if (!receiptFile || !order) return;
+    if (!receiptFile || !order || isUploading) return;
+
+    console.log('SUBMIT_STARTED');
+    console.log('FILE_VALIDATED');
+
     setIsUploading(true);
     setReceiptError(null);
 
     try {
-      const downloadUrl = await firestoreService.uploadReceipt(order.id, receiptFile);
-      await firestoreService.submitOrderReceipt(
-        order.id,
-        downloadUrl,
-        receiptFile.name,
-        receiptFile.type,
-        txReceiptNumber.trim() || undefined
-      );
+      console.log('STORAGE_UPLOAD_STARTED');
+      let downloadUrl = '';
+      try {
+        const uploadTask = firestoreService.uploadReceipt(order.id, receiptFile);
+        const timeoutTask = new Promise<string>((_, reject) =>
+          setTimeout(() => reject(new Error('STORAGE_TIMEOUT')), 12000)
+        );
+        downloadUrl = await Promise.race([uploadTask, timeoutTask]);
+        console.log('STORAGE_UPLOAD_COMPLETED');
+      } catch (storageErr) {
+        console.error('RECEIPT_UPLOAD_ERROR', storageErr);
+        throw new Error('RECEIPT_UPLOAD_ERROR');
+      }
+
+      console.log('FIRESTORE_UPDATE_STARTED');
+      try {
+        const updateTask = firestoreService.submitOrderReceipt(
+          order.id,
+          downloadUrl,
+          receiptFile.name,
+          receiptFile.type,
+          txReceiptNumber.trim() || undefined
+        );
+        const timeoutTask = new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error('FIRESTORE_TIMEOUT')), 10000)
+        );
+        await Promise.race([updateTask, timeoutTask]);
+        console.log('FIRESTORE_UPDATE_COMPLETED');
+      } catch (firestoreErr) {
+        console.error('FIRESTORE_UPDATE_ERROR', firestoreErr);
+        throw new Error('FIRESTORE_UPDATE_ERROR');
+      }
 
       const updated = {
         ...order,
@@ -244,7 +272,7 @@ export const OrderSuccessView: React.FC = () => {
       showToast('Chek yuklandi', 'To‘lov cheki tekshirish uchun yuborildi.', 'success');
     } catch (err: any) {
       console.error('Error submitting re-upload receipt:', err);
-      const errMsg = 'Buyurtmani yuborishda muammo yuz berdi. Qayta urinib ko‘ring.';
+      const errMsg = 'Chekni yuborishda muammo yuz berdi. Internet aloqangizni tekshirib, qayta urinib ko‘ring.';
       setReceiptError(errMsg);
       showToast('Xatolik', errMsg, 'error');
     } finally {
