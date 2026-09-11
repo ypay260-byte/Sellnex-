@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Order, Store, User, OrderStatus } from '../../../types';
 import { firestoreService } from '../../../services/firestoreService';
 import {
@@ -22,6 +22,7 @@ import {
   Clock,
   Check,
   AlertCircle,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface AdminOrdersTabProps {
@@ -29,6 +30,7 @@ interface AdminOrdersTabProps {
   stores: Store[];
   users: User[];
   adminEmail: string;
+  adminUid?: string;
   onRefresh: () => Promise<void>;
   showToast: (title: string, desc?: string, type?: 'success' | 'error' | 'info') => void;
   formatMoney: (amount: number) => string;
@@ -39,6 +41,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   stores,
   users,
   adminEmail,
+  adminUid,
   onRefresh,
   showToast,
   formatMoney,
@@ -47,19 +50,50 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
+  const [processingAction, setProcessingAction] = useState<'confirm' | 'reject' | null>(null);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [viewReceiptModal, setViewReceiptModal] = useState<{ url: string; fileName?: string; fileType?: string } | null>(
     null
   );
 
+  // Maintain local orders state for immediate optimistic UI responsiveness
+  const [localOrders, setLocalOrders] = useState<Order[]>(orders);
+  useEffect(() => {
+    setLocalOrders(orders);
+  }, [orders]);
+
+  // Support Back button & browser back navigation
+  useEffect(() => {
+    const handleBack = (e: Event) => {
+      if (viewReceiptModal) {
+        setViewReceiptModal(null);
+        e.preventDefault();
+        return;
+      }
+      if (rejectModalOpen) {
+        setRejectModalOpen(false);
+        e.preventDefault();
+        return;
+      }
+      if (selectedOrder) {
+        setSelectedOrder(null);
+        e.preventDefault();
+        return;
+      }
+    };
+    window.addEventListener('admin-back-pressed', handleBack);
+    return () => window.removeEventListener('admin-back-pressed', handleBack);
+  }, [viewReceiptModal, rejectModalOpen, selectedOrder]);
+
   const storeMap = new Map<string, Store>();
   stores.forEach((s) => storeMap.set(s.id, s));
 
   // Count how many orders have pending_verification
-  const pendingVerificationCount = orders.filter((o) => o.paymentStatus === 'pending_verification').length;
+  const pendingVerificationCount = localOrders.filter((o) => o.paymentStatus === 'pending_verification').length;
 
-  const filteredOrders = orders.filter((o) => {
+  const filteredOrders = localOrders.filter((o) => {
     const term = searchTerm.toLowerCase();
     const st = storeMap.get(o.storeId);
     const matchesSearch =
@@ -82,13 +116,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const recordAudit = async (action: string, targetId: string, oldVal: any, newVal: any) => {
     try {
       await firestoreService.createAuditLog({
-        adminEmail,
+        adminEmail: adminEmail || 'ypay260@gmail.com',
         action,
         targetType: 'order',
         targetId,
         oldValue: oldVal,
         newValue: newVal,
-        details: `Order payment/status action by ${adminEmail}`,
+        details: `Order payment/status action by ${adminUid || adminEmail}`,
         userAgent: navigator.userAgent,
       });
     } catch (err) {
@@ -98,9 +132,45 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
   // ADMIN ACTION 1: CONFIRM PAYMENT
   const handleConfirmPayment = async (order: Order) => {
+    if (processingOrderId) return;
+    setProcessingOrderId(order.id);
+    setProcessingAction('confirm');
     setIsProcessing(true);
+
+    const targetUid = adminUid || 'admin_kamoliddin_5021';
+    const targetEmail = adminEmail || 'ypay260@gmail.com';
+    const nowIso = new Date().toISOString();
+
+    // Optimistic immediate UI update
+    setLocalOrders((prev) =>
+      prev.map((o) =>
+        o.id === order.id
+          ? {
+              ...o,
+              paymentStatus: 'paid',
+              orderStatus: 'confirmed',
+              verifiedBy: targetUid,
+              adminEmail: targetEmail,
+              verifiedAt: nowIso,
+            }
+          : o
+      )
+    );
+    setSelectedOrder((prev) =>
+      prev && prev.id === order.id
+        ? {
+            ...prev,
+            paymentStatus: 'paid',
+            orderStatus: 'confirmed',
+            verifiedBy: targetUid,
+            adminEmail: targetEmail,
+            verifiedAt: nowIso,
+          }
+        : prev
+    );
+
     try {
-      await firestoreService.confirmOrderPayment(order.id, adminEmail);
+      await firestoreService.confirmOrderPayment(order.id, targetUid, targetEmail);
       await recordAudit(
         'confirm_order_payment',
         order.id,
@@ -109,54 +179,100 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       );
 
       showToast(
-        'To‘lov Tasdiqlandi!',
-        `Buyurtma ${order.orderNumber || order.id} to‘lovi muvaffaqiyatli tasdiqlandi.`,
+        'To‘lov tasdiqlandi',
+        `Buyurtma ${order.orderNumber || order.id} to‘lovi muvaffaqiyatli tasdiqlandi va sotuvchiga yuborildi.`,
         'success'
-      );
-
-      setSelectedOrder((prev) =>
-        prev && prev.id === order.id ? { ...prev, paymentStatus: 'paid', orderStatus: 'confirmed' } : prev
       );
 
       await onRefresh();
     } catch (err: any) {
-      showToast('Tasdiqlashda xatolik', err.message, 'error');
+      console.error('Error confirming order payment:', err);
+      showToast(
+        'Amalni bajarib bo‘lmadi. Qayta urinib ko‘ring.',
+        err?.message || 'Xatolik yuz berdi',
+        'error'
+      );
+      await onRefresh();
     } finally {
       setIsProcessing(false);
+      setProcessingOrderId(null);
+      setProcessingAction(null);
     }
   };
 
   // ADMIN ACTION 2: REJECT PAYMENT
   const handleRejectPayment = async () => {
-    if (!selectedOrder) return;
+    if (!selectedOrder || processingOrderId) return;
+    const targetOrder = selectedOrder;
+    setProcessingOrderId(targetOrder.id);
+    setProcessingAction('reject');
     setIsProcessing(true);
+
+    const reason = rejectReason.trim() || 'To‘lov cheki tasdiqlanmadi';
+    const targetUid = adminUid || 'admin_kamoliddin_5021';
+    const targetEmail = adminEmail || 'ypay260@gmail.com';
+    const nowIso = new Date().toISOString();
+
+    // Optimistic immediate UI update
+    setLocalOrders((prev) =>
+      prev.map((o) =>
+        o.id === targetOrder.id
+          ? {
+              ...o,
+              paymentStatus: 'rejected',
+              orderStatus: 'rejected',
+              receiptRejectedReason: reason,
+              verifiedBy: targetUid,
+              adminEmail: targetEmail,
+              verifiedAt: nowIso,
+            }
+          : o
+      )
+    );
+    setSelectedOrder((prev) =>
+      prev && prev.id === targetOrder.id
+        ? {
+            ...prev,
+            paymentStatus: 'rejected',
+            orderStatus: 'rejected',
+            receiptRejectedReason: reason,
+            verifiedBy: targetUid,
+            adminEmail: targetEmail,
+            verifiedAt: nowIso,
+          }
+        : prev
+    );
+
     try {
-      const reason = rejectReason.trim() || 'To‘lov cheki tasdiqlanmadi';
-      await firestoreService.rejectOrderPayment(selectedOrder.id, reason, adminEmail);
+      await firestoreService.rejectOrderPayment(targetOrder.id, reason, targetUid, targetEmail);
       await recordAudit(
         'reject_order_payment',
-        selectedOrder.id,
-        { paymentStatus: selectedOrder.paymentStatus },
+        targetOrder.id,
+        { paymentStatus: targetOrder.paymentStatus },
         { paymentStatus: 'rejected', reason }
       );
 
       showToast(
-        'To‘lov Rad Etildi',
-        `Buyurtma ${selectedOrder.orderNumber} cheki rad etildi. Mijozga yangi chek yuklash xabari yuborildi.`,
+        'To‘lov rad etildi',
+        `Buyurtma ${targetOrder.orderNumber || targetOrder.id} to‘lovi rad etildi.`,
         'info'
-      );
-
-      setSelectedOrder((prev) =>
-        prev ? { ...prev, paymentStatus: 'rejected', receiptRejectedReason: reason } : prev
       );
 
       setRejectModalOpen(false);
       setRejectReason('');
       await onRefresh();
     } catch (err: any) {
-      showToast('Rad etishda xatolik', err.message, 'error');
+      console.error('Error rejecting order payment:', err);
+      showToast(
+        'Amalni bajarib bo‘lmadi. Qayta urinib ko‘ring.',
+        err?.message || 'Xatolik yuz berdi',
+        'error'
+      );
+      await onRefresh();
     } finally {
       setIsProcessing(false);
+      setProcessingOrderId(null);
+      setProcessingAction(null);
     }
   };
 
@@ -396,10 +512,17 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                             <button
                               onClick={() => handleConfirmPayment(o)}
                               disabled={isProcessing}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition-colors cursor-pointer"
+                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1"
                               title="To‘lovni tasdiqlash"
                             >
-                              Tasdiqlash
+                              {isProcessing && processingOrderId === o.id && processingAction === 'confirm' ? (
+                                <>
+                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                  <span>Tasdiqlanmoqda...</span>
+                                </>
+                              ) : (
+                                <span>Tasdiqlash</span>
+                              )}
                             </button>
                           )}
                           <button
@@ -424,13 +547,24 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl space-y-6 my-8">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div>
-                <h3 className="text-lg font-black text-white">
-                  Buyurtma {selectedOrder.orderNumber || selectedOrder.id}
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Yaratilgan: {new Date(selectedOrder.createdAt).toLocaleString('uz-UZ')}
-                </p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-colors cursor-pointer"
+                  title="Ortga qaytish"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Ortga</span>
+                </button>
+                <div>
+                  <h3 className="text-lg font-black text-white">
+                    Buyurtma {selectedOrder.orderNumber || selectedOrder.id}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Yaratilgan: {new Date(selectedOrder.createdAt).toLocaleString('uz-UZ')}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
@@ -542,8 +676,17 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     onClick={() => handleConfirmPayment(selectedOrder)}
                     className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Confirm Payment (Tasdiqlash)</span>
+                    {isProcessing && processingOrderId === selectedOrder.id && processingAction === 'confirm' ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Tasdiqlanmoqda...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Confirm Payment (Tasdiqlash)</span>
+                      </>
+                    )}
                   </button>
 
                   <button
@@ -553,10 +696,19 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       setRejectReason(selectedOrder.receiptRejectedReason || '');
                       setRejectModalOpen(true);
                     }}
-                    className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-rose-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-rose-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <XCircle className="w-4 h-4" />
-                    <span>Reject Payment (Rad etish)</span>
+                    {isProcessing && processingOrderId === selectedOrder.id && processingAction === 'reject' ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Rad etilmoqda...</span>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-4 h-4" />
+                        <span>Reject Payment (Rad etish)</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -678,13 +830,24 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scaleUp">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h4 className="font-black text-white text-sm flex items-center gap-2">
-                <XCircle className="w-5 h-5 text-rose-500" />
-                <span>To‘lov Chekini Rad Etish</span>
-              </h4>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectModalOpen(false)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold cursor-pointer"
+                  title="Ortga qaytish"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Ortga</span>
+                </button>
+                <h4 className="font-black text-white text-sm flex items-center gap-2">
+                  <XCircle className="w-5 h-5 text-rose-500" />
+                  <span>To‘lov Chekini Rad Etish</span>
+                </h4>
+              </div>
               <button
                 onClick={() => setRejectModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-white p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -716,9 +879,16 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 type="button"
                 disabled={isProcessing}
                 onClick={handleRejectPayment}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-600/20 cursor-pointer"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-600/20 flex items-center gap-1.5 cursor-pointer"
               >
-                {isProcessing ? 'Yuborilmoqda...' : 'Rad etishni tasdiqlash'}
+                {isProcessing && processingAction === 'reject' ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Rad etilmoqda...</span>
+                  </>
+                ) : (
+                  <span>Rad etishni tasdiqlash</span>
+                )}
               </button>
             </div>
           </div>
@@ -736,9 +906,20 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-full flex items-center justify-between pb-2 border-b border-slate-800">
-              <span className="font-bold text-sm text-white truncate max-w-md">
-                {viewReceiptModal.fileName || 'To‘lov Cheki'}
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setViewReceiptModal(null)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold cursor-pointer"
+                  title="Ortga qaytish"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Ortga</span>
+                </button>
+                <span className="font-bold text-sm text-white truncate max-w-md">
+                  {viewReceiptModal.fileName || 'To‘lov Cheki'}
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <a
                   href={viewReceiptModal.url}
@@ -751,7 +932,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 </a>
                 <button
                   onClick={() => setViewReceiptModal(null)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white"
+                  className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>

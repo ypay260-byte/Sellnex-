@@ -72,13 +72,24 @@ export const COLLECTIONS = {
 } as const;
 
 // Helper to strip undefined fields for Firestore setDoc / updateDoc compatibility
+function isFirestoreSentinel(val: any): boolean {
+  if (!val || typeof val !== 'object') return false;
+  if (val.constructor?.name === 'FieldValueImpl' || (val as any)._methodName || typeof (val as any).isEqual === 'function' || val instanceof Date) {
+    return true;
+  }
+  return false;
+}
+
 function sanitizeData<T extends Record<string, any>>(obj: T): Record<string, any> {
   const result: Record<string, any> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value === undefined) continue;
-    if (Array.isArray(value)) {
+    if (isFirestoreSentinel(value)) {
+      result[key] = value;
+    } else if (Array.isArray(value)) {
       result[key] = value.map((item) => {
         if (item !== null && typeof item === 'object') {
+          if (isFirestoreSentinel(item)) return item;
           return sanitizeData(item);
         }
         return item;
@@ -611,62 +622,125 @@ export const firestoreService = {
     await setDoc(docRef, updatePayload, { merge: true });
   },
 
-  async confirmOrderPayment(orderId: string, adminEmail: string): Promise<void> {
+  async confirmOrderPayment(orderId: string, adminUidOrEmail?: string, fallbackEmail?: string): Promise<void> {
+    if (!orderId) throw new Error('Order ID is required');
     const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
-    const existing = await this.getOrderById(orderId);
+    let existingTimeline: any[] = [];
+    try {
+      const existing = await this.getOrderById(orderId);
+      if (existing?.timeline && Array.isArray(existing.timeline)) {
+        existingTimeline = existing.timeline;
+      }
+    } catch (e) {
+      console.warn('Notice: proceeding with timeline update in confirmOrderPayment:', e);
+    }
+
+    let currentAdminUid = auth.currentUser?.uid || 'admin_kamoliddin_5021';
+    let currentAdminEmail = auth.currentUser?.email || 'ypay260@gmail.com';
+
+    if (adminUidOrEmail) {
+      if (adminUidOrEmail.includes('@')) {
+        currentAdminEmail = adminUidOrEmail;
+      } else {
+        currentAdminUid = adminUidOrEmail;
+      }
+    }
+    if (fallbackEmail && fallbackEmail.includes('@')) {
+      currentAdminEmail = fallbackEmail;
+    }
+
+    const nowIso = new Date().toISOString();
     const newTimeline = [
-      ...(existing?.timeline || []),
+      ...existingTimeline,
       {
         status: 'confirmed' as const,
-        timestamp: new Date().toISOString(),
+        timestamp: nowIso,
         title: "To'lov tasdiqlandi (Admin)",
-        description: `Sellnex platforma administratori (${adminEmail}) to'lovni tasdiqladi.`,
+        description: `Sellnex platforma administratori (${currentAdminEmail || currentAdminUid}) to'lovni tasdiqladi.`,
       },
     ];
 
-    await updateDoc(docRef, {
+    const payload = sanitizeData({
       paymentStatus: 'paid',
       orderStatus: 'confirmed',
-      verifiedBy: adminEmail,
-      verifiedAt: new Date().toISOString(),
+      verifiedBy: currentAdminUid,
+      adminEmail: currentAdminEmail,
+      verifiedAt: serverTimestamp(),
+      verifiedAtIso: nowIso,
       timeline: newTimeline,
-      updatedAt: new Date().toISOString(),
+      updatedAt: nowIso,
     });
+
+    // Use setDoc with merge to ensure atomic update and avoid not-found errors
+    await setDoc(docRef, payload, { merge: true });
   },
 
-  async rejectOrderPayment(orderId: string, param1: string, param2?: string): Promise<void> {
+  async rejectOrderPayment(orderId: string, param1?: string, param2?: string, param3?: string): Promise<void> {
+    if (!orderId) throw new Error('Order ID is required');
     const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
-    const existing = await this.getOrderById(orderId);
-
-    let adminEmail = 'admin@sellnex.uz';
-    let reason = "To‘lov cheki ma'lumotlari tasdiqlanmadi. Yangi chek talab qilinadi.";
-
-    if (param1 && param1.includes('@')) {
-      adminEmail = param1;
-      if (param2) reason = param2;
-    } else {
-      if (param1) reason = param1;
-      if (param2) adminEmail = param2;
+    let existingTimeline: any[] = [];
+    try {
+      const existing = await this.getOrderById(orderId);
+      if (existing?.timeline && Array.isArray(existing.timeline)) {
+        existingTimeline = existing.timeline;
+      }
+    } catch (e) {
+      console.warn('Notice: proceeding with timeline update in rejectOrderPayment:', e);
     }
 
+    let currentAdminUid = auth.currentUser?.uid || 'admin_kamoliddin_5021';
+    let currentAdminEmail = auth.currentUser?.email || 'ypay260@gmail.com';
+    let reason = "To‘lov cheki ma'lumotlari tasdiqlanmadi. Yangi chek talab qilinadi.";
+
+    if (param1) {
+      if (param1.includes('@')) {
+        currentAdminEmail = param1;
+        if (param2) reason = param2;
+        if (param3) currentAdminUid = param3;
+      } else {
+        reason = param1;
+        if (param2) {
+          if (param2.includes('@')) {
+            currentAdminEmail = param2;
+          } else {
+            currentAdminUid = param2;
+          }
+        }
+        if (param3) {
+          if (param3.includes('@')) {
+            currentAdminEmail = param3;
+          } else {
+            currentAdminUid = param3;
+          }
+        }
+      }
+    }
+
+    const nowIso = new Date().toISOString();
     const newTimeline = [
-      ...(existing?.timeline || []),
+      ...existingTimeline,
       {
         status: 'Pending' as const,
-        timestamp: new Date().toISOString(),
+        timestamp: nowIso,
         title: "To'lov cheki rad etildi (Admin)",
         description: reason,
       },
     ];
 
-    await updateDoc(docRef, {
+    const payload = sanitizeData({
       paymentStatus: 'rejected',
+      orderStatus: 'rejected',
       receiptRejectedReason: reason,
-      verifiedBy: adminEmail,
-      verifiedAt: new Date().toISOString(),
+      verifiedBy: currentAdminUid,
+      adminEmail: currentAdminEmail,
+      verifiedAt: serverTimestamp(),
+      verifiedAtIso: nowIso,
       timeline: newTimeline,
-      updatedAt: new Date().toISOString(),
+      updatedAt: nowIso,
     });
+
+    // Use setDoc with merge to ensure atomic update and avoid not-found errors
+    await setDoc(docRef, payload, { merge: true });
   },
 
   async getOrdersByStore(storeId: string, onlyPaid: boolean = true): Promise<Order[]> {

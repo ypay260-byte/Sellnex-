@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { P2PPayment, AdminSettings, DynamicPlan, User, PlanType, Order, Store } from '../../../types';
 import { firestoreService } from '../../../services/firestoreService';
 import {
@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   FileCheck,
   ShoppingBag,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface AdminPaymentsTabProps {
@@ -33,6 +34,7 @@ interface AdminPaymentsTabProps {
   orders?: Order[];
   stores?: Store[];
   adminEmail: string;
+  adminUid?: string;
   onRefresh: () => Promise<void>;
   showToast: (title: string, desc?: string, type?: 'success' | 'error' | 'info') => void;
   formatMoney: (amount: number) => string;
@@ -46,6 +48,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
   orders = [],
   stores = [],
   adminEmail,
+  adminUid,
   onRefresh,
   showToast,
   formatMoney,
@@ -57,16 +60,46 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [selectedPayment, setSelectedPayment] = useState<P2PPayment | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
+  const [processingAction, setProcessingAction] = useState<'confirm' | 'reject' | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [viewScreenshot, setViewScreenshot] = useState<string | null>(null);
 
   // Orders verification state
+  const [localOrders, setLocalOrders] = useState<Order[]>(orders);
   const [orderFilter, setOrderFilter] = useState<'all' | 'pending_verification' | 'paid' | 'rejected'>(
     'pending_verification'
   );
   const [orderSearch, setOrderSearch] = useState('');
   const [rejectOrderModal, setRejectOrderModal] = useState<Order | null>(null);
   const [orderRejectReason, setOrderRejectReason] = useState('');
+
+  useEffect(() => {
+    setLocalOrders(orders);
+  }, [orders]);
+
+  // Handle back button event
+  useEffect(() => {
+    const handleBack = (e: Event) => {
+      if (viewScreenshot) {
+        setViewScreenshot(null);
+        e.preventDefault();
+        return;
+      }
+      if (rejectOrderModal) {
+        setRejectOrderModal(null);
+        e.preventDefault();
+        return;
+      }
+      if (selectedPayment) {
+        setSelectedPayment(null);
+        e.preventDefault();
+        return;
+      }
+    };
+    window.addEventListener('admin-back-pressed', handleBack);
+    return () => window.removeEventListener('admin-back-pressed', handleBack);
+  }, [viewScreenshot, rejectOrderModal, selectedPayment]);
 
   // P2P Card Settings Config State
   const [cardNumber, setCardNumber] = useState(settings?.p2pCardNumber || '8600 3141 7549 7736');
@@ -76,7 +109,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
     settings?.p2pInstructions || 'Iltimos, kartaga toʻlov qiling va chek skrinshotini yuklang. Admin 15 daqiqada tasdiqlaydi.'
   );
 
-  const pendingOrdersCount = orders.filter((o) => o.paymentStatus === 'pending_verification').length;
+  const pendingOrdersCount = localOrders.filter((o) => o.paymentStatus === 'pending_verification').length;
   const pendingSubsCount = p2pPayments.filter((p) => p.status === 'pending').length;
 
   const filteredPayments = p2pPayments.filter((p) => {
@@ -84,7 +117,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
     return p.status === statusFilter;
   });
 
-  const filteredOrders = orders.filter((o) => {
+  const filteredOrders = localOrders.filter((o) => {
     const term = orderSearch.toLowerCase();
     const matchesSearch =
       o.id.toLowerCase().includes(term) ||
@@ -104,13 +137,13 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
   const recordAudit = async (action: string, targetId: string, oldVal: any, newVal: any) => {
     try {
       await firestoreService.createAuditLog({
-        adminEmail,
+        adminEmail: adminEmail || 'ypay260@gmail.com',
         action,
         targetType: 'p2p_payment',
         targetId,
         oldValue: oldVal,
         newValue: newVal,
-        details: `Payment action by ${adminEmail}`,
+        details: `Payment action by ${adminUid || adminEmail}`,
         userAgent: navigator.userAgent,
       });
     } catch (err) {
@@ -120,45 +153,102 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
 
   // 1. ORDER PAYMENT: CONFIRM
   const handleConfirmOrderPayment = async (order: Order) => {
+    if (processingOrderId) return;
+    setProcessingOrderId(order.id);
+    setProcessingAction('confirm');
     setIsProcessing(true);
+
+    const targetUid = adminUid || 'admin_kamoliddin_5021';
+    const targetEmail = adminEmail || 'ypay260@gmail.com';
+    const nowIso = new Date().toISOString();
+
+    // Optimistic UI update
+    setLocalOrders((prev) =>
+      prev.map((o) =>
+        o.id === order.id
+          ? {
+              ...o,
+              paymentStatus: 'paid',
+              orderStatus: 'confirmed',
+              verifiedBy: targetUid,
+              adminEmail: targetEmail,
+              verifiedAt: nowIso,
+            }
+          : o
+      )
+    );
+
     try {
-      await firestoreService.confirmOrderPayment(order.id, adminEmail);
+      await firestoreService.confirmOrderPayment(order.id, targetUid, targetEmail);
       await recordAudit(
         'confirm_order_payment',
         order.id,
         { paymentStatus: order.paymentStatus },
         { paymentStatus: 'paid', orderStatus: 'confirmed' }
       );
-      showToast('To‘lov Tasdiqlandi', `Buyurtma ${order.orderNumber} to‘lovi muvaffaqiyatli tasdiqlandi.`, 'success');
+      showToast('To‘lov tasdiqlandi', `Buyurtma ${order.orderNumber || order.id} to‘lovi muvaffaqiyatli tasdiqlandi.`, 'success');
       await onRefresh();
     } catch (err: any) {
-      showToast('Tasdiqlashda xatolik', err.message, 'error');
+      console.error('Confirm order payment error:', err);
+      showToast('Amalni bajarib bo‘lmadi. Qayta urinib ko‘ring.', err?.message || 'Xatolik yuz berdi', 'error');
+      await onRefresh();
     } finally {
       setIsProcessing(false);
+      setProcessingOrderId(null);
+      setProcessingAction(null);
     }
   };
 
   // 2. ORDER PAYMENT: REJECT
   const handleRejectOrderPayment = async () => {
-    if (!rejectOrderModal) return;
+    if (!rejectOrderModal || processingOrderId) return;
+    const targetOrder = rejectOrderModal;
+    setProcessingOrderId(targetOrder.id);
+    setProcessingAction('reject');
     setIsProcessing(true);
+
+    const targetUid = adminUid || 'admin_kamoliddin_5021';
+    const targetEmail = adminEmail || 'ypay260@gmail.com';
+    const nowIso = new Date().toISOString();
+    const reason = orderRejectReason.trim() || 'To‘lov cheki tasdiqlanmadi';
+
+    // Optimistic UI update
+    setLocalOrders((prev) =>
+      prev.map((o) =>
+        o.id === targetOrder.id
+          ? {
+              ...o,
+              paymentStatus: 'rejected',
+              orderStatus: 'rejected',
+              receiptRejectedReason: reason,
+              verifiedBy: targetUid,
+              adminEmail: targetEmail,
+              verifiedAt: nowIso,
+            }
+          : o
+      )
+    );
+
     try {
-      const reason = orderRejectReason.trim() || 'To‘lov cheki tasdiqlanmadi';
-      await firestoreService.rejectOrderPayment(rejectOrderModal.id, reason, adminEmail);
+      await firestoreService.rejectOrderPayment(targetOrder.id, reason, targetUid, targetEmail);
       await recordAudit(
         'reject_order_payment',
-        rejectOrderModal.id,
-        { paymentStatus: rejectOrderModal.paymentStatus },
+        targetOrder.id,
+        { paymentStatus: targetOrder.paymentStatus },
         { paymentStatus: 'rejected', reason }
       );
-      showToast('To‘lov Rad Etildi', `Buyurtma ${rejectOrderModal.orderNumber} to‘lovi rad etildi.`, 'info');
+      showToast('To‘lov rad etildi', `Buyurtma ${targetOrder.orderNumber || targetOrder.id} to‘lovi rad etildi.`, 'info');
       setRejectOrderModal(null);
       setOrderRejectReason('');
       await onRefresh();
     } catch (err: any) {
-      showToast('Rad etishda xatolik', err.message, 'error');
+      console.error('Reject order payment error:', err);
+      showToast('Amalni bajarib bo‘lmadi. Qayta urinib ko‘ring.', err?.message || 'Xatolik yuz berdi', 'error');
+      await onRefresh();
     } finally {
       setIsProcessing(false);
+      setProcessingOrderId(null);
+      setProcessingAction(null);
     }
   };
 
@@ -437,8 +527,17 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                         onClick={() => handleConfirmOrderPayment(o)}
                         className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Confirm Payment</span>
+                        {isProcessing && processingOrderId === o.id && processingAction === 'confirm' ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Tasdiqlanmoqda...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Confirm Payment</span>
+                          </>
+                        )}
                       </button>
 
                       {/* Reject Payment Button */}
@@ -449,10 +548,19 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                           setRejectOrderModal(o);
                           setOrderRejectReason(o.receiptRejectedReason || '');
                         }}
-                        className="px-3 py-2 rounded-xl bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                        className="px-3 py-2 rounded-xl bg-rose-950 hover:bg-rose-900 disabled:opacity-50 text-rose-300 border border-rose-800 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
                       >
-                        <XCircle className="w-3.5 h-3.5" />
-                        <span>Reject</span>
+                        {isProcessing && processingOrderId === o.id && processingAction === 'reject' ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Rad etilmoqda...</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Reject</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -648,13 +756,24 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h4 className="font-bold text-white text-sm">To‘lov Chekini Rad Etish</h4>
-              <button onClick={() => setRejectOrderModal(null)} className="text-slate-400 hover:text-white">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectOrderModal(null)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold cursor-pointer"
+                  title="Ortga qaytish"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Ortga</span>
+                </button>
+                <h4 className="font-bold text-white text-sm">To‘lov Chekini Rad Etish</h4>
+              </div>
+              <button onClick={() => setRejectOrderModal(null)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <p className="text-xs text-slate-300">
-              Buyurtma <strong>{rejectOrderModal.orderNumber}</strong> uchun to‘lov chekini rad etish sababini yozing:
+              Buyurtma <strong>{rejectOrderModal.orderNumber || rejectOrderModal.id}</strong> uchun to‘lov chekini rad etish sababini yozing:
             </p>
             <textarea
               value={orderRejectReason}
@@ -665,16 +784,23 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setRejectOrderModal(null)}
-                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold"
+                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
               >
                 Bekor qilish
               </button>
               <button
                 onClick={handleRejectOrderPayment}
                 disabled={isProcessing}
-                className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
               >
-                Rad etish
+                {isProcessing && processingAction === 'reject' ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Rad etilmoqda...</span>
+                  </>
+                ) : (
+                  <span>Rad etish</span>
+                )}
               </button>
             </div>
           </div>
@@ -692,8 +818,19 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-              <span className="text-xs font-bold text-white">To‘lov Cheki Skrinshoti</span>
-              <button onClick={() => setViewScreenshot(null)} className="text-slate-400 hover:text-white">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setViewScreenshot(null)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold cursor-pointer"
+                  title="Ortga qaytish"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Ortga</span>
+                </button>
+                <span className="text-xs font-bold text-white">To‘lov Cheki Skrinshoti</span>
+              </div>
+              <button onClick={() => setViewScreenshot(null)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>

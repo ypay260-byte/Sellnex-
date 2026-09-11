@@ -396,6 +396,7 @@ export const AdminView: React.FC = () => {
                   stores={stores}
                   users={users}
                   adminEmail={currentUser.email}
+                  adminUid={currentUser.id || (currentUser as any).uid}
                   onRefresh={loadAllAdminData}
                   showToast={showToast}
                   formatMoney={formatMoney}
@@ -411,6 +412,7 @@ export const AdminView: React.FC = () => {
                   orders={orders}
                   stores={stores}
                   adminEmail={currentUser.email}
+                  adminUid={currentUser.id || (currentUser as any).uid}
                   onRefresh={loadAllAdminData}
                   showToast={showToast}
                   formatMoney={formatMoney}
