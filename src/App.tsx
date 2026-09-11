@@ -39,6 +39,13 @@ import { SettingsView } from './views/SettingsView';
 import { AdminLogin } from './views/admin/AdminLogin';
 import { AdminView } from './views/admin/AdminView';
 
+// Restaurant Mode Views
+import { PublicRestaurantView } from './views/restaurant/PublicRestaurantView';
+import { RestaurantDashboardView } from './views/restaurant/RestaurantDashboardView';
+import { RestaurantMenuView } from './views/restaurant/RestaurantMenuView';
+import { RestaurantSettingsView } from './views/restaurant/RestaurantSettingsView';
+import { RestaurantOnboarding } from './views/restaurant/RestaurantOnboarding';
+
 const PUBLIC_ROUTES = [
   'landing',
   'auth',
@@ -52,6 +59,9 @@ const PUBLIC_ROUTES = [
   'admin-panel',
   'admin',
   'store',
+  'restaurant',
+  'r',
+  'restaurant-onboarding',
 ];
 
 const MainAppContent: React.FC = () => {
@@ -138,6 +148,31 @@ const MainAppContent: React.FC = () => {
     );
   }
 
+  if (currentRoute === 'restaurant-onboarding') {
+    return (
+      <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-slate-50">
+        <RestaurantOnboarding />
+        <DeviceSelectorModal />
+        <ToastContainer />
+      </div>
+    );
+  }
+
+  if (
+    currentRoute === 'restaurant' ||
+    currentRoute === 'r' ||
+    currentRoute.startsWith('restaurant/') ||
+    currentRoute.startsWith('r/')
+  ) {
+    return (
+      <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-slate-50">
+        <PublicRestaurantView />
+        <DeviceSelectorModal />
+        <ToastContainer />
+      </div>
+    );
+  }
+
   if (
     currentRoute === 'public-store' ||
     currentRoute === 'store' ||
@@ -185,7 +220,34 @@ const MainAppContent: React.FC = () => {
 
   // Back-office Merchant Shell Layout (For Authenticated Sellers)
   const renderDashboardRoute = () => {
+    const isRestaurantUser = currentUser?.businessType === 'restaurant';
+
+    if (isRestaurantUser) {
+      switch (currentRoute) {
+        case 'restaurant-dashboard':
+        case 'dashboard':
+        case 'orders':
+          return <RestaurantDashboardView />;
+        case 'restaurant-menu':
+        case 'products':
+          return <RestaurantMenuView />;
+        case 'restaurant-settings':
+        case 'settings':
+          return <RestaurantSettingsView />;
+        case 'pricing':
+          return <PricingView />;
+        default:
+          return <RestaurantDashboardView />;
+      }
+    }
+
     switch (currentRoute) {
+      case 'restaurant-dashboard':
+        return <RestaurantDashboardView />;
+      case 'restaurant-menu':
+        return <RestaurantMenuView />;
+      case 'restaurant-settings':
+        return <RestaurantSettingsView />;
       case 'dashboard':
         return <DashboardView />;
       case 'products':

@@ -22,6 +22,7 @@ export interface SignUpParams {
   phone: string;
   password?: string;
   confirmPassword?: string;
+  businessType?: 'store' | 'restaurant';
 }
 
 export function validatePasswordRequirements(password: string): {
@@ -240,6 +241,7 @@ export const authService = {
     phone,
     password,
     confirmPassword,
+    businessType = 'store',
   }: SignUpParams): Promise<{ success: boolean; pendingRegistration?: PendingRegistration; user?: User; error?: string }> {
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
@@ -343,6 +345,7 @@ export const authService = {
         email: cleanEmail,
         phone: cleanPhone,
         role: 'seller',
+        businessType: businessType || 'store',
         plan: 'trial',
         status: 'active',
         subscriptionStatus: 'active',

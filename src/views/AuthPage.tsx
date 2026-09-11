@@ -30,6 +30,7 @@ export const AuthPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [businessType, setBusinessType] = useState<'store' | 'restaurant'>('store');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [resetSuccessMsg, setResetSuccessMsg] = useState('');
@@ -56,6 +57,8 @@ export const AuthPage: React.FC = () => {
       if (res.success) {
         if (res.user?.role === 'admin') {
           navigateTo('admin');
+        } else if (res.user?.businessType === 'restaurant') {
+          navigateTo('restaurant-dashboard');
         } else {
           navigateTo('dashboard');
         }
@@ -95,11 +98,16 @@ export const AuthPage: React.FC = () => {
         phone: phone.trim(),
         password,
         confirmPassword,
+        businessType,
       });
 
       setLoading(false);
       if (res.success) {
-        navigateTo('onboarding');
+        if (businessType === 'restaurant') {
+          navigateTo('restaurant-onboarding');
+        } else {
+          navigateTo('onboarding');
+        }
       } else {
         setErrorMsg(res.error || 'Failed to create account.');
       }
@@ -229,6 +237,60 @@ export const AuthPage: React.FC = () => {
                         placeholder="+998 90 123 45 67"
                         className="block w-full pl-9 pr-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-hidden"
                       />
+                    </div>
+                  </div>
+                )}
+
+                {/* Business Type Selection */}
+                {mode === 'signup' && (
+                  <div className="pt-1 pb-1 space-y-2">
+                    <label className="block text-xs font-bold text-slate-800">
+                      Sellnex'dan qanday foydalanmoqchisiz?
+                    </label>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        id="select-type-store"
+                        onClick={() => setBusinessType('store')}
+                        className={`p-3 rounded-2xl border-2 text-left transition relative flex flex-col justify-between ${
+                          businessType === 'store'
+                            ? 'border-blue-600 bg-blue-50/60 shadow-xs'
+                            : 'border-slate-200 hover:border-slate-300 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xl">🛍️</span>
+                          {businessType === 'store' && (
+                            <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900 leading-tight">Online do‘kon</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Mahsulot sotish, savat va do‘kon</p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        id="select-type-restaurant"
+                        onClick={() => setBusinessType('restaurant')}
+                        className={`p-3 rounded-2xl border-2 text-left transition relative flex flex-col justify-between ${
+                          businessType === 'restaurant'
+                            ? 'border-amber-600 bg-amber-50/60 shadow-xs'
+                            : 'border-slate-200 hover:border-slate-300 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xl">🍽️</span>
+                          {businessType === 'restaurant' && (
+                            <CheckCircle2 className="w-4 h-4 text-amber-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900 leading-tight">Restoran / Kafe</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Menyu, taomlar, Telegram bot</p>
+                        </div>
+                      </button>
                     </div>
                   </div>
                 )}

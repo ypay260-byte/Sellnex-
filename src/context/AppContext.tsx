@@ -109,6 +109,7 @@ interface AppContextType {
   adminLogin: (email: string, password?: string, twoFactorCode?: string) => Promise<{ success: boolean; user?: User; error?: string }>;
   signUp: (data: SignUpParams) => Promise<{ success: boolean; error?: string }>;
   completeOnboarding: (onboardingData: OnboardingData) => Promise<{ success: boolean; error?: string }>;
+  switchBusinessType?: (type: 'store' | 'restaurant') => Promise<void>;
   logout: () => void;
   isLoadingAuth: boolean;
 
@@ -268,6 +269,44 @@ export function parseLocationRoute(
       route: 'checkout',
       params: { storeId: sId, storeSlug: sSlug, orderId: oId },
       storeIdToLoad: sId || undefined,
+    };
+  }
+
+  // 0.1 Restaurant Telegram Action Handling: ?restaurantAction=accept&orderId=...
+  const tgAction = searchParams.get('restaurantAction') || searchParams.get('orderAction') || hashParams?.get('restaurantAction');
+  const tgOrderId = searchParams.get('orderId') || hashParams?.get('orderId');
+  if (tgAction && tgOrderId) {
+    return {
+      route: 'restaurant-dashboard',
+      params: { restaurantAction: tgAction, orderId: tgOrderId },
+    };
+  }
+
+  // 0.2 Public Restaurant Direct Path: /restaurant/:slug, /r/:slug, #restaurant/:slug, ?restaurantSlug=...
+  if (lowerPath.startsWith('restaurant/') || lowerPath.startsWith('r/')) {
+    const parts = cleanPath.split('/').filter(Boolean);
+    const slug = parts[1] ? decodeURIComponent(parts[1]).trim() : 'osh-markazi';
+    return {
+      route: 'restaurant',
+      params: { restaurantSlug: slug, slug },
+    };
+  }
+
+  if (lowerHash.startsWith('restaurant/') || lowerHash.startsWith('r/')) {
+    const parts = cleanHash.split('/').filter(Boolean);
+    const slug = parts[1] ? decodeURIComponent(parts[1]).trim() : 'osh-markazi';
+    return {
+      route: 'restaurant',
+      params: { restaurantSlug: slug, slug },
+    };
+  }
+
+  const qRestaurant = searchParams.get('restaurantSlug') || searchParams.get('restaurant') || searchParams.get('r') || hashParams?.get('restaurantSlug') || hashParams?.get('restaurant');
+  if (qRestaurant) {
+    const slug = decodeURIComponent(qRestaurant).trim();
+    return {
+      route: 'restaurant',
+      params: { restaurantSlug: slug, slug },
     };
   }
 
@@ -1275,6 +1314,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
+  const switchBusinessType = async (type: 'store' | 'restaurant') => {
+    const activeUser = currentUser || Storage.getCurrentUser();
+    if (!activeUser) return;
+    try {
+      const updatedUser: User = { ...activeUser, businessType: type };
+      await firestoreService.setUser(activeUser.id, updatedUser);
+      setCurrentUserState(updatedUser);
+      Storage.setCurrentUser(updatedUser);
+      showToast(
+        'Rejim yangilandi',
+        type === 'restaurant' ? 'Restoran / Kafe rejimiga o‘tildi' : 'Online do‘kon rejimiga o‘tildi',
+        'success'
+      );
+      if (type === 'restaurant') {
+        navigateTo('restaurant-dashboard');
+      } else {
+        navigateTo('dashboard');
+      }
+    } catch (e: any) {
+      showToast('Xatolik', e.message || 'Rejimni o‘zgartirib bo‘lmadi', 'error');
+    }
+  };
+
+  // Handle Telegram Order Quick Action URL (?restaurantAction=accept&orderId=...)
+  useEffect(() => {
+    if (routeParams?.restaurantAction && routeParams?.orderId) {
+      const act = routeParams.restaurantAction;
+      const oId = routeParams.orderId;
+      const targetStatus = act === 'accept' ? 'preparing' : act === 'reject' ? 'cancelled' : 'preparing';
+
+      firestoreService.updateRestaurantOrderStatus(oId, targetStatus as any)
+        .then(() => {
+          showToast(
+            'Telegram orqali yangilandi',
+            `Buyurtma holati "${targetStatus === 'preparing' ? 'Qabul qilindi / Tayyorlanmoqda' : 'Bekor qilindi'}" deb belgilandi.`,
+            'info'
+          );
+        })
+        .catch((err) => {
+          console.warn('Telegram action update error:', err);
+        });
+    }
+  }, [routeParams?.restaurantAction, routeParams?.orderId]);
+
   // === PRODUCT ACTIONS (FIRESTORE PERSISTENT + PLAN LIMIT ENFORCEMENT) ===
   const refreshProducts = async () => {
     if (store.id || currentUser?.id) {
@@ -1811,6 +1894,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         pendingRegistration,
         setPendingRegistration,
         completeOnboarding,
+        switchBusinessType,
         login,
         adminLogin,
         signUp,

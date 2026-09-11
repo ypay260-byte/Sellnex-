@@ -21,6 +21,8 @@ export interface PendingRegistration {
 
 export type PlanType = 'trial' | 'starter' | 'pro' | 'free' | 'full' | 'premium' | 'premium_pro' | 'business' | 'custom';
 
+export type BusinessType = 'store' | 'restaurant';
+
 export interface User {
   id: string;
   name: string;
@@ -28,6 +30,8 @@ export interface User {
   phone: string;
   role: UserRole;
   storeId?: string;
+  restaurantId?: string;
+  businessType?: BusinessType;
   plan: PlanType;
   status: 'active' | 'suspended' | 'expired';
   subscriptionStatus?: 'active' | 'expired' | 'trial';
@@ -96,6 +100,7 @@ export interface Store {
   sellerCardNumber?: string;
   sellerCardHolder?: string;
   sellerBankName?: string;
+  businessType?: BusinessType;
   deliveryOptions?: StoreDeliveryOption[];
   createdAt: string;
   updatedAt?: string;
@@ -505,3 +510,78 @@ export interface AdminSettings {
   notifyOnOrder?: boolean;
   updatedAt?: string;
 }
+
+// === RESTAURANT MODE TYPES ===
+export interface RestaurantAddon {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface MenuItem {
+  id: string;
+  restaurantId: string;
+  ownerId?: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  image: string;
+  isAvailable: boolean;
+  addons?: RestaurantAddon[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type RestaurantOrderStatus = 'new' | 'preparing' | 'delivering' | 'delivered' | 'cancelled';
+
+export interface RestaurantOrderItem {
+  menuItemId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  selectedAddons?: RestaurantAddon[];
+  totalPrice: number;
+}
+
+export interface RestaurantOrder {
+  id: string;
+  orderNumber: string; // e.g. #1024
+  restaurantId: string;
+  ownerId?: string;
+  customerName: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  deliveryNotes?: string;
+  notes?: string;
+  orderType?: 'dine_in' | 'takeaway' | 'delivery';
+  tableNumber?: string;
+  items: RestaurantOrderItem[];
+  subtotal: number;
+  deliveryFee: number;
+  totalAmount: number;
+  status: RestaurantOrderStatus;
+  paymentMethod: 'cash' | 'click' | 'payme' | 'card';
+  paymentStatus?: 'pending' | 'paid';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface RestaurantProfile {
+  id: string;
+  ownerId: string;
+  name: string;
+  slug: string;
+  logo: string;
+  phone: string;
+  address: string;
+  workingHours: string; // e.g. "09:00 - 23:00"
+  deliveryFee: number; // e.g. 15000
+  description: string;
+  telegramBotToken?: string;
+  telegramChatId?: string;
+  isOpen?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+

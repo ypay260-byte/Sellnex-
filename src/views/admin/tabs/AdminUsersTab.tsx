@@ -46,6 +46,7 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'trial' | 'starter' | 'pro' | 'business' | 'premium'>('all');
+  const [businessTypeFilter, setBusinessTypeFilter] = useState<'all' | 'store' | 'restaurant'>('all');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [adminNoteText, setAdminNoteText] = useState('');
@@ -68,6 +69,10 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
       u.id.toLowerCase().includes(term);
 
     if (!matchesSearch) return false;
+
+    // Business type filter
+    if (businessTypeFilter === 'restaurant' && u.businessType !== 'restaurant') return false;
+    if (businessTypeFilter === 'store' && u.businessType === 'restaurant') return false;
 
     if (statusFilter === 'all') return true;
     if (statusFilter === 'active') return u.status === 'active';
@@ -210,6 +215,23 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
     }
   };
 
+  // Switch Business Type (Store vs Restaurant)
+  const handleUpdateBusinessType = async (newType: 'store' | 'restaurant') => {
+    if (!selectedUser) return;
+    setIsProcessing(true);
+    try {
+      await firestoreService.updateUser(selectedUser.id, { businessType: newType });
+      await recordAudit('change_business_type', selectedUser.id, { businessType: selectedUser.businessType }, { businessType: newType });
+      showToast('Biznes turi o‘zgartirildi', `Foydalanuvchi rejimi: ${newType === 'restaurant' ? 'Restoran / Kafe' : 'Online do‘kon'}`, 'success');
+      setSelectedUser({ ...selectedUser, businessType: newType });
+      await onRefresh();
+    } catch (err: any) {
+      showToast('Action Failed', err.message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Add Admin Note
   const handleAddAdminNote = async () => {
     if (!selectedUser || !adminNoteText.trim()) return;
@@ -274,6 +296,40 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
 
         {/* Filter Pills */}
         <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
+          {/* Business Type Selector */}
+          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-0.5 mr-2">
+            <button
+              onClick={() => setBusinessTypeFilter('all')}
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                businessTypeFilter === 'all'
+                  ? 'bg-slate-800 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Hammasi
+            </button>
+            <button
+              onClick={() => setBusinessTypeFilter('store')}
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                businessTypeFilter === 'store'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🛍️ Do‘kon
+            </button>
+            <button
+              onClick={() => setBusinessTypeFilter('restaurant')}
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                businessTypeFilter === 'restaurant'
+                  ? 'bg-amber-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🍽️ Restoran
+            </button>
+          </div>
+
           {(
             [
               { id: 'all', label: 'Barchasi' },
@@ -316,8 +372,9 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
             <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
               <tr>
                 <th className="py-3.5 px-4 font-semibold">Foydalanuvchi & UID</th>
+                <th className="py-3.5 px-4 font-semibold">Biznes Turi</th>
                 <th className="py-3.5 px-4 font-semibold">Aloqa</th>
-                <th className="py-3.5 px-4 font-semibold">Do'koni</th>
+                <th className="py-3.5 px-4 font-semibold">Do'koni / Restorani</th>
                 <th className="py-3.5 px-4 font-semibold">Tarif & Holat</th>
                 <th className="py-3.5 px-4 font-semibold">Ro'yxatdan o'tgan</th>
                 <th className="py-3.5 px-4 font-semibold text-right">Amallar</th>
@@ -326,13 +383,14 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
             <tbody className="divide-y divide-slate-800/80 text-slate-300">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-slate-500">
+                  <td colSpan={7} className="text-center py-10 text-slate-500">
                     Filtr bo'yicha foydalanuvchi topilmadi.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => {
                   const userStore = storeMap.get(user.id) || (user.storeId ? storeMap.get(user.storeId) : undefined);
+                  const isRestaurant = user.businessType === 'restaurant';
                   return (
                     <tr
                       key={user.id}
@@ -359,6 +417,18 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
                       </td>
 
                       <td className="py-3.5 px-4">
+                        {isRestaurant ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">
+                            🍽️ Restoran
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-800">
+                            🛍️ Do‘kon
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4">
                         <div className="space-y-0.5">
                           <div className="text-slate-200 flex items-center gap-1">
                             <Mail className="w-3 h-3 text-slate-500" />
@@ -379,7 +449,9 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
                             {userStore.name}
                           </div>
                         ) : (
-                          <span className="text-slate-500 text-[11px]">Do'kon ochilmagan</span>
+                          <span className="text-slate-500 text-[11px]">
+                            {isRestaurant ? 'Restoran menyusi' : 'Do\'kon ochilmagan'}
+                          </span>
                         )}
                       </td>
 
@@ -532,6 +604,44 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
                       : 'PREMIUM (110)'}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Action Group: Business Type Modifier (Store vs Restaurant) */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🏪 Biznes Turi (Rejim)</span>
+                </span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${selectedUser.businessType === 'restaurant' ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-blue-950 text-blue-300 border border-blue-800'}`}>
+                  {selectedUser.businessType === 'restaurant' ? '🍽️ Restoran / Kafe' : '🛍️ Online do‘kon'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={() => handleUpdateBusinessType('store')}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 border ${
+                    selectedUser.businessType !== 'restaurant'
+                      ? 'bg-blue-600 text-white border-blue-500'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>🛍️ Online do‘kon</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={() => handleUpdateBusinessType('restaurant')}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 border ${
+                    selectedUser.businessType === 'restaurant'
+                      ? 'bg-amber-600 text-white border-amber-500'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>🍽️ Restoran / Kafe</span>
+                </button>
               </div>
             </div>
 

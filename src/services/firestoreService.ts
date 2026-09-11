@@ -41,6 +41,10 @@ import {
   Dispute,
   DynamicPlan,
   AdminSettings,
+  RestaurantProfile,
+  MenuItem,
+  RestaurantOrder,
+  RestaurantOrderStatus,
 } from '../types';
 import {
   INITIAL_STORE,
@@ -69,6 +73,9 @@ export const COLLECTIONS = {
   DISPUTES: 'disputes',
   ADMIN_SETTINGS: 'admin_settings',
   ADMIN_NOTIFICATIONS: 'admin_notifications',
+  RESTAURANTS: 'restaurants',
+  MENU_ITEMS: 'menu_items',
+  RESTAURANT_ORDERS: 'restaurant_orders',
 } as const;
 
 // Helper to strip undefined fields for Firestore setDoc / updateDoc compatibility
@@ -1326,6 +1333,193 @@ export const firestoreService = {
         reader.onerror = () => resolve('');
         reader.readAsDataURL(file);
       });
+    }
+  },
+
+  // === RESTAURANT MODE CRUD & REALTIME ===
+  async getRestaurantByOwner(ownerId: string): Promise<RestaurantProfile | null> {
+    try {
+      const q = query(collection(db, COLLECTIONS.RESTAURANTS), where('ownerId', '==', ownerId));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        return { id: snap.docs[0].id, ...snap.docs[0].data() } as RestaurantProfile;
+      }
+      return null;
+    } catch (e) {
+      console.error('Failed to get restaurant by owner', e);
+      return null;
+    }
+  },
+
+  async getRestaurantBySlug(slug: string): Promise<RestaurantProfile | null> {
+    try {
+      const cleanSlug = slug.toLowerCase().trim();
+      const q = query(collection(db, COLLECTIONS.RESTAURANTS), where('slug', '==', cleanSlug));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        return { id: snap.docs[0].id, ...snap.docs[0].data() } as RestaurantProfile;
+      }
+      const docRef = doc(db, COLLECTIONS.RESTAURANTS, cleanSlug);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as RestaurantProfile;
+      }
+      return null;
+    } catch (e) {
+      console.error('Failed to get restaurant by slug', e);
+      return null;
+    }
+  },
+
+  async getRestaurantById(id: string): Promise<RestaurantProfile | null> {
+    try {
+      const docRef = doc(db, COLLECTIONS.RESTAURANTS, id);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        return { id: snap.id, ...snap.data() } as RestaurantProfile;
+      }
+      return null;
+    } catch (e) {
+      console.error('Failed to get restaurant by ID', e);
+      return null;
+    }
+  },
+
+  async saveRestaurant(restaurant: RestaurantProfile): Promise<void> {
+    try {
+      const docRef = doc(db, COLLECTIONS.RESTAURANTS, restaurant.id);
+      await setDoc(docRef, sanitizeData({ ...restaurant, updatedAt: new Date().toISOString() }), { merge: true });
+    } catch (e) {
+      console.error('Failed to save restaurant', e);
+      throw e;
+    }
+  },
+
+  async getMenuItems(restaurantId: string): Promise<MenuItem[]> {
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.MENU_ITEMS),
+        where('restaurantId', '==', restaurantId)
+      );
+      const snap = await getDocs(q);
+      const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as MenuItem));
+      return items.sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+    } catch (e) {
+      console.error('Failed to get menu items', e);
+      return [];
+    }
+  },
+
+  async saveMenuItem(item: MenuItem): Promise<MenuItem> {
+    try {
+      const id = item.id || `dish_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const docRef = doc(db, COLLECTIONS.MENU_ITEMS, id);
+      const payload: MenuItem = {
+        ...item,
+        id,
+        updatedAt: new Date().toISOString(),
+        createdAt: item.createdAt || new Date().toISOString(),
+      };
+      await setDoc(docRef, sanitizeData(payload), { merge: true });
+      return payload;
+    } catch (e) {
+      console.error('Failed to save menu item', e);
+      throw e;
+    }
+  },
+
+  async deleteMenuItem(id: string): Promise<void> {
+    try {
+      const docRef = doc(db, COLLECTIONS.MENU_ITEMS, id);
+      await deleteDoc(docRef);
+    } catch (e) {
+      console.error('Failed to delete menu item', e);
+      throw e;
+    }
+  },
+
+  async getRestaurantOrders(restaurantId: string): Promise<RestaurantOrder[]> {
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.RESTAURANT_ORDERS),
+        where('restaurantId', '==', restaurantId)
+      );
+      const snap = await getDocs(q);
+      const orders = snap.docs.map(d => ({ id: d.id, ...d.data() } as RestaurantOrder));
+      return orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (e) {
+      console.error('Failed to get restaurant orders', e);
+      return [];
+    }
+  },
+
+  async createRestaurantOrder(orderData: Omit<RestaurantOrder, 'id' | 'orderNumber' | 'createdAt'>): Promise<RestaurantOrder> {
+    try {
+      const id = `rorder_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const orderNum = Math.floor(1000 + Math.random() * 9000).toString();
+      const newOrder: RestaurantOrder = {
+        ...orderData,
+        id,
+        orderNumber: orderNum,
+        createdAt: new Date().toISOString(),
+        status: orderData.status || 'new',
+      };
+      const docRef = doc(db, COLLECTIONS.RESTAURANT_ORDERS, id);
+      await setDoc(docRef, sanitizeData(newOrder));
+      return newOrder;
+    } catch (e) {
+      console.error('Failed to create restaurant order', e);
+      throw e;
+    }
+  },
+
+  async updateRestaurantOrderStatus(orderId: string, status: RestaurantOrderStatus): Promise<void> {
+    try {
+      const docRef = doc(db, COLLECTIONS.RESTAURANT_ORDERS, orderId);
+      await updateDoc(docRef, sanitizeData({ status, updatedAt: new Date().toISOString() }));
+    } catch (e) {
+      console.error('Failed to update restaurant order status', e);
+      throw e;
+    }
+  },
+
+  subscribeRestaurantOrders(restaurantId: string, callback: (orders: RestaurantOrder[]) => void): () => void {
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.RESTAURANT_ORDERS),
+        where('restaurantId', '==', restaurantId)
+      );
+      return onSnapshot(q, (snapshot) => {
+        const orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as RestaurantOrder));
+        orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        callback(orders);
+      }, (err) => {
+        console.warn('subscribeRestaurantOrders error:', err);
+      });
+    } catch (e) {
+      console.error('Failed to subscribe to restaurant orders', e);
+      return () => {};
+    }
+  },
+
+  async getAllRestaurants(): Promise<RestaurantProfile[]> {
+    try {
+      const snap = await getDocs(collection(db, COLLECTIONS.RESTAURANTS));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as RestaurantProfile));
+    } catch (e) {
+      console.error('Failed to get all restaurants', e);
+      return [];
+    }
+  },
+
+  async getAllRestaurantOrders(): Promise<RestaurantOrder[]> {
+    try {
+      const snap = await getDocs(collection(db, COLLECTIONS.RESTAURANT_ORDERS));
+      const orders = snap.docs.map(d => ({ id: d.id, ...d.data() } as RestaurantOrder));
+      return orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (e) {
+      console.error('Failed to get all restaurant orders', e);
+      return [];
     }
   },
 };

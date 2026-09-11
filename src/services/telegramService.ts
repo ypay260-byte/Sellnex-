@@ -1,4 +1,4 @@
-import { Order } from '../types';
+import { Order, RestaurantOrder, RestaurantProfile } from '../types';
 
 export interface TelegramConfig {
   botToken: string;
@@ -94,9 +94,14 @@ export const telegramService = {
     }
   },
 
-  async sendMessage(text: string, targetChatId?: string): Promise<{ success: boolean; error?: string }> {
+  async sendMessage(
+    text: string,
+    targetChatId?: string,
+    replyMarkup?: any,
+    customToken?: string
+  ): Promise<{ success: boolean; error?: string }> {
     const config = this.getConfig();
-    const token = config.botToken || DEFAULT_BOT_TOKEN;
+    const token = customToken || config.botToken || DEFAULT_BOT_TOKEN;
     const chatId = targetChatId || config.chatId;
 
     if (!chatId) {
@@ -105,17 +110,23 @@ export const telegramService = {
     }
 
     try {
+      const payload: any = {
+        chat_id: chatId,
+        text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      };
+
+      if (replyMarkup) {
+        payload.reply_markup = replyMarkup;
+      }
+
       const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text,
-          parse_mode: 'HTML',
-          disable_web_page_preview: true,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const resData = await response.json();
@@ -128,6 +139,99 @@ export const telegramService = {
       console.error('Telegram sendMessage error:', err);
       return { success: false, error: err.message || 'Xabar yuborishda tarmoq xatosi' };
     }
+  },
+
+  async sendRestaurantOrderAlert(order: RestaurantOrder, restaurant: RestaurantProfile): Promise<{ success: boolean; error?: string }> {
+    const chatId = restaurant.telegramChatId || this.getConfig().chatId;
+    const token = restaurant.telegramBotToken || this.getConfig().botToken || DEFAULT_BOT_TOKEN;
+
+    if (!chatId) {
+      console.warn('Restoran telegram chat ID kiritilmagan');
+      return { success: false, error: 'Telegram chat ID mavjud emas' };
+    }
+
+    const itemsList = order.items
+      .map((item) => {
+        const addonsText = item.selectedAddons && item.selectedAddons.length > 0
+          ? `\n  <i>+ Qo'shimchalar: ${item.selectedAddons.map(a => `${escapeHtml(a.name)} (+${a.price.toLocaleString()} so'm)`).join(', ')}</i>`
+          : '';
+        return `🍔 <b>${escapeHtml(item.name)}</b> x${item.quantity} — <b>${item.totalPrice.toLocaleString()} so‘m</b>${addonsText}`;
+      })
+      .join('\n');
+
+    const appOrigin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'https://sellnex.uz';
+
+    const message = `🔔 <b>YANGI BUYURTMA!</b>
+
+Buyurtma <b>№${order.orderNumber}</b>
+
+${itemsList}
+
+🚚 <b>Yetkazib berish:</b> ${order.deliveryFee > 0 ? `${order.deliveryFee.toLocaleString()} so‘m` : 'Bepul'}
+💰 <b>Jami:</b> <b>${order.totalAmount.toLocaleString()} so‘m</b>
+
+👤 <b>Mijoz:</b> ${escapeHtml(order.customerName)}
+📞 <b>Telefon:</b> <code>${escapeHtml(order.customerPhone)}</code>
+📍 <b>Manzil:</b> ${escapeHtml(order.deliveryAddress)}
+${order.deliveryNotes ? `💬 <b>Izoh:</b> <i>${escapeHtml(order.deliveryNotes)}</i>\n` : ''}
+🕐 <b>Vaqti:</b> ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+
+⚡ <i>Sellnex Restaurant Mode</i>`;
+
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: '✅ Qabul qilish',
+            url: `${appOrigin}/?restaurantAction=accept&orderId=${order.id}&token=${order.orderNumber}`
+          },
+          {
+            text: '❌ Rad etish',
+            url: `${appOrigin}/?restaurantAction=reject&orderId=${order.id}&token=${order.orderNumber}`
+          }
+        ],
+        [
+          {
+            text: '👁 Buyurtmani ko‘rish',
+            url: `${appOrigin}/?restaurantOrder=${order.id}`
+          }
+        ]
+      ]
+    };
+
+    return this.sendMessage(message, chatId, inlineKeyboard, token);
+  },
+
+  async sendRestaurantStatusUpdate(
+    order: RestaurantOrder,
+    restaurant: RestaurantProfile,
+    newStatus: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const chatId = restaurant.telegramChatId || this.getConfig().chatId;
+    const token = restaurant.telegramBotToken || this.getConfig().botToken || DEFAULT_BOT_TOKEN;
+
+    if (!chatId) return { success: false };
+
+    const statusMap: Record<string, string> = {
+      new: '🟡 Yangi buyurtma',
+      preparing: '🔵 Qabul qilindi / Tayyorlanmoqda',
+      delivering: '🟠 Yetkazilmoqda (Kuryer yo‘lda)',
+      delivered: '🟢 Muvaffaqiyatli yetkazildi',
+      cancelled: '🔴 Bekor qilindi'
+    };
+
+    const statusLabel = statusMap[newStatus] || newStatus;
+
+    const message = `🔄 <b>BUYURTMA STATUSI YANGILANDI!</b>
+━━━━━━━━━━━━━━━━━━━━
+🏢 <b>Restoran:</b> ${escapeHtml(restaurant.name)}
+🆔 <b>Buyurtma №:</b> <code>${order.orderNumber}</code>
+📊 <b>Yangi holat:</b> <b>${statusLabel}</b>
+👤 <b>Mijoz:</b> ${escapeHtml(order.customerName)} (<code>${escapeHtml(order.customerPhone)}</code>)
+💰 <b>Summa:</b> <b>${order.totalAmount.toLocaleString()} so‘m</b>
+🕐 <b>Vaqt:</b> ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
+
+    return this.sendMessage(message, chatId, undefined, token);
   },
 
   async sendNewOrderAlert(order: Order, storeName: string): Promise<{ success: boolean; error?: string }> {
