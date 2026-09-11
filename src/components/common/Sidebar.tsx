@@ -159,16 +159,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
             <span className="font-extrabold text-blue-900 uppercase">
               {currentUser?.plan === 'starter'
                 ? 'STARTER'
-                : currentUser?.plan === 'full'
-                ? 'FULL'
-                : currentUser?.plan === 'premium'
-                ? 'PREMIUM'
-                : currentUser?.plan === 'premium_pro' || currentUser?.plan === 'pro' || currentUser?.plan === 'business'
-                ? 'PREMIUM PRO'
-                : '4-DAY TRIAL'}
+                : currentUser?.plan === 'pro' || currentUser?.plan === 'full' || currentUser?.plan === 'premium' || currentUser?.plan === 'premium_pro' || currentUser?.plan === 'business'
+                ? 'PRO'
+                : 'FREE TRIAL'}
             </span>
             <span className="font-mono font-bold text-blue-700">
-              {products.length} / {currentUser?.plan === 'starter' ? 5 : currentUser?.plan === 'full' ? 50 : currentUser?.plan === 'premium' ? 100 : currentUser?.plan === 'premium_pro' ? 1000 : 50}
+              {products.length} / {currentUser?.productLimit || (currentUser?.plan === 'pro' || currentUser?.plan === 'full' || currentUser?.plan === 'premium' || currentUser?.plan === 'premium_pro' || currentUser?.plan === 'business' ? 20 : 5)}
             </span>
           </div>
           <div className="w-full bg-blue-200/60 h-1.5 rounded-full overflow-hidden">
@@ -178,15 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
                 width: `${Math.min(
                   100,
                   (products.length /
-                    (currentUser?.plan === 'starter'
-                      ? 5
-                      : currentUser?.plan === 'full'
-                      ? 50
-                      : currentUser?.plan === 'premium'
-                      ? 100
-                      : currentUser?.plan === 'premium_pro'
-                      ? 1000
-                      : 50)) *
+                    (currentUser?.productLimit || (currentUser?.plan === 'pro' || currentUser?.plan === 'full' || currentUser?.plan === 'premium' || currentUser?.plan === 'premium_pro' || currentUser?.plan === 'business' ? 20 : 5))) *
                     100
                 )}%`,
               }}

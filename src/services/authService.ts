@@ -195,15 +195,24 @@ export const authService = {
       // Fetch user profile from Firestore
       let userProfile = await firestoreService.getUser(userId);
       if (!userProfile) {
+        const now = new Date();
+        const trialEnds = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
         userProfile = {
           id: userId,
           name: displayName || cleanInput.split('@')[0] || 'Seller',
           email: cleanInput,
           phone: '',
           role: 'seller',
-          plan: 'free',
+          plan: 'trial',
           status: 'active',
-          createdAt: new Date().toISOString(),
+          subscriptionStatus: 'active',
+          startDate: now.toISOString(),
+          endDate: trialEnds,
+          trialEndsAt: trialEnds,
+          subscriptionExpiresAt: trialEnds,
+          productLimit: 5,
+          paymentAmount: 0,
+          createdAt: now.toISOString(),
         };
         try {
           await firestoreService.setUser(userId, userProfile);
@@ -326,15 +335,24 @@ export const authService = {
       };
 
       // Create ONLY the user's profile document in Firestore (no store, no demo data)
+      const now = new Date();
+      const trialEnds = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
       const userProfile: User = {
         id: uid,
         name: cleanName,
         email: cleanEmail,
         phone: cleanPhone,
         role: 'seller',
-        plan: 'free',
+        plan: 'trial',
         status: 'active',
-        createdAt: new Date().toISOString(),
+        subscriptionStatus: 'active',
+        startDate: now.toISOString(),
+        endDate: trialEnds,
+        trialEndsAt: trialEnds,
+        subscriptionExpiresAt: trialEnds,
+        productLimit: 5,
+        paymentAmount: 0,
+        createdAt: now.toISOString(),
       };
       if (password) {
         (userProfile as any).passwordHash = btoa(password);
@@ -477,17 +495,27 @@ export const authService = {
       }
 
       // 7. Update User Profile in Firestore
+      const existingProfile = await firestoreService.getUser(userId);
+      const now = new Date();
+      const trialEnds = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
       const newUser: User = {
         id: userId,
         name: cleanName,
         email: cleanEmail || auth.currentUser?.email || '',
         phone: cleanPhone,
-        role: 'seller',
+        role: existingProfile?.role || 'seller',
         storeId: newStore.id,
-        plan: 'free',
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        plan: existingProfile?.plan || 'trial',
+        status: existingProfile?.status || 'active',
+        subscriptionStatus: existingProfile?.subscriptionStatus || 'active',
+        startDate: existingProfile?.startDate || now.toISOString(),
+        endDate: existingProfile?.endDate || trialEnds,
+        trialEndsAt: existingProfile?.trialEndsAt || trialEnds,
+        subscriptionExpiresAt: existingProfile?.subscriptionExpiresAt || trialEnds,
+        productLimit: existingProfile?.productLimit || 5,
+        paymentAmount: existingProfile?.paymentAmount || 0,
+        createdAt: existingProfile?.createdAt || now.toISOString(),
+        updatedAt: now.toISOString(),
         onboarding: onboardingData,
       };
 

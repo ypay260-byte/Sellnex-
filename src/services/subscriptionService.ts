@@ -29,43 +29,68 @@ export interface PlanConfig {
 }
 
 export const PLAN_CONFIGS: Record<string, PlanConfig> = {
-  free: {
-    id: 'free',
-    name: '4-Day Free Trial',
-    tagline: 'Full platform trial with all features enabled for 4 days',
+  trial: {
+    id: 'trial',
+    name: 'FREE TRIAL',
+    tagline: '7-day full access with up to 5 products',
     priceUSD: 0,
     priceUZS: 0,
-    billingPeriod: '4 days free trial',
-    trialDays: 4,
+    billingPeriod: '7 days',
+    trialDays: 7,
     badge: 'Free Trial',
     limits: {
       maxStores: 1,
-      maxProducts: 50,
+      maxProducts: 5,
       transactionFeePercent: 0,
       autoFulfillment: true,
       telegramAlerts: true,
-      customDomain: true,
-      prioritySupport: true,
-      advancedAnalytics: true,
+      customDomain: false,
+      prioritySupport: false,
+      advancedAnalytics: false,
     },
     features: [
-      '1 Public Storefront (.sellnex.uz)',
-      'Up to 50 Products & 1-Click Import',
-      'Click, Payme & Uzum Bank Checkout',
-      'Instant Telegram Order Bot Alerts',
-      'Instagram Bio & Story Links Generator',
-      'Full Access for 4 Days without Card',
+      '7 kunlik bepul sinov davri',
+      'Maksimum 5 ta mahsulot katalogi',
+      'Click, Payme va Uzum Bank orqali toʻlov',
+      'Telegram orqali tezkor bildirishnomalar',
+      'Shaxsiy onlayn doʻkon havolasi (.sellnex.uz)',
+    ],
+  },
+  // Alias for backward compatibility
+  free: {
+    id: 'trial',
+    name: 'FREE TRIAL',
+    tagline: '7-day full access with up to 5 products',
+    priceUSD: 0,
+    priceUZS: 0,
+    billingPeriod: '7 days',
+    trialDays: 7,
+    badge: 'Free Trial',
+    limits: {
+      maxStores: 1,
+      maxProducts: 5,
+      transactionFeePercent: 0,
+      autoFulfillment: true,
+      telegramAlerts: true,
+      customDomain: false,
+      prioritySupport: false,
+      advancedAnalytics: false,
+    },
+    features: [
+      '7 kunlik bepul sinov davri',
+      'Maksimum 5 ta mahsulot katalogi',
+      'Click, Payme va Uzum Bank orqali toʻlov',
+      'Telegram orqali tezkor bildirishnomalar',
+      'Shaxsiy onlayn doʻkon havolasi (.sellnex.uz)',
     ],
   },
   starter: {
     id: 'starter',
     name: 'STARTER',
-    tagline: 'For micro-sellers & single-product campaigns',
-    priceUSD: 5,
-    priceUZS: 65000,
-    renewalDiscountUSD: 3,
-    renewalDiscountUZS: 39000,
-    billingPeriod: '$5 / month ($3 / mo renewal option)',
+    tagline: '$1 for 3 months with up to 5 products',
+    priceUSD: 1,
+    priceUZS: 13000,
+    billingPeriod: '3 months',
     badge: 'Starter',
     limits: {
       maxStores: 1,
@@ -78,25 +103,50 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
       advancedAnalytics: false,
     },
     features: [
-      'Up to 5 Published Products',
-      '1 Online Storefront & Direct Links',
-      'Click, Payme & Cash on Delivery',
-      'Telegram Order Alerts',
-      '$3/mo Loyalty Renewal Option',
-      'Standard Support',
+      '$1 toʻlov evaziga 3 oy aktiv',
+      'Maksimum 5 ta mahsulot katalogi',
+      'Click, Payme va Uzum Bank orqali toʻlov',
+      'Telegram buyurtma boti va xabarlar',
+      'Doimiy qoʻllab-quvvatlash',
     ],
   },
-  full: {
-    id: 'full',
-    name: 'FULL',
-    tagline: 'Best for growing dropshippers & local boutique brands',
+  pro: {
+    id: 'pro',
+    name: 'PRO',
+    tagline: '$5 / month with up to 20 products',
     priceUSD: 5,
     priceUZS: 65000,
-    billingPeriod: '$5 / month',
-    badge: 'Best Value',
+    billingPeriod: '1 month',
+    badge: 'Pro',
     popular: true,
     limits: {
       maxStores: 2,
+      maxProducts: 20,
+      transactionFeePercent: 0,
+      autoFulfillment: true,
+      telegramAlerts: true,
+      customDomain: true,
+      prioritySupport: true,
+      advancedAnalytics: true,
+    },
+    features: [
+      '$5 toʻlov evaziga 1 oy aktiv',
+      'Maksimum 20 ta mahsulot katalogi',
+      '1-klikda Uzum va AliExpressdan import',
+      'Click, Payme va Uzum Bank integratsiyasi',
+      'Ustuvor VIP texnik koʻmak',
+    ],
+  },
+  business: {
+    id: 'business',
+    name: 'BUSINESS',
+    tagline: '$10 / month with up to 50 products',
+    priceUSD: 10,
+    priceUZS: 130000,
+    billingPeriod: '1 month',
+    badge: 'Kengayish',
+    limits: {
+      maxStores: 5,
       maxProducts: 50,
       transactionFeePercent: 0,
       autoFulfillment: true,
@@ -106,25 +156,24 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
       advancedAnalytics: true,
     },
     features: [
-      'Up to 50 Products Catalog',
-      '1-Click Uzum & AliExpress Importer',
-      'Two Business Modes (Personal & Dropship)',
-      'Instagram Bio & Product Direct Links',
-      'Automated Order Tracking',
-      'Priority Support',
+      '$10 toʻlov evaziga 1 oy aktiv',
+      'Maksimum 50 ta mahsulot katalogi',
+      'Shaxsiy domen ulash imkoniyati',
+      'Telegram bot va kengaytirilgan statistika',
+      'Ustuvor VIP texnik koʻmak',
     ],
   },
   premium: {
     id: 'premium',
     name: 'PREMIUM',
-    tagline: 'For established stores with expanding catalogs',
-    priceUSD: 8,
-    priceUZS: 99000,
-    billingPeriod: '99,000 UZS / month',
-    badge: 'Popular',
+    tagline: '$20 / month with up to 110 products',
+    priceUSD: 20,
+    priceUZS: 260000,
+    billingPeriod: '1 month',
+    badge: 'Maksimal',
     limits: {
-      maxStores: 3,
-      maxProducts: 100,
+      maxStores: 10,
+      maxProducts: 110,
       transactionFeePercent: 0,
       autoFulfillment: true,
       telegramAlerts: true,
@@ -133,25 +182,44 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
       advancedAnalytics: true,
     },
     features: [
-      'Up to 100 Products Catalog',
-      'Custom Domain (.uz) Integration',
-      'Automated Supplier Profit Calculations',
-      'Multi-Variant Product Customization',
-      'Dedicated Telegram Notification Bot',
-      '24/7 Priority Assistance',
+      '$20 toʻlov evaziga 1 oy aktiv',
+      'Maksimum 110 ta mahsulot katalogi',
+      'Cheksiz buyurtmalar va toʻliq funksionallik',
+      'Shaxsiy VIP menejer koʻmagi',
+      'Maksimal server tezligi va 0% komissiya',
     ],
+  },
+  // Legacy aliases for backward compatibility
+  full: {
+    id: 'pro',
+    name: 'PRO',
+    tagline: '$5 / month with up to 20 products',
+    priceUSD: 5,
+    priceUZS: 65000,
+    billingPeriod: '1 month',
+    popular: true,
+    limits: {
+      maxStores: 2,
+      maxProducts: 20,
+      transactionFeePercent: 0,
+      autoFulfillment: true,
+      telegramAlerts: true,
+      customDomain: true,
+      prioritySupport: true,
+      advancedAnalytics: true,
+    },
+    features: ['Up to 20 Products', 'Priority Support'],
   },
   premium_pro: {
-    id: 'premium_pro',
-    name: 'PREMIUM PRO',
-    tagline: 'For top-volume merchants, agencies & big stores',
-    priceUSD: 16,
-    priceUZS: 199000,
-    billingPeriod: '199,000 UZS / month',
-    badge: 'Maximum Power',
+    id: 'premium',
+    name: 'PREMIUM',
+    tagline: '$20 / month with up to 110 products',
+    priceUSD: 20,
+    priceUZS: 260000,
+    billingPeriod: '1 month',
     limits: {
-      maxStores: 5,
-      maxProducts: 1000,
+      maxStores: 10,
+      maxProducts: 110,
       transactionFeePercent: 0,
       autoFulfillment: true,
       telegramAlerts: true,
@@ -159,53 +227,7 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
       prioritySupport: true,
       advancedAnalytics: true,
     },
-    features: [
-      'Up to 1,000 Products Catalog',
-      'Unlimited Storefront Customization',
-      'Bulk Product Import & Inventory Sync',
-      'VIP Dedicated Account Manager',
-      'Advanced Influencer & Partner Tracking',
-      'SLA 99.9% Uptime Guarantee',
-    ],
-  },
-  // Legacy aliases for backward-compatibility
-  pro: {
-    id: 'premium_pro',
-    name: 'PREMIUM PRO',
-    tagline: 'For top-volume merchants',
-    priceUSD: 16,
-    priceUZS: 199000,
-    billingPeriod: '199,000 UZS / month',
-    limits: {
-      maxStores: 5,
-      maxProducts: 1000,
-      transactionFeePercent: 0,
-      autoFulfillment: true,
-      telegramAlerts: true,
-      customDomain: true,
-      prioritySupport: true,
-      advancedAnalytics: true,
-    },
-    features: ['Up to 1,000 Products', 'Priority 24/7 Support'],
-  },
-  business: {
-    id: 'premium_pro',
-    name: 'PREMIUM PRO',
-    tagline: 'For top-volume merchants',
-    priceUSD: 16,
-    priceUZS: 199000,
-    billingPeriod: '199,000 UZS / month',
-    limits: {
-      maxStores: 5,
-      maxProducts: 1000,
-      transactionFeePercent: 0,
-      autoFulfillment: true,
-      telegramAlerts: true,
-      customDomain: true,
-      prioritySupport: true,
-      advancedAnalytics: true,
-    },
-    features: ['Up to 1,000 Products', 'Priority 24/7 Support'],
+    features: ['Up to 110 Products', 'Priority VIP Support'],
   },
 };
 
@@ -223,7 +245,7 @@ export interface TrialStatusInfo {
 
 export const subscriptionService = {
   getPlanConfig(planId?: string): PlanConfig {
-    if (!planId || planId === 'free' || planId === 'trial') return PLAN_CONFIGS.free;
+    if (!planId || planId === 'trial' || planId === 'free') return PLAN_CONFIGS.trial;
     const clean = planId.toLowerCase();
     return PLAN_CONFIGS[clean] || PLAN_CONFIGS.starter;
   },
@@ -231,15 +253,15 @@ export const subscriptionService = {
   getTrialStatus(user: User | null): TrialStatusInfo {
     if (!user) {
       return {
-        isTrial: false,
+        isTrial: true,
         isActive: true,
         isExpired: false,
-        daysRemaining: 4,
-        hoursRemaining: 96,
-        formattedRemaining: '4 days remaining',
-        expiryDateFormatted: new Date(Date.now() + 4 * 86400000).toLocaleDateString(),
-        planName: '4-Day Free Trial',
-        maxProducts: 50,
+        daysRemaining: 7,
+        hoursRemaining: 168,
+        formattedRemaining: 'Your free trial ends in 7 days.',
+        expiryDateFormatted: new Date(Date.now() + 7 * 86400000).toLocaleDateString(),
+        planName: 'FREE TRIAL',
+        maxProducts: 5,
       };
     }
 
@@ -258,55 +280,62 @@ export const subscriptionService = {
       };
     }
 
-    const isTrial = user.plan === 'free' || (user as any).plan === 'trial';
-    const config = this.getPlanConfig(user.plan);
+    const plan = (user.plan === 'free' ? 'trial' : user.plan) || 'trial';
+    const isTrial = plan === 'trial';
+    const config = this.getPlanConfig(plan);
 
+    // Paid Plan (Starter: 3 months, Pro: 1 month)
     if (!isTrial) {
-      const expiresAt = user.subscriptionExpiresAt
-        ? new Date(user.subscriptionExpiresAt).getTime()
-        : Date.now() + 30 * 86400000;
+      const expiresAt = user.endDate || user.subscriptionExpiresAt
+        ? new Date(user.endDate || user.subscriptionExpiresAt!).getTime()
+        : Date.now() + (plan === 'starter' ? 90 : 30) * 86400000;
       const diffMs = expiresAt - Date.now();
-      const isExpired = diffMs <= 0;
+      const isExpired = diffMs <= 0 || user.status === 'expired' || user.subscriptionStatus === 'expired';
       const daysRemaining = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+      const hoursRemaining = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
 
       return {
         isTrial: false,
         isActive: !isExpired,
         isExpired,
         daysRemaining,
-        hoursRemaining: Math.max(0, Math.floor(diffMs / (1000 * 60 * 60))),
-        formattedRemaining: isExpired ? 'Subscription Expired' : `${daysRemaining} days remaining`,
+        hoursRemaining,
+        formattedRemaining: isExpired ? 'Your subscription has expired.' : `${daysRemaining} days remaining`,
         expiryDateFormatted: new Date(expiresAt).toLocaleDateString('uz-UZ', {
           year: 'numeric',
           month: 'short',
           day: 'numeric',
         }),
         planName: config.name,
-        maxProducts: config.limits.maxProducts,
+        maxProducts: user.productLimit || config.limits.maxProducts,
       };
     }
 
-    // 4 Days Free Trial logic
-    const createdAt = user.createdAt ? new Date(user.createdAt).getTime() : Date.now();
-    const trialDurationMs = 4 * 24 * 60 * 60 * 1000; // 4 days
-    const expiryTimestamp = createdAt + trialDurationMs;
+    // Free Trial logic (7 days, 5 products)
+    const startDate = user.startDate || user.createdAt
+      ? new Date(user.startDate || user.createdAt).getTime()
+      : Date.now();
+    const trialDurationMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+    const expiryTimestamp = user.endDate || user.trialEndsAt || user.subscriptionExpiresAt
+      ? new Date(user.endDate || user.trialEndsAt || user.subscriptionExpiresAt!).getTime()
+      : startDate + trialDurationMs;
     const now = Date.now();
     const diffMs = expiryTimestamp - now;
 
-    const isExpired = diffMs <= 0;
+    const isExpired = diffMs <= 0 || user.status === 'expired' || user.subscriptionStatus === 'expired';
     const isActive = !isExpired;
 
     const totalHoursRemaining = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
     const daysRemaining = Math.floor(totalHoursRemaining / 24);
     const hoursRemaining = totalHoursRemaining % 24;
 
-    let formattedRemaining = 'Active Trial';
-    if (isExpired) {
-      formattedRemaining = 'Trial expired';
-    } else if (daysRemaining > 0) {
-      formattedRemaining = `${daysRemaining}d ${hoursRemaining}h remaining`;
-    } else {
-      formattedRemaining = `${hoursRemaining} hours remaining`;
+    let formattedRemaining = 'Your subscription has expired.';
+    if (!isExpired) {
+      if (daysRemaining > 0) {
+        formattedRemaining = `Your free trial ends in ${daysRemaining} day${daysRemaining > 1 ? 's' : ''}.`;
+      } else {
+        formattedRemaining = `Your free trial ends in ${hoursRemaining} hour${hoursRemaining > 1 ? 's' : ''}.`;
+      }
     }
 
     return {
@@ -321,8 +350,8 @@ export const subscriptionService = {
         month: 'short',
         day: 'numeric',
       }),
-      planName: '4-Day Free Trial',
-      maxProducts: config.limits.maxProducts,
+      planName: 'FREE TRIAL',
+      maxProducts: 5,
     };
   },
 
@@ -331,27 +360,93 @@ export const subscriptionService = {
       return { allowed: true, limit: 10000 };
     }
 
-    const plan = user?.plan || 'free';
-    const config = this.getPlanConfig(plan);
-    const trialStatus = this.getTrialStatus(user);
+    const plan = (user?.plan === 'free' ? 'trial' : user?.plan) || 'trial';
+    const statusInfo = this.getTrialStatus(user);
 
-    if (trialStatus.isTrial && trialStatus.isExpired) {
+    if (statusInfo.isExpired) {
       return {
         allowed: false,
-        reason: 'Your 4-day free trial has ended. Upgrade your plan to continue adding products.',
-        limit: config.limits.maxProducts,
+        reason: 'Your subscription has expired.',
+        limit: statusInfo.maxProducts,
       };
     }
 
-    if (currentProductCount >= config.limits.maxProducts) {
+    // Trial: 5 products
+    if (plan === 'trial') {
+      const limit = 5;
+      if (currentProductCount >= limit) {
+        return {
+          allowed: false,
+          reason: 'You have reached your 5 product limit.',
+          limit,
+        };
+      }
+      return { allowed: true, limit };
+    }
+
+    // Starter: 5 products
+    if (plan === 'starter') {
+      const limit = 5;
+      if (currentProductCount >= limit) {
+        return {
+          allowed: false,
+          reason: 'You have reached your 5 product limit. Upgrade to Pro for up to 20 products.',
+          limit,
+        };
+      }
+      return { allowed: true, limit };
+    }
+
+    // Pro: 20 products
+    if (plan === 'pro' || plan === 'full') {
+      const limit = 20;
+      if (currentProductCount >= limit) {
+        return {
+          allowed: false,
+          reason: 'You have reached your 20 product limit. Upgrade to Business for up to 50 products.',
+          limit,
+        };
+      }
+      return { allowed: true, limit };
+    }
+
+    // Business: 50 products
+    if (plan === 'business') {
+      const limit = 50;
+      if (currentProductCount >= limit) {
+        return {
+          allowed: false,
+          reason: 'You have reached your 50 product limit. Upgrade to Premium for up to 110 products.',
+          limit,
+        };
+      }
+      return { allowed: true, limit };
+    }
+
+    // Premium: 110 products
+    if (plan === 'premium' || plan === 'premium_pro') {
+      const limit = 110;
+      if (currentProductCount >= limit) {
+        return {
+          allowed: false,
+          reason: 'You have reached your 110 product limit on Premium.',
+          limit,
+        };
+      }
+      return { allowed: true, limit };
+    }
+
+    // Fallback limit check
+    const limit = user?.productLimit || 5;
+    if (currentProductCount >= limit) {
       return {
         allowed: false,
-        reason: `Your current plan allows up to ${config.limits.maxProducts} products. Upgrade your plan to add more products.`,
-        limit: config.limits.maxProducts,
+        reason: `You have reached your ${limit} product limit.`,
+        limit,
       };
     }
 
-    return { allowed: true, limit: config.limits.maxProducts };
+    return { allowed: true, limit };
   },
 
   async upgradePlan(
@@ -360,16 +455,49 @@ export const subscriptionService = {
     paymentMethod: 'Click' | 'Payme' | 'Uzum Bank' | 'Card',
     isRenewalDiscount = false
   ): Promise<{ user: User; receiptNumber: string }> {
-    const config = this.getPlanConfig(newPlan);
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const cleanPlan: PlanType = newPlan === 'free' ? 'trial' : newPlan;
+    const now = new Date();
+    let durationDays = 7;
+    let productLimit = 5;
+    let paymentAmount = 0;
+
+    if (cleanPlan === 'starter') {
+      durationDays = 90; // 3 months
+      productLimit = 5;
+      paymentAmount = 1;
+    } else if (cleanPlan === 'pro' || cleanPlan === 'full') {
+      durationDays = 30; // 1 month
+      productLimit = 20;
+      paymentAmount = 5;
+    } else if (cleanPlan === 'business') {
+      durationDays = 30; // 1 month
+      productLimit = 50;
+      paymentAmount = 10;
+    } else if (cleanPlan === 'premium' || cleanPlan === 'premium_pro') {
+      durationDays = 30; // 1 month
+      productLimit = 110;
+      paymentAmount = 20;
+    } else if (cleanPlan === 'trial') {
+      durationDays = 7; // 7 days
+      productLimit = 5;
+      paymentAmount = 0;
+    }
+
+    const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
 
     const updatedUser: User = {
       ...user,
-      plan: newPlan,
-      subscriptionExpiresAt: expiresAt,
-      isStarterRenewedDiscount: isRenewalDiscount,
+      plan: cleanPlan,
       status: 'active',
-      updatedAt: new Date().toISOString(),
+      subscriptionStatus: 'active',
+      startDate: now.toISOString(),
+      endDate: expiresAt,
+      subscriptionExpiresAt: expiresAt,
+      trialEndsAt: cleanPlan === 'trial' ? expiresAt : user.trialEndsAt,
+      productLimit,
+      paymentAmount,
+      isStarterRenewedDiscount: isRenewalDiscount,
+      updatedAt: now.toISOString(),
     };
 
     // 1. Update localStorage
@@ -384,7 +512,7 @@ export const subscriptionService = {
       console.error('Failed to sync plan upgrade to Firestore user document:', err);
     }
 
-    const receiptNumber = `SUB-${newPlan.toUpperCase().replace('_', '-')}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const receiptNumber = `SUB-${cleanPlan.toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     return { user: updatedUser, receiptNumber };
   },
@@ -411,6 +539,8 @@ export const subscriptionService = {
     notes?: string;
   }): Promise<{ success: boolean; paymentId?: string; error?: string }> {
     try {
+      const cleanPlan: PlanType = planRequested === 'free' ? 'trial' : planRequested;
+      const durationMonths = cleanPlan === 'starter' ? 3 : 1;
       const paymentId = `p2p_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const newPayment: P2PPayment = {
         id: paymentId,
@@ -419,14 +549,20 @@ export const subscriptionService = {
         userEmail: user.email,
         userName: user.name,
         userPhone: senderPhone || user.phone || '',
-        planRequested,
-        planId: planRequested,
-        planName: planRequested.toUpperCase(),
-        durationMonths: 1,
+        planRequested: cleanPlan,
+        planId: cleanPlan,
+        planName: cleanPlan.toUpperCase(),
+        durationMonths,
         amount: amountUZS,
         paymentMethod: paymentMethod === 'Card' ? 'P2P Card Transfer' : paymentMethod,
         screenshotUrl: receiptImageUrl || '',
-        notes: [transactionRef ? `Tranzaksiya: ${transactionRef}` : '', notes].filter(Boolean).join(' | '),
+        notes: [
+          `Tarif: ${cleanPlan.toUpperCase()} ($${amountUSD} / ${amountUZS.toLocaleString()} UZS, ${durationMonths} oy)`,
+          transactionRef ? `Tranzaksiya: ${transactionRef}` : '',
+          notes,
+        ]
+          .filter(Boolean)
+          .join(' | '),
         status: 'pending',
         createdAt: new Date().toISOString(),
       };
@@ -438,7 +574,7 @@ export const subscriptionService = {
         await firestoreService.createAdminNotification({
           id: `admin_notif_${Date.now()}`,
           title: `Yangi to'lov cheki kelib tushdi!`,
-          message: `${user.name} (${user.email}) "${planRequested.toUpperCase()}" tarifi uchun ${amountUZS.toLocaleString()} UZS to'lov chekini yukladi.`,
+          message: `${user.name} (${user.email}) "${cleanPlan.toUpperCase()}" tarifi uchun ${amountUZS.toLocaleString()} UZS ($${amountUSD}) to'lov chekini yukladi.`,
           type: 'order',
           timestamp: new Date().toISOString(),
           read: false,
@@ -454,7 +590,7 @@ export const subscriptionService = {
           userName: user.name,
           userEmail: user.email,
           userPhone: senderPhone || user.phone || '',
-          planRequested: planRequested,
+          planRequested: cleanPlan,
           amount: amountUZS,
           paymentMethod: newPayment.paymentMethod,
           notes: newPayment.notes,

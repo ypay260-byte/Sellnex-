@@ -19,7 +19,7 @@ export interface PendingRegistration {
   password?: string;
 }
 
-export type PlanType = 'free' | 'starter' | 'full' | 'premium' | 'premium_pro' | 'pro' | 'business' | 'trial' | 'custom';
+export type PlanType = 'trial' | 'starter' | 'pro' | 'free' | 'full' | 'premium' | 'premium_pro' | 'business' | 'custom';
 
 export interface User {
   id: string;
@@ -29,7 +29,12 @@ export interface User {
   role: UserRole;
   storeId?: string;
   plan: PlanType;
-  status: 'active' | 'suspended';
+  status: 'active' | 'suspended' | 'expired';
+  subscriptionStatus?: 'active' | 'expired' | 'trial';
+  startDate?: string;
+  endDate?: string;
+  productLimit?: number;
+  paymentAmount?: number;
   createdAt: string;
   updatedAt?: string;
   subscriptionExpiresAt?: string;

@@ -45,7 +45,7 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
   formatMoney,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'trial' | 'pro' | 'business'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'trial' | 'starter' | 'pro' | 'business' | 'premium'>('all');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [adminNoteText, setAdminNoteText] = useState('');
@@ -73,8 +73,10 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
     if (statusFilter === 'active') return u.status === 'active';
     if (statusFilter === 'suspended') return u.status === 'suspended';
     if (statusFilter === 'trial') return u.plan === 'trial' || u.plan === 'free';
+    if (statusFilter === 'starter') return u.plan === 'starter';
     if (statusFilter === 'pro') return u.plan === 'pro';
     if (statusFilter === 'business') return u.plan === 'business';
+    if (statusFilter === 'premium') return u.plan === 'premium' || u.plan === 'premium_pro';
     return true;
   });
 
@@ -101,10 +103,34 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
     setIsProcessing(true);
     try {
       const oldPlan = selectedUser.plan;
-      await firestoreService.updateUser(selectedUser.id, { plan: newPlan, status: 'active' });
+      const productLimit =
+        newPlan === 'premium' || newPlan === 'premium_pro'
+          ? 110
+          : newPlan === 'business'
+          ? 50
+          : newPlan === 'pro'
+          ? 20
+          : 5;
+      const isSub = newPlan !== 'trial' && newPlan !== 'free';
+      const durationDays = newPlan === 'starter' ? 90 : 30;
+      const newExpiry = isSub ? new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString() : selectedUser.subscriptionExpiresAt;
+
+      await firestoreService.updateUser(selectedUser.id, {
+        plan: newPlan,
+        status: 'active',
+        subscriptionStatus: isSub ? 'active' : 'trial',
+        productLimit,
+        subscriptionExpiresAt: newExpiry,
+      });
       await recordAudit('change_plan', selectedUser.id, { plan: oldPlan }, { plan: newPlan });
-      showToast('Plan Updated', `User plan changed to ${newPlan.toUpperCase()}`, 'success');
-      setSelectedUser({ ...selectedUser, plan: newPlan, status: 'active' });
+      showToast('Plan Yangilandi', `Foydalanuvchi tarifi ${newPlan.toUpperCase()} ga o'zgartirildi (Limit: ${productLimit} ta)`, 'success');
+      setSelectedUser({
+        ...selectedUser,
+        plan: newPlan,
+        status: 'active',
+        productLimit,
+        subscriptionExpiresAt: newExpiry,
+      });
       await onRefresh();
     } catch (err: any) {
       showToast('Action Failed', err.message, 'error');
@@ -253,9 +279,11 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
               { id: 'all', label: 'Barchasi' },
               { id: 'active', label: 'Faol' },
               { id: 'suspended', label: 'Bloklangan' },
+              { id: 'trial', label: 'Trial' },
+              { id: 'starter', label: 'Starter' },
               { id: 'pro', label: 'PRO' },
-              { id: 'business', label: 'BUSINESS' },
-              { id: 'trial', label: 'Sinov / Bepul' },
+              { id: 'business', label: 'Business' },
+              { id: 'premium', label: 'Premium' },
             ] as const
           ).map((item) => (
             <button
@@ -359,14 +387,18 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                              user.plan === 'business'
-                                ? 'bg-purple-950 text-purple-300 border border-purple-800'
+                              user.plan === 'premium' || user.plan === 'premium_pro'
+                                ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                                : user.plan === 'business'
+                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                                 : user.plan === 'pro'
+                                ? 'bg-purple-950 text-purple-300 border border-purple-800'
+                                : user.plan === 'starter'
                                 ? 'bg-blue-950 text-blue-300 border border-blue-800'
-                                : 'bg-slate-800 text-slate-300'
+                                : 'bg-slate-800 text-slate-300 border border-slate-700'
                             }`}
                           >
-                            {user.plan || 'Free'}
+                            {user.plan === 'trial' ? 'FREE TRIAL' : (user.plan?.toUpperCase() || 'FREE TRIAL')}
                           </span>
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
@@ -477,19 +509,27 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
                 <Crown className="w-3.5 h-3.5 text-amber-400" />
                 <span>Tarifni o'zgartirish</span>
               </label>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {(['free', 'starter', 'full', 'premium', 'premium_pro'] as const).map((p) => (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {(['trial', 'starter', 'pro', 'business', 'premium'] as const).map((p) => (
                   <button
                     key={p}
                     disabled={isProcessing}
                     onClick={() => handleUpdatePlan(p)}
-                    className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer truncate ${
+                    className={`py-2 px-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer truncate ${
                       selectedUser.plan === p
                         ? 'bg-rose-600 text-white shadow-xs'
                         : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800'
                     }`}
                   >
-                    {p.toUpperCase().replace('_', ' ')}
+                    {p === 'trial'
+                      ? 'TRIAL (5)'
+                      : p === 'starter'
+                      ? 'STARTER (5/3oy)'
+                      : p === 'pro'
+                      ? 'PRO (20/1oy)'
+                      : p === 'business'
+                      ? 'BIZ (50/1oy)'
+                      : 'PREMIUM (110)'}
                   </button>
                 ))}
               </div>

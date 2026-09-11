@@ -268,16 +268,42 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
         targetUserId = user.id;
       }
 
-      const targetPlan: PlanType = (payment.planRequested as PlanType) || 'full';
+      const targetPlan: PlanType = (payment.planRequested as PlanType) || 'pro';
+      const cleanPlan: PlanType = targetPlan === 'free' ? 'trial' : targetPlan;
       const currentExp = user?.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt).getTime() : Date.now();
-      const durationDays = payment.durationMonths ? payment.durationMonths * 30 : 30;
+      const durationDays = cleanPlan === 'starter' ? 90 : (payment.durationMonths ? payment.durationMonths * 30 : 30);
       const newExpiry = new Date(Math.max(Date.now(), currentExp) + durationDays * 24 * 60 * 60 * 1000).toISOString();
+      const productLimit =
+        cleanPlan === 'starter'
+          ? 5
+          : cleanPlan === 'pro'
+          ? 20
+          : cleanPlan === 'business'
+          ? 50
+          : cleanPlan === 'premium' || cleanPlan === 'premium_pro'
+          ? 110
+          : 5;
+      const paymentAmount =
+        cleanPlan === 'starter'
+          ? 1
+          : cleanPlan === 'pro'
+          ? 5
+          : cleanPlan === 'business'
+          ? 10
+          : cleanPlan === 'premium' || cleanPlan === 'premium_pro'
+          ? 20
+          : 0;
 
       if (targetUserId) {
         await firestoreService.updateUser(targetUserId, {
-          plan: targetPlan,
-          subscriptionExpiresAt: newExpiry,
+          plan: cleanPlan,
           status: 'active',
+          subscriptionStatus: 'active',
+          startDate: new Date().toISOString(),
+          endDate: newExpiry,
+          subscriptionExpiresAt: newExpiry,
+          productLimit,
+          paymentAmount,
         });
       }
 

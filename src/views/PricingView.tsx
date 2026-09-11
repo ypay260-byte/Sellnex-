@@ -54,90 +54,113 @@ export const PricingView: React.FC = () => {
     name: string;
     priceUSD: number;
     priceUZS: number;
+    duration: string;
     priceFormatted: string;
     productLimit: number;
     desc: string;
     badge?: string;
     features: string[];
     popular?: boolean;
-    isStarter?: boolean;
+    isTrial?: boolean;
   }[] = [
     {
-      id: 'starter',
-      name: 'STARTER',
-      priceUSD: 5,
-      priceUZS: 65000,
-      priceFormatted: '$5 / oyiga (65,000 UZS)',
+      id: 'trial',
+      name: 'FREE TRIAL',
+      priceUSD: 0,
+      priceUZS: 0,
+      duration: '7 kun',
+      priceFormatted: '$0 (7 kun bepul)',
       productLimit: 5,
-      desc: 'Boshlovchilar va sinov kampaniyalari uchun moʻljallangan. 5 tagacha mahsulot limiti.',
-      badge: 'Boshlangʻich',
-      isStarter: true,
+      desc: 'Yangi foydalanuvchilar uchun 7 kunlik bepul sinov. 5 tagacha mahsulot qo‘shish imkoniyati.',
+      badge: 'Avtomatik Sinov',
+      isTrial: true,
       features: [
-        '5 tagacha mahsulot katalog limiti',
-        'Toʻgʻridan-toʻgʻri Telegram va Instagram buyurtmalar',
-        'Click, Payme va Uzum Bank orqali toʻlov',
-        'Telegram bot orqali tezkor bildirishnomalar',
-        '39,000 UZS / oyiga yangilash imkoniyati',
-        'Doimiy texnik koʻmak',
+        'Maksimum 5 ta mahsulot limiti',
+        '7 kunlik bepul to‘liq kirish',
+        'Ro‘yxatdan o‘tganda avtomatik boshlanadi',
+        'To‘g‘ridan-to‘g‘ri buyurtmalar qabuli',
+        'Click, Payme va Uzum Bank to‘lovlari',
+        'Tugaganda Starter tarifiga o‘tish taklifi',
       ],
       popular: false,
     },
     {
-      id: 'full',
-      name: 'FULL',
+      id: 'starter',
+      name: 'STARTER',
+      priceUSD: 1,
+      priceUZS: 13000,
+      duration: '3 oy',
+      priceFormatted: '$1 (jami 3 oy uchun)',
+      productLimit: 5,
+      desc: 'Kichik do‘konlar va yangi boshlovchilar uchun 3 oylik qulay tarif. 5 tagacha mahsulot.',
+      badge: 'Qulay Boshlanish',
+      features: [
+        'Maksimum 5 ta mahsulot limiti',
+        '3 oy muddat (jami 3 oy uchun atigi $1)',
+        '13,000 UZS jami 3 oylik to‘lov',
+        'To‘g‘ridan-to‘g‘ri Telegram buyurtmalar',
+        '5 tadan ortiq mahsulot uchun Pro taklif qilinadi',
+        'Doimiy 24/7 texnik ko‘mak',
+      ],
+      popular: false,
+    },
+    {
+      id: 'pro',
+      name: 'PRO',
       priceUSD: 5,
       priceUZS: 65000,
+      duration: '1 oy',
       priceFormatted: '$5 / oyiga (65,000 UZS)',
-      productLimit: 50,
-      desc: 'Faol dropshipperlar va doʻkon egalari uchun eng ommabop tarif. 50 tagacha mahsulot.',
+      productLimit: 20,
+      desc: 'Kengroq mahsulot katalogiga ega faol sotuvchilar uchun. 20 tagacha mahsulot limiti.',
       badge: 'Eng Ommabop',
       popular: true,
       features: [
-        '50 tagacha mahsulot katalog limiti',
-        '2 ta biznes rejimi (Shaxsiy va Dropshipping)',
-        '1-klikda Uzum va AliExpressdan import',
-        'Moslashtirilgan doʻkon dizayni va brending',
-        'Telegram buyurtma boti va statistika',
+        'Maksimum 20 ta mahsulot limiti',
+        'Har oy $5 (65,000 UZS)',
+        '2 ta savdo rejimi (Shaxsiy va Dropshipping)',
+        'Telegram bot bildirishnomalari va statistika',
+        'Cheksiz mijoz buyurtmalari',
         'Ustuvor VIP texnik yordam',
+      ],
+    },
+    {
+      id: 'business',
+      name: 'BUSINESS',
+      priceUSD: 10,
+      priceUZS: 130000,
+      duration: '1 oy',
+      priceFormatted: '$10 / oyiga (130,000 UZS)',
+      productLimit: 50,
+      desc: 'Katta assortiment va o‘sayotgan bizneslar uchun. 50 tagacha mahsulot limiti.',
+      badge: 'Biznes Kengayish',
+      features: [
+        'Maksimum 50 ta mahsulot limiti',
+        'Har oy $10 (130,000 UZS)',
+        'Shaxsiy domen ulash (.uz yoki .com)',
+        'Kengaytirilgan savdo statistikasi',
+        'Telegram buyurtma boti va integratsiyalar',
+        'Ustuvor VIP texnik koʻmak',
       ],
     },
     {
       id: 'premium',
       name: 'PREMIUM',
-      priceUSD: 8,
-      priceUZS: 99000,
-      priceFormatted: '99,000 UZS / oyiga ($8)',
-      productLimit: 100,
-      desc: 'Kengaytirilgan mahsulot assortimentiga ega brendlar uchun. 100 tagacha mahsulot.',
-      badge: 'Kengayish',
+      priceUSD: 20,
+      priceUZS: 260000,
+      duration: '1 oy',
+      priceFormatted: '$20 / oyiga (260,000 UZS)',
+      productLimit: 110,
+      desc: 'Professional brendlar va yirik do‘konlar uchun. 110 tagacha mahsulot limiti.',
+      badge: 'Maksimal Quvvat',
       features: [
-        '100 tagacha mahsulot katalog limiti',
-        'Shaxsiy domen (.uz) ulash imkoniyati',
-        '0% platforma komissiyasi',
-        'Taʻminotchi foydasini avtomatlashtirish',
-        'Hamkorlik va referal havolalar',
-        '24/7 shaxsiy menejer koʻmagi',
+        'Maksimum 110 ta mahsulot limiti',
+        'Har oy $20 (260,000 UZS)',
+        'Cheksiz buyurtmalar va toʻliq avtomatizatsiya',
+        'Shaxsiy VIP menejer koʻmagi',
+        'Maksimal server tezligi va 0% komissiya',
+        'Barcha yangi imkoniyatlarga 1-kirish',
       ],
-      popular: false,
-    },
-    {
-      id: 'premium_pro',
-      name: 'PREMIUM PRO',
-      priceUSD: 16,
-      priceUZS: 199000,
-      priceFormatted: '199,000 UZS / oyiga ($16)',
-      productLimit: 1000,
-      desc: 'Katta hajmdagi distribyutorlar, brendlar va agentliklar uchun. 1000 tagacha mahsulot.',
-      badge: 'Maksimal',
-      features: [
-        '1,000 tagacha mahsulot katalog limiti',
-        'Cheksiz dizayn va premium shablonlar',
-        'Ommaviy import va avtomatik zaxira',
-        'Shaxsiy VIP akkaunt menejeri',
-        'Kuryerlik va API integratsiyalari',
-        '99.9% kafolatlangan server tezligi',
-      ],
-      popular: false,
     },
   ];
 
@@ -189,8 +212,8 @@ export const PricingView: React.FC = () => {
 
     setIsProcessing(true);
     const plan = plans.find((p) => p.id === selectedPlanModal);
-    const amountUZS = isRenewalOption ? 39000 : plan?.priceUZS || 65000;
-    const amountUSD = isRenewalOption ? 3 : plan?.priceUSD || 5;
+    const amountUZS = plan?.priceUZS || (selectedPlanModal === 'starter' ? 13000 : 65000);
+    const amountUSD = plan?.priceUSD || (selectedPlanModal === 'starter' ? 1 : 5);
 
     const res = await subscriptionService.submitP2PPaymentRequest({
       user: currentUser,
@@ -271,7 +294,7 @@ export const PricingView: React.FC = () => {
               <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${
                 trialInfo.isTrial ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
               }`}>
-                {trialInfo.isTrial ? '4 Kunlik Bepul Sinov' : 'Faol Obuna'}
+                {trialInfo.isTrial ? '7 Kunlik Bepul Sinov' : 'Faol Obuna'}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 mt-1 font-medium">
@@ -289,14 +312,52 @@ export const PricingView: React.FC = () => {
         </div>
 
         <div className="shrink-0 flex items-center gap-2">
-          <button
-            id="btn-upgrade-full-plan"
-            onClick={() => handleOpenUpgradeModal('full')}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>FULL Tarifga Oʻtish ($5/oy)</span>
-          </button>
+          {trialInfo.isTrial ? (
+            <button
+              id="btn-upgrade-starter-plan"
+              onClick={() => handleOpenUpgradeModal('starter')}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Starter Tarifga Oʻtish ($1 / 3 oy)</span>
+            </button>
+          ) : currentPlanId === 'starter' ? (
+            <button
+              id="btn-upgrade-pro-plan"
+              onClick={() => handleOpenUpgradeModal('pro')}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Pro Tarifga Oʻtish ($5 / oy)</span>
+            </button>
+          ) : currentPlanId === 'pro' ? (
+            <button
+              id="btn-upgrade-biz-plan"
+              onClick={() => handleOpenUpgradeModal('business')}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Business Tarifga Oʻtish ($10 / oy)</span>
+            </button>
+          ) : currentPlanId === 'business' ? (
+            <button
+              id="btn-upgrade-premium-plan"
+              onClick={() => handleOpenUpgradeModal('premium')}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Premium Tarifga Oʻtish ($20 / oy)</span>
+            </button>
+          ) : (
+            <button
+              id="btn-renew-current-plan"
+              onClick={() => handleOpenUpgradeModal(currentPlanId as PlanType)}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Obunani Yangilash</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -306,7 +367,7 @@ export const PricingView: React.FC = () => {
           <div className="flex items-center gap-3">
             <Sparkles className="w-5 h-5 text-indigo-600 shrink-0" />
             <p className="text-xs text-slate-700">
-              <strong>4 Kunlik Bepul Sinov Faol:</strong> Siz 50 tagacha mahsulot joylashingiz va barcha funksiyalardan toʻliq foydalanishingiz mumkin. Doʻkoningizni cheklovlarsiz ishlatish uchun quyidagi tariflardan birini tanlang.
+              <strong>7 Kunlik Bepul Sinov Faol:</strong> Siz 5 tagacha mahsulot joylashingiz va barcha funksiyalardan toʻliq foydalanishingiz mumkin. Sinov muddati tugaganda Starter tarifiga ($1 / 3 oy) o‘tishingiz mumkin.
             </p>
           </div>
           <span className="text-xs font-bold text-indigo-700 bg-indigo-100/80 px-3 py-1 rounded-full shrink-0">
@@ -315,17 +376,15 @@ export const PricingView: React.FC = () => {
         </div>
       )}
 
-      {/* Pricing Cards Grid (4 Columns) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 pt-2">
+      {/* Pricing Cards Grid (5 Columns on XL, responsive) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 pt-2">
         {plans.map((p) => {
-          const isCurrent = currentPlanId === p.id;
-          const isProEquivalent = (currentPlanId === 'pro' || currentPlanId === 'business') && p.id === 'premium_pro';
-          const isCurrentActive = isCurrent || isProEquivalent;
+          const isCurrent = currentPlanId === p.id || (trialInfo.isTrial && p.id === 'trial');
 
           return (
             <div
               key={p.id}
-              className={`rounded-3xl p-6 flex flex-col justify-between space-y-6 transition-all relative ${
+              className={`rounded-3xl p-5 flex flex-col justify-between space-y-5 transition-all relative ${
                 p.popular
                   ? 'bg-white border-2 border-blue-600 shadow-xl ring-4 ring-blue-600/10'
                   : 'bg-white border border-slate-200 shadow-xs hover:border-slate-300'
@@ -353,19 +412,19 @@ export const PricingView: React.FC = () => {
 
                 {/* Price Display */}
                 <div className="pt-1">
-                  <div className="text-2xl font-black text-slate-900">
-                    {p.id === 'starter' || p.id === 'full' ? (
-                      <span>$5 <span className="text-xs font-bold text-slate-400">/ oyiga (65,000 UZS)</span></span>
-                    ) : p.id === 'premium' ? (
-                      <span>99,000 <span className="text-xs font-bold text-slate-400">UZS / oyiga</span></span>
+                  <div className="text-xl font-black text-slate-900">
+                    {p.id === 'trial' ? (
+                      <span>$0 <span className="text-xs font-bold text-slate-400">(7 kun bepul)</span></span>
+                    ) : p.id === 'starter' ? (
+                      <span>$1 <span className="text-xs font-bold text-slate-400">/ jami 3 oy uchun (13,000 UZS)</span></span>
                     ) : (
-                      <span>199,000 <span className="text-xs font-bold text-slate-400">UZS / oyiga</span></span>
+                      <span>${p.priceUSD} <span className="text-xs font-bold text-slate-400">/ oyiga ({p.priceUZS.toLocaleString()} UZS)</span></span>
                     )}
                   </div>
                   {/* Product Limit Highlight */}
                   <div className="mt-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 text-xs font-extrabold border border-blue-100">
                     <Package className="w-3.5 h-3.5 text-blue-600" />
-                    <span>{p.productLimit.toLocaleString()} tagacha mahsulot</span>
+                    <span>Maksimum {p.productLimit} ta mahsulot</span>
                   </div>
                 </div>
 
@@ -385,38 +444,34 @@ export const PricingView: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="pt-3 border-t border-slate-100 space-y-2">
-                <button
-                  id={`btn-choose-plan-${p.id}`}
-                  onClick={() => handleOpenUpgradeModal(p.id)}
-                  disabled={isProcessing}
-                  className={`w-full py-3 rounded-xl font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 ${
-                    isCurrentActive
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 font-bold'
-                      : p.popular
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/25 active:scale-95'
-                      : 'bg-slate-900 hover:bg-slate-800 text-white'
-                  }`}
-                >
-                  {isCurrentActive ? (
-                    <>
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      <span>Faol Tarif</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>{p.name} Tarifini Tanlash</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-
-                {/* Starter Loyalty Renewal Option */}
-                {p.isStarter && (
+                {p.id === 'trial' ? (
+                  <div className="w-full py-3 rounded-xl font-extrabold text-xs text-center bg-slate-100 text-slate-600 border border-slate-200">
+                    {isCurrent ? 'Joriy Tarif (Faol Sinov)' : 'Avtomatik Sinov (7 kun)'}
+                  </div>
+                ) : (
                   <button
-                    onClick={() => handleOpenUpgradeModal('starter', true)}
-                    className="w-full py-1.5 rounded-lg text-[10px] font-bold text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors border border-dashed border-slate-200"
+                    id={`btn-choose-plan-${p.id}`}
+                    onClick={() => handleOpenUpgradeModal(p.id)}
+                    disabled={isProcessing}
+                    className={`w-full py-3 rounded-xl font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      isCurrent
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 font-bold'
+                        : p.popular
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/25 active:scale-95'
+                        : 'bg-slate-900 hover:bg-slate-800 text-white'
+                    }`}
                   >
-                    Doimiy mijoz yangilash: $3/oy (39,000 UZS)
+                    {isCurrent ? (
+                      <>
+                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                        <span>Faol Tarif</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{p.name} Tarifini Tanlash ({p.id === 'starter' ? '$1 / 3 oy' : `$${p.priceUSD} / oy`})</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 )}
               </div>
@@ -448,7 +503,7 @@ export const PricingView: React.FC = () => {
                   </h3>
                   <p className="text-xs text-slate-600 max-w-sm mx-auto mt-2 leading-relaxed">
                     {paymentSuccessInfo.mode === 'instant'
-                      ? `Siz ${PLAN_CONFIGS[selectedPlanModal].name} tarifiga oʻtdingiz. Barcha oʻzgarishlar Firestore bazasida saqlandi.`
+                      ? `Siz ${PLAN_CONFIGS[selectedPlanModal]?.name || selectedPlanModal.toUpperCase()} tarifiga oʻtdingiz. Barcha oʻzgarishlar Firestore bazasida saqlandi.`
                       : `Chekingiz admin tekshiruviga yuborildi (Kvitansiya ID: ${paymentSuccessInfo.refNumber}). Admin 5-15 daqiqa ichida tasdiqlaydi.`}
                   </p>
                 </div>
@@ -468,32 +523,33 @@ export const PricingView: React.FC = () => {
                     <span>Rasmiy Toʻlov & Obuna</span>
                   </div>
                   <h3 className="text-xl font-black text-slate-900">
-                    {PLAN_CONFIGS[selectedPlanModal].name} Tarifini Faollashtirish
+                    {PLAN_CONFIGS[selectedPlanModal]?.name || selectedPlanModal.toUpperCase()} Tarifini Faollashtirish
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    {PLAN_CONFIGS[selectedPlanModal].limits.maxProducts} tagacha mahsulot katalog hajmi ochiladi.
+                    {PLAN_CONFIGS[selectedPlanModal]?.limits.maxProducts || (selectedPlanModal === 'premium' ? 110 : selectedPlanModal === 'business' ? 50 : selectedPlanModal === 'pro' ? 20 : 5)} tagacha mahsulot katalog hajmi ochiladi.
                   </p>
                 </div>
 
                 {/* Price Summary */}
                 <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex items-center justify-between text-xs">
                   <div>
-                    <p className="font-extrabold text-slate-800">{PLAN_CONFIGS[selectedPlanModal].name} Tarifi</p>
+                    <p className="font-extrabold text-slate-800">{PLAN_CONFIGS[selectedPlanModal]?.name || selectedPlanModal.toUpperCase()} Tarifi</p>
                     <p className="text-[11px] text-slate-500">
-                      {isRenewalOption ? 'Starter Doimiy Yangilanish' : '30 kunlik toʻliq kirish'}
+                      {selectedPlanModal === 'starter'
+                        ? '3 oylik toʻliq kirish (90 kun)'
+                        : '1 oylik toʻliq kirish (30 kun)'}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-black text-blue-600">
-                      {isRenewalOption
-                        ? '39,000 UZS ($3)'
-                        : selectedPlanModal === 'starter' || selectedPlanModal === 'full'
-                        ? '65,000 UZS ($5)'
-                        : selectedPlanModal === 'premium'
-                        ? '99,000 UZS ($8)'
-                        : '199,000 UZS ($16)'}
+                      {plans.find((p) => p.id === selectedPlanModal)?.priceFormatted ||
+                        `${PLAN_CONFIGS[selectedPlanModal]?.priceUZS.toLocaleString()} UZS ($${PLAN_CONFIGS[selectedPlanModal]?.priceUSD})`}
                     </p>
-                    <span className="text-[10px] text-slate-400 font-medium">30 kunlik muddat</span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {selectedPlanModal === 'starter'
+                        ? '3 oy uchun jami $1'
+                        : `1 oy uchun $${PLAN_CONFIGS[selectedPlanModal]?.priceUSD || (selectedPlanModal === 'premium' ? 20 : selectedPlanModal === 'business' ? 10 : 5)}`}
+                    </span>
                   </div>
                 </div>
 

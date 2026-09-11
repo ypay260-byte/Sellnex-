@@ -212,16 +212,15 @@ export const DashboardView: React.FC = () => {
           <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-blue-100">
             <Package className="w-3.5 h-3.5" />
             <span>
-              Plan: {currentUser?.plan?.toUpperCase() || 'STARTER'} ({products.length} /{' '}
-              {currentUser?.plan === 'starter'
-                ? 5
-                : currentUser?.plan === 'full'
-                ? 50
-                : currentUser?.plan === 'premium'
-                ? 100
-                : currentUser?.plan === 'premium_pro'
-                ? 1000
-                : 50}{' '}
+              Plan: {currentUser?.plan?.toUpperCase() || 'FREE TRIAL'} ({products.length} /{' '}
+              {currentUser?.productLimit ||
+                (currentUser?.plan === 'premium' || currentUser?.plan === 'premium_pro'
+                  ? 110
+                  : currentUser?.plan === 'business'
+                  ? 50
+                  : currentUser?.plan === 'pro' || currentUser?.plan === 'full'
+                  ? 20
+                  : 5)}{' '}
               max)
             </span>
           </div>

@@ -516,6 +516,69 @@ export const firestoreService = {
   },
 
   async saveProduct(product: Product): Promise<void> {
+    // Database / backend level product limit check for new products
+    try {
+      const existingProduct = await this.getProductById(product.id);
+      if (!existingProduct) {
+        const ownerId = product.ownerId || auth.currentUser?.uid;
+        if (ownerId) {
+          const ownerUser = await this.getUser(ownerId);
+          if (ownerUser && ownerUser.role !== 'admin') {
+            // Check if subscription or trial is expired
+            const expiry = ownerUser.endDate || ownerUser.subscriptionExpiresAt || ownerUser.trialEndsAt;
+            if (expiry) {
+              const isExpired =
+                new Date(expiry).getTime() < Date.now() ||
+                ownerUser.status === 'expired' ||
+                ownerUser.subscriptionStatus === 'expired';
+              if (isExpired) {
+                throw new Error('Your subscription has expired.');
+              }
+            }
+
+            const existingProducts = await this.getProductsByOwner(ownerId);
+            const count = existingProducts.length;
+            const plan = (ownerUser.plan === 'free' ? 'trial' : ownerUser.plan) || 'trial';
+
+            if (plan === 'trial') {
+              if (count >= 5) {
+                throw new Error('You have reached your 5 product limit.');
+              }
+            } else if (plan === 'starter') {
+              if (count >= 5) {
+                throw new Error('You have reached your 5 product limit. Upgrade to Pro for up to 20 products.');
+              }
+            } else if (plan === 'pro' || plan === 'full') {
+              if (count >= 20) {
+                throw new Error('You have reached your 20 product limit. Upgrade to Business for up to 50 products.');
+              }
+            } else if (plan === 'business') {
+              if (count >= 50) {
+                throw new Error('You have reached your 50 product limit. Upgrade to Premium for up to 110 products.');
+              }
+            } else if (plan === 'premium' || plan === 'premium_pro') {
+              if (count >= 110) {
+                throw new Error('You have reached your 110 product limit on Premium.');
+              }
+            } else {
+              const limit = ownerUser.productLimit || 5;
+              if (count >= limit) {
+                throw new Error(`You have reached your ${limit} product limit.`);
+              }
+            }
+          }
+        }
+      }
+    } catch (limitErr: any) {
+      if (
+        limitErr?.message?.includes('product limit') ||
+        limitErr?.message?.includes('subscription has expired')
+      ) {
+        throw limitErr;
+      }
+      console.warn('Backend limit check notice:', limitErr);
+    }
+
     const docRef = doc(db, COLLECTIONS.PRODUCTS, product.id);
     const cleaned = sanitizeData({ ...product, updatedAt: new Date().toISOString() });
     await setDoc(docRef, cleaned, { merge: true });

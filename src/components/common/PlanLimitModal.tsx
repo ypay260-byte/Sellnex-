@@ -80,7 +80,23 @@ export const PlanLimitModal: React.FC<PlanLimitModalProps> = ({
             <div className="bg-amber-500 h-full rounded-full w-full animate-pulse" />
           </div>
           <p className="text-[11px] text-slate-500">
-            Upgrade to <strong>FULL ($5/mo, 50 products)</strong>, <strong>PREMIUM (99,000 UZS, 100 products)</strong> or <strong>PREMIUM PRO (199,000 UZS, 1,000 products)</strong> to continue expanding your catalog.
+            {maxLimit <= 5 ? (
+              <>
+                Upgrade to <strong>Pro ($5/mo, 20 products)</strong> to continue expanding your catalog.
+              </>
+            ) : maxLimit <= 20 ? (
+              <>
+                Upgrade to <strong>Business ($10/mo, 50 products)</strong> to continue expanding your catalog.
+              </>
+            ) : maxLimit <= 50 ? (
+              <>
+                Upgrade to <strong>Premium ($20/mo, 110 products)</strong> for maximum capacity.
+              </>
+            ) : (
+              <>
+                You have reached your {maxLimit} product limit on Premium. Manage existing products or contact VIP support.
+              </>
+            )}
           </p>
         </div>
 
