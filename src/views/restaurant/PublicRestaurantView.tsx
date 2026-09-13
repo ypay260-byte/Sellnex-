@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { firestoreService } from '../../services/firestoreService';
-import { telegramService } from '../../services/telegramService';
 import { RestaurantProfile, MenuItem, RestaurantAddon, RestaurantOrder, RestaurantOrderItem } from '../../types';
 import { SAMPLE_RESTAURANT, SAMPLE_MENU_ITEMS } from '../../data/restaurantInitialData';
+import { CafeReceiptModal } from '../../components/cafe/CafeReceiptModal';
 import {
   Utensils,
   Clock,
@@ -25,6 +25,7 @@ import {
   DollarSign,
   Copy,
   Info,
+  FileText,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -62,6 +63,7 @@ export const PublicRestaurantView: React.FC = () => {
 
   // Order placed confirmation
   const [placedOrder, setPlacedOrder] = useState<RestaurantOrder | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
   // Load restaurant & menu
   useEffect(() => {
@@ -164,9 +166,10 @@ export const PublicRestaurantView: React.FC = () => {
   };
 
   const handleConfirmAddToCart = () => {
-    if (!selectedDish) return;
+    if (!selectedDish || !selectedDish.isAvailable) return;
+    const basePrice = selectedDish.discountPrice || selectedDish.price;
     const addonsSum = selectedAddons.reduce((sum, a) => sum + a.price, 0);
-    const unitPrice = selectedDish.price + addonsSum;
+    const unitPrice = basePrice + addonsSum;
     const totalPrice = unitPrice * dishQuantity;
 
     const sortedAddonIds = [...selectedAddons].map((a) => a.id).sort().join('-');
@@ -190,7 +193,7 @@ export const PublicRestaurantView: React.FC = () => {
             itemKey,
             menuItemId: selectedDish.id,
             name: selectedDish.name,
-            price: selectedDish.price,
+            price: basePrice,
             quantity: dishQuantity,
             selectedAddons: selectedAddons,
             totalPrice,
@@ -262,13 +265,6 @@ export const PublicRestaurantView: React.FC = () => {
       };
 
       const createdOrder = await firestoreService.createRestaurantOrder(orderPayload);
-
-      // Auto-trigger Telegram notification to restaurant chat
-      try {
-        await telegramService.sendRestaurantOrderAlert(createdOrder, restaurant!);
-      } catch (tgErr) {
-        console.warn('Telegram notification could not be delivered:', tgErr);
-      }
 
       // Celebrate
       confetti({
@@ -483,22 +479,42 @@ export const PublicRestaurantView: React.FC = () => {
                     <div className="space-y-1">
                       <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-1">{dish.name}</h3>
                       <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{dish.description}</p>
-                      {hasAddons && (
-                        <p className="text-[11px] text-amber-700 font-medium">
-                          ✨ +{dish.addons!.length} ta qo'shimcha tanlash mumkin
-                        </p>
-                      )}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {dish.extraInfo && (
+                          <span className="text-[10px] bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded font-medium">
+                            {dish.extraInfo}
+                          </span>
+                        )}
+                        {hasAddons && (
+                          <p className="text-[11px] text-amber-700 font-medium">
+                            ✨ +{dish.addons!.length} ta qo'shimcha
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                       <div>
-                        <span className="text-xs text-slate-400 block font-medium">Narxi</span>
-                        <span className="text-base font-extrabold text-slate-900">
-                          {dish.price.toLocaleString()} <span className="text-xs font-semibold text-slate-500">so‘m</span>
-                        </span>
+                        {dish.discountPrice && dish.discountPrice < dish.price ? (
+                          <div>
+                            <span className="text-base font-extrabold text-amber-800 block leading-tight">
+                              {dish.discountPrice.toLocaleString()} <span className="text-xs font-semibold">so‘m</span>
+                            </span>
+                            <span className="text-[11px] text-slate-400 line-through">
+                              {dish.price.toLocaleString()} so‘m
+                            </span>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="text-xs text-slate-400 block font-medium">Narxi</span>
+                            <span className="text-base font-extrabold text-slate-900">
+                              {dish.price.toLocaleString()} <span className="text-xs font-semibold text-slate-500">so‘m</span>
+                            </span>
+                          </div>
+                        )}
                       </div>
 
-                      {dish.isAvailable && (
+                      {dish.isAvailable ? (
                         <button
                           onClick={() => handleOpenDishModal(dish)}
                           className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-xs transition"
@@ -510,6 +526,13 @@ export const PublicRestaurantView: React.FC = () => {
                               {inCartItem.quantity}
                             </span>
                           )}
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="px-3 py-1.5 bg-slate-100 text-slate-400 text-xs font-semibold rounded-xl cursor-not-allowed border border-slate-200"
+                        >
+                          Tugagan
                         </button>
                       )}
                     </div>
@@ -919,7 +942,7 @@ export const PublicRestaurantView: React.FC = () => {
               </span>
               <h3 className="text-2xl font-extrabold text-slate-900">№{placedOrder.orderNumber}</h3>
               <p className="text-xs text-slate-500">
-                Buyurtmangiz restoran botiga yetkazildi va oshxonaga topshirildi!
+                Buyurtmangiz Sellnex Café tizimida qabul qilindi va oshxonaga topshirildi!
               </p>
             </div>
 
@@ -929,12 +952,15 @@ export const PublicRestaurantView: React.FC = () => {
               <div className="space-y-2 text-xs">
                 {[
                   { key: 'new', label: '1. Qabul qilinishi kutilmoqda', color: 'text-amber-600' },
-                  { key: 'preparing', label: '2. Qabul qilindi / Tayyorlanmoqda', color: 'text-blue-600' },
-                  { key: 'delivering', label: '3. Kuryer yetkazib bermoqda', color: 'text-orange-600' },
-                  { key: 'delivered', label: '4. Muvaffaqiyatli yetkazildi', color: 'text-emerald-600' },
+                  { key: 'accepted', label: '2. Qabul qilindi', color: 'text-indigo-600' },
+                  { key: 'preparing', label: '3. Tayyorlanmoqda', color: 'text-blue-600' },
+                  { key: 'on_the_way', label: '4. Kuryer yetkazib bermoqda', color: 'text-orange-600' },
+                  { key: 'delivered', label: '5. Muvaffaqiyatli yetkazildi', color: 'text-emerald-600' },
                 ].map((st, idx) => {
-                  const currentIdx = ['new', 'preparing', 'delivering', 'delivered'].indexOf(placedOrder.status);
-                  const isCurrent = placedOrder.status === st.key;
+                  const stages = ['new', 'accepted', 'preparing', 'on_the_way', 'delivered'];
+                  const normStatus = placedOrder.status === 'delivering' ? 'on_the_way' : placedOrder.status;
+                  const currentIdx = stages.indexOf(normStatus);
+                  const isCurrent = normStatus === st.key;
                   const isDone = currentIdx > idx;
 
                   return (
@@ -970,6 +996,15 @@ export const PublicRestaurantView: React.FC = () => {
               </p>
             </div>
 
+            {/* Receipt Button */}
+            <button
+              onClick={() => setIsReceiptModalOpen(true)}
+              className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+            >
+              <FileText className="w-4 h-4 text-amber-700" />
+              <span>Buyurtma chekini ko‘rish / Chop etish</span>
+            </button>
+
             <div className="pt-2 flex gap-2">
               <a
                 href={`tel:${restaurant.phone}`}
@@ -988,6 +1023,15 @@ export const PublicRestaurantView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Customer Receipt Modal */}
+      <CafeReceiptModal
+        order={placedOrder}
+        cafeName={restaurant?.name || 'Sellnex Café'}
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        onToast={showToast}
+      />
     </div>
   );
 };

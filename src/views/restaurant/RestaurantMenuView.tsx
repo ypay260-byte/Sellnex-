@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { firestoreService } from '../../services/firestoreService';
 import { subscriptionService } from '../../services/subscriptionService';
-import { MenuItem, RestaurantProfile, RestaurantAddon } from '../../types';
+import { MenuItem, RestaurantProfile, RestaurantAddon, CafeCategory } from '../../types';
 import { SAMPLE_RESTAURANT, SAMPLE_MENU_ITEMS } from '../../data/restaurantInitialData';
+import { DEFAULT_CAFE_CATEGORIES } from '../../data/cafeInitialCategories';
 import {
   Utensils,
   Plus,
@@ -16,36 +17,57 @@ import {
   Tag,
   DollarSign,
   Sparkles,
-  Image as ImageIcon,
+  UploadCloud,
   Layers,
+  FolderPlus,
+  SlidersHorizontal,
+  Package,
+  Info,
+  CheckCircle2,
+  Image as ImageIcon,
+  Loader2,
 } from 'lucide-react';
 
 export const RestaurantMenuView: React.FC = () => {
   const { currentUser, showToast } = useApp();
   const [restaurant, setRestaurant] = useState<RestaurantProfile | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<CafeCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Category manager modal
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('🍽️');
+  const [editingCategory, setEditingCategory] = useState<CafeCategory | null>(null);
 
   // Edit / Add dish modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDish, setEditingDish] = useState<Partial<MenuItem> | null>(null);
   const [dishName, setDishName] = useState('');
-  const [dishCategory, setDishCategory] = useState('Fast food');
+  const [dishCategory, setDishCategory] = useState('');
   const [dishPrice, setDishPrice] = useState<number>(35000);
+  const [dishDiscountPrice, setDishDiscountPrice] = useState<number | undefined>(undefined);
   const [dishDescription, setDishDescription] = useState('');
   const [dishImage, setDishImage] = useState('');
   const [dishAvailable, setDishAvailable] = useState(true);
+  const [dishStockQuantity, setDishStockQuantity] = useState<number | undefined>(undefined);
+  const [dishExtraInfo, setDishExtraInfo] = useState('');
   const [dishAddons, setDishAddons] = useState<RestaurantAddon[]>([]);
 
   // Addon inputs
   const [newAddonName, setNewAddonName] = useState('');
   const [newAddonPrice, setNewAddonPrice] = useState<number>(5000);
 
+  // Image upload state
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [saving, setSaving] = useState(false);
 
-  // Load restaurant & menu
+  // Load restaurant, categories & menu
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
@@ -58,19 +80,41 @@ export const RestaurantMenuView: React.FC = () => {
             ...SAMPLE_RESTAURANT,
             id: `rest_${currentUser.id}`,
             ownerId: currentUser.id,
-            name: `${currentUser.name?.split(' ')[0] || 'Mening'}'s Restoran`,
-            slug: `restoran-${currentUser.id.slice(0, 5)}`,
+            name: `${currentUser.name?.split(' ')[0] || 'Mening'}'s Café`,
+            slug: `cafe-${currentUser.id.slice(0, 5)}`,
+            storeType: 'cafe',
           };
           await firestoreService.saveRestaurant(profile);
         }
 
         if (isMounted && profile) {
           setRestaurant(profile);
+
+          // 1. Load Categories
+          let cats = await firestoreService.getCafeCategories(profile.id);
+          if (cats.length === 0) {
+            // Seed initial categories
+            const seededCats: CafeCategory[] = await Promise.all(
+              DEFAULT_CAFE_CATEGORIES.map((def, idx) =>
+                firestoreService.saveCafeCategory({
+                  id: `cat_${Date.now()}_${idx}`,
+                  restaurantId: profile!.id,
+                  name: def.name,
+                  icon: def.icon,
+                  orderIndex: idx,
+                })
+              )
+            );
+            cats = seededCats;
+          }
+          setCategories(cats);
+
+          // 2. Load Menu Items
           const items = await firestoreService.getMenuItems(profile.id);
           setMenuItems(items);
         }
       } catch (err) {
-        console.error('Failed to load restaurant menu', err);
+        console.error('Failed to load cafe menu', err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -84,7 +128,8 @@ export const RestaurantMenuView: React.FC = () => {
 
   // Product limit check
   const currentPlan = (currentUser?.plan || 'trial') as any;
-  const maxLimit = currentUser?.productLimit || subscriptionService.getPlanConfig(currentPlan)?.limits?.maxProducts || 5;
+  const maxLimit =
+    currentUser?.productLimit || subscriptionService.getPlanConfig(currentPlan)?.limits?.maxProducts || 5;
   const isLimitReached = menuItems.length >= maxLimit;
 
   // Open modal for new dish
@@ -92,18 +137,22 @@ export const RestaurantMenuView: React.FC = () => {
     if (isLimitReached) {
       showToast(
         'Tarif limiti to‘ldi',
-        `Sizning ${currentPlan.toUpperCase()} tarifingizda limit ${maxLimit} ta taom. Yangi taom qo‘shish uchun tarifni oshiring.`,
+        `Sizning ${currentPlan.toUpperCase()} tarifingizda limit ${maxLimit} ta mahsulot. Yangi mahsulot qo‘shish uchun tarifni oshiring.`,
         'warning'
       );
       return;
     }
     setEditingDish(null);
     setDishName('');
-    setDishCategory('Fast food');
+    const defaultCat = categories.length > 0 ? categories[0].name : 'Fast Food';
+    setDishCategory(defaultCat);
     setDishPrice(35000);
+    setDishDiscountPrice(undefined);
     setDishDescription('');
-    setDishImage('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500');
+    setDishImage('');
     setDishAvailable(true);
+    setDishStockQuantity(undefined);
+    setDishExtraInfo('');
     setDishAddons([]);
     setIsModalOpen(true);
   };
@@ -112,13 +161,88 @@ export const RestaurantMenuView: React.FC = () => {
   const handleOpenEdit = (dish: MenuItem) => {
     setEditingDish(dish);
     setDishName(dish.name);
-    setDishCategory(dish.category || 'Fast food');
+    setDishCategory(dish.category || (categories[0]?.name ?? 'Boshqalar'));
     setDishPrice(dish.price);
+    setDishDiscountPrice(dish.discountPrice);
     setDishDescription(dish.description || '');
     setDishImage(dish.image || '');
     setDishAvailable(dish.isAvailable);
+    setDishStockQuantity(dish.stockQuantity);
+    setDishExtraInfo(dish.extraInfo || '');
     setDishAddons(dish.addons || []);
     setIsModalOpen(true);
+  };
+
+  // Gallery image file handler
+  const handleGalleryFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check size limit (< 15MB before compression)
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('Fayl hajmi katta', 'Iltimos, 15 MB dan kichikroq rasm tanlang', 'warning');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const uploadedUrl = await firestoreService.uploadCafeImage(file);
+      setDishImage(uploadedUrl);
+      showToast('Rasm yuklandi', 'Galereyadan mahsulot rasmi muvaffaqiyatli tanlandi', 'success');
+    } catch (err: any) {
+      console.error('Gallery image upload error:', err);
+      showToast('Xatolik', 'Rasmni yuklab bo‘lmadi', 'error');
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Category creation / update
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim() || !restaurant) return;
+
+    try {
+      if (editingCategory) {
+        const updated = await firestoreService.saveCafeCategory({
+          ...editingCategory,
+          name: newCatName.trim(),
+          icon: newCatIcon.trim() || '🍽️',
+        });
+        setCategories((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+        showToast('Kategoriya yangilandi', `"${newCatName}" kategoriyasi o‘zgartirildi`, 'success');
+        setEditingCategory(null);
+      } else {
+        const newCat = await firestoreService.saveCafeCategory({
+          id: `cat_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          restaurantId: restaurant.id,
+          name: newCatName.trim(),
+          icon: newCatIcon.trim() || '🍽️',
+          orderIndex: categories.length,
+        });
+        setCategories((prev) => [...prev, newCat]);
+        showToast('Yangi kategoriya', `"${newCatName}" kategoriyasi qo‘shildi`, 'success');
+      }
+      setNewCatName('');
+      setNewCatIcon('🍽️');
+    } catch (err: any) {
+      showToast('Xatolik', err.message || 'Kategoriyani saqlab bo‘lmadi', 'error');
+    }
+  };
+
+  const handleDeleteCategory = async (catId: string, catName: string) => {
+    if (!confirm(`"${catName}" kategoriyasini o‘chirmoqchimisiz?`)) return;
+    try {
+      await firestoreService.deleteCafeCategory(catId);
+      setCategories((prev) => prev.filter((c) => c.id !== catId));
+      if (activeCategory === catName) setActiveCategory('all');
+      showToast('O‘chirildi', `"${catName}" kategoriyasi o‘chirildi`, 'info');
+    } catch (err: any) {
+      showToast('Xatolik', err.message, 'error');
+    }
   };
 
   // Add addon to dish
@@ -142,7 +266,7 @@ export const RestaurantMenuView: React.FC = () => {
   const handleSaveDish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dishName.trim()) {
-      showToast('Nomi kiritilmadi', 'Taom nomini kiriting', 'warning');
+      showToast('Nomi kiritilmadi', 'Mahsulot nomini kiriting', 'warning');
       return;
     }
     if (!restaurant) return;
@@ -156,10 +280,16 @@ export const RestaurantMenuView: React.FC = () => {
         name: dishName.trim(),
         description: dishDescription.trim(),
         price: Number(dishPrice) || 0,
-        category: dishCategory.trim(),
-        image: dishImage.trim() || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500',
+        discountPrice: dishDiscountPrice ? Number(dishDiscountPrice) : undefined,
+        category: dishCategory.trim() || (categories[0]?.name ?? 'Boshqalar'),
+        image:
+          dishImage.trim() ||
+          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500',
         isAvailable: dishAvailable,
+        stockQuantity: dishStockQuantity ? Number(dishStockQuantity) : undefined,
+        extraInfo: dishExtraInfo.trim() || undefined,
         addons: dishAddons,
+        storeType: 'cafe',
       };
 
       const saved = await firestoreService.saveMenuItem(payload);
@@ -173,7 +303,7 @@ export const RestaurantMenuView: React.FC = () => {
         return [...prev, saved];
       });
 
-      showToast('Muvaffaqiyatli saqlandi', `${dishName} menyuga kiritildi`, 'success');
+      showToast('Muvaffaqiyatli saqlandi', `"${dishName}" menyuga kiritildi`, 'success');
       setIsModalOpen(false);
     } catch (err: any) {
       showToast('Xatolik', err.message || 'Saqlab bo‘lmadi', 'error');
@@ -184,36 +314,39 @@ export const RestaurantMenuView: React.FC = () => {
 
   // Delete dish
   const handleDeleteDish = async (id: string, name: string) => {
-    if (!confirm(`"${name}" taomini rostdan ham menyudan o‘chirmoqchimisiz?`)) return;
+    if (!confirm(`"${name}" mahsulotini rostdan ham menyudan o‘chirmoqchimisiz?`)) return;
     try {
       await firestoreService.deleteMenuItem(id);
       setMenuItems((prev) => prev.filter((i) => i.id !== id));
-      showToast('O‘chirildi', `"${name}" taomi o‘chirildi`, 'info');
+      showToast('O‘chirildi', `"${name}" mahsuloti o‘chirildi`, 'info');
     } catch (err: any) {
       showToast('Xatolik', err.message || 'O‘chirib bo‘lmadi', 'error');
     }
   };
 
-  // Toggle availability
+  // Toggle availability (Stop-list / Mavjud emas)
   const handleToggleAvailability = async (dish: MenuItem) => {
     try {
       const updated = { ...dish, isAvailable: !dish.isAvailable };
       await firestoreService.saveMenuItem(updated);
       setMenuItems((prev) => prev.map((i) => (i.id === dish.id ? updated : i)));
-      showToast('Holat yangilandi', updated.isAvailable ? 'Taom sotuvda mavjud' : 'Taom tugadi deb belgilandi', 'success');
+      showToast(
+        'Holat yangilandi',
+        updated.isAvailable ? `"${dish.name}" sotuvda mavjud` : `"${dish.name}" mavjud emas (Stop-list) deb belgilandi`,
+        'success'
+      );
     } catch (err: any) {
       showToast('Xatolik', err.message, 'error');
     }
   };
-
-  const categories = ['all', ...Array.from(new Set(menuItems.map((i) => i.category).filter(Boolean)))];
 
   const filteredItems = menuItems.filter((dish) => {
     const matchesCategory = activeCategory === 'all' || dish.category === activeCategory;
     const matchesSearch =
       !searchQuery.trim() ||
       dish.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dish.description.toLowerCase().includes(searchQuery.toLowerCase());
+      dish.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (dish.category && dish.category.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 
@@ -222,36 +355,48 @@ export const RestaurantMenuView: React.FC = () => {
       <div className="p-8 flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-3">
           <div className="w-10 h-10 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm font-semibold text-slate-600">Menyu yuklanmoqda...</p>
+          <p className="text-sm font-semibold text-slate-600">Café menyusi yuklanmoqda...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div id="restaurant-menu-view" className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div id="cafe-menu-view" className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Top Header */}
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Restoran Menyusi</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Café Menyu & Mahsulotlar
+            </h1>
             <span className="bg-amber-100 text-amber-900 text-xs font-bold px-2.5 py-0.5 rounded-full">
-              {menuItems.length} / {maxLimit} taom
+              {menuItems.length} / {maxLimit} ta mahsulot
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Kategoriyalar, taomlar, narxlar va qo‘shimcha masalliqlar (add-ons) boshqaruvi.
+            Kategoriyalar, mahsulotlar, narxlar, chegirmalar va rasmlar boshqaruvi.
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          disabled={isLimitReached}
-          className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Yangi Taom Qo‘shish</span>
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setIsCategoryModalOpen(true)}
+            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"
+          >
+            <Layers className="w-4 h-4 text-amber-600" />
+            <span>Kategoriyalarni boshqarish ({categories.length})</span>
+          </button>
+
+          <button
+            onClick={handleOpenAdd}
+            disabled={isLimitReached}
+            className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Mahsulot qo‘shish</span>
+          </button>
+        </div>
       </div>
 
       {/* Limit Alert if Reached */}
@@ -260,173 +405,449 @@ export const RestaurantMenuView: React.FC = () => {
           <div className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
             <span>
-              Tarif limiti to‘lgan (<strong>{menuItems.length}/{maxLimit} taom</strong>). Yangi taom qo‘shish uchun tarifingizni yangilang.
+              Tarif limiti to‘lgan (<strong>{menuItems.length}/{maxLimit} ta mahsulot</strong>). Yangi mahsulot qo‘shish uchun tarifingizni yangilang.
             </span>
           </div>
         </div>
       )}
 
-      {/* Filter & Search Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Menyudan taom nomini qidirish..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
-          />
+      {/* Filter & Category Bar */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Mahsulot nomi yoki tavsifi bo‘yicha qidirish..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+            />
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition whitespace-nowrap ${
-                activeCategory === cat
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {cat === 'all' ? 'Barchasi' : cat}
-            </button>
-          ))}
+        {/* Category Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-1 border-t border-slate-100">
+          <button
+            onClick={() => setActiveCategory('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap ${
+              activeCategory === 'all'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Barchasi ({menuItems.length})
+          </button>
+          {categories.map((cat) => {
+            const count = menuItems.filter((i) => i.category === cat.name).length;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.name)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap flex items-center gap-1 ${
+                  activeCategory === cat.name
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <span>{cat.icon || '🍽️'}</span>
+                <span>{cat.name}</span>
+                <span className="text-[10px] opacity-75 font-normal">({count})</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Dishes Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredItems.map((dish) => (
-          <div
-            key={dish.id}
-            className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between"
-          >
-            <div>
-              <div className="relative aspect-16/10 bg-slate-100 overflow-hidden">
-                <img
-                  src={dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'}
-                  alt={dish.name}
-                  className="w-full h-full object-cover"
-                />
-                <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-xs text-white text-[11px] font-semibold px-2 py-0.5 rounded-md">
-                  {dish.category}
-                </span>
-
-                <button
-                  onClick={() => handleToggleAvailability(dish)}
-                  className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[11px] font-bold shadow-xs transition ${
-                    dish.isAvailable
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-red-600 text-white'
-                  }`}
-                >
-                  {dish.isAvailable ? 'Sotuvda mavjud' : 'Tugagan'}
-                </button>
-              </div>
-
-              <div className="p-4 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-slate-900 text-base leading-snug">{dish.name}</h3>
-                  <span className="font-extrabold text-slate-900 text-sm whitespace-nowrap">
-                    {dish.price.toLocaleString()} so‘m
+        {filteredItems.length === 0 ? (
+          <div className="col-span-full py-16 text-center bg-white rounded-2xl border border-slate-200 space-y-3">
+            <Utensils className="w-12 h-12 text-slate-300 mx-auto" />
+            <p className="text-sm font-semibold text-slate-700">Mahsulot topilmadi</p>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              {activeCategory !== 'all'
+                ? `"${activeCategory}" kategoriyasida hozircha mahsulot yo‘q.`
+                : 'Menyuga yangi mahsulot qo‘shish orqali boshlang.'}
+            </p>
+            <button
+              onClick={handleOpenAdd}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-semibold hover:bg-amber-700 transition"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Yangi mahsulot qo‘shish</span>
+            </button>
+          </div>
+        ) : (
+          filteredItems.map((dish) => (
+            <div
+              key={dish.id}
+              className={`bg-white rounded-2xl border overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between ${
+                !dish.isAvailable ? 'border-red-200 bg-red-50/10' : 'border-slate-200'
+              }`}
+            >
+              <div>
+                <div className="relative aspect-16/10 bg-slate-100 overflow-hidden">
+                  <img
+                    src={dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'}
+                    alt={dish.name}
+                    className={`w-full h-full object-cover transition duration-300 ${
+                      !dish.isAvailable ? 'grayscale opacity-75' : ''
+                    }`}
+                  />
+                  <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-xs text-white text-[11px] font-semibold px-2.5 py-0.5 rounded-lg">
+                    {dish.category}
                   </span>
-                </div>
-                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{dish.description}</p>
 
-                {dish.addons && dish.addons.length > 0 && (
-                  <div className="pt-2 border-t border-slate-100">
-                    <p className="text-[11px] font-bold text-slate-700">Qo‘shimchalar ({dish.addons.length}):</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {dish.addons.map((a) => (
-                        <span
-                          key={a.id}
-                          className="bg-slate-100 text-slate-700 text-[10px] font-medium px-2 py-0.5 rounded-md"
-                        >
-                          +{a.name} ({a.price.toLocaleString()})
+                  {/* Availability quick switch */}
+                  <button
+                    onClick={() => handleToggleAvailability(dish)}
+                    title="Bosib holatni o‘zgartiring"
+                    className={`absolute top-2 right-2 px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-xs transition flex items-center gap-1 ${
+                      dish.isAvailable
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        : 'bg-red-600 text-white hover:bg-red-700'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${dish.isAvailable ? 'bg-white' : 'bg-red-200'}`} />
+                    <span>{dish.isAvailable ? 'Mavjud' : 'Mavjud emas'}</span>
+                  </button>
+
+                  {dish.discountPrice && dish.discountPrice < dish.price && (
+                    <span className="absolute bottom-2 left-2 bg-red-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md">
+                      Chegirma!
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-bold text-slate-900 text-base leading-snug">{dish.name}</h3>
+                    <div className="text-right shrink-0">
+                      <span className="font-extrabold text-slate-900 text-sm whitespace-nowrap block">
+                        {(dish.discountPrice || dish.price).toLocaleString()} so‘m
+                      </span>
+                      {dish.discountPrice && (
+                        <span className="text-[11px] text-slate-400 line-through block">
+                          {dish.price.toLocaleString()} so‘m
                         </span>
-                      ))}
+                      )}
                     </div>
                   </div>
-                )}
+
+                  {dish.description && (
+                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{dish.description}</p>
+                  )}
+
+                  {/* Stock or Extra info badges */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
+                    {dish.stockQuantity !== undefined && (
+                      <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-medium">
+                        Qoldiq: <strong>{dish.stockQuantity} ta</strong>
+                      </span>
+                    )}
+                    {dish.extraInfo && (
+                      <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md font-medium">
+                        {dish.extraInfo}
+                      </span>
+                    )}
+                  </div>
+
+                  {dish.addons && dish.addons.length > 0 && (
+                    <div className="pt-2 border-t border-slate-100">
+                      <p className="text-[11px] font-bold text-slate-700">Qo‘shimchalar ({dish.addons.length}):</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {dish.addons.map((a) => (
+                          <span
+                            key={a.id}
+                            className="bg-slate-100 text-slate-700 text-[10px] font-medium px-2 py-0.5 rounded-md"
+                          >
+                            +{a.name} ({a.price.toLocaleString()} so‘m)
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom Actions */}
+              <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+                <button
+                  onClick={() => handleOpenEdit(dish)}
+                  className="flex-1 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition flex items-center justify-center gap-1"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Tahrirlash</span>
+                </button>
+                <button
+                  onClick={() => handleDeleteDish(dish.id, dish.name)}
+                  className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition"
+                  title="O‘chirish"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Category Manager Modal */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-slate-200 animate-scale-up max-h-[85vh] flex flex-col">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-amber-600" />
+                <h3 className="font-bold text-base text-slate-900">Café Kategoriyalari</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setIsCategoryModalOpen(false);
+                  setEditingCategory(null);
+                  setNewCatName('');
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Create / Edit Category Form */}
+            <form onSubmit={handleSaveCategory} className="p-4 bg-amber-50/50 border-b border-slate-100 space-y-3">
+              <p className="text-xs font-bold text-slate-700">
+                {editingCategory ? 'Kategoriyani tahrirlash' : 'Yangi kategoriya qo‘shish'}
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Ikonka (masalan: 🥤)"
+                  value={newCatIcon}
+                  onChange={(e) => setNewCatIcon(e.target.value)}
+                  className="w-16 px-2 py-2 text-center bg-white border border-slate-200 rounded-xl text-sm"
+                />
+                <input
+                  type="text"
+                  required
+                  placeholder="Kategoriya nomi (masalan: Ichimliklar)"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition shrink-0"
+                >
+                  {editingCategory ? 'Saqlash' : 'Qo‘shish'}
+                </button>
+              </div>
+              {editingCategory && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingCategory(null);
+                    setNewCatName('');
+                    setNewCatIcon('🍽️');
+                  }}
+                  className="text-[11px] text-slate-500 hover:underline"
+                >
+                  Bekor qilish
+                </button>
+              )}
+            </form>
+
+            {/* Categories List */}
+            <div className="p-4 overflow-y-auto flex-1 space-y-2">
+              <p className="text-xs font-semibold text-slate-500">Mavjud kategoriyalar:</p>
+              <div className="space-y-1.5">
+                {categories.map((cat) => {
+                  const itemCount = menuItems.filter((i) => i.category === cat.name).length;
+                  return (
+                    <div
+                      key={cat.id}
+                      className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 text-xs transition"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{cat.icon || '🍽️'}</span>
+                        <span className="font-bold text-slate-800">{cat.name}</span>
+                        <span className="text-[10px] text-slate-400 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                          {itemCount} ta mahsulot
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingCategory(cat);
+                            setNewCatName(cat.name);
+                            setNewCatIcon(cat.icon || '🍽️');
+                          }}
+                          className="p-1 text-slate-400 hover:text-amber-700 rounded-md"
+                          title="Tahrirlash"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                          className="p-1 text-slate-400 hover:text-red-600 rounded-md"
+                          title="O‘chirish"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Bottom Actions */}
-            <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div className="p-3 bg-slate-50 border-t border-slate-100 text-right">
               <button
-                onClick={() => handleOpenEdit(dish)}
-                className="flex-1 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition flex items-center justify-center gap-1"
+                onClick={() => setIsCategoryModalOpen(false)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-semibold transition"
               >
-                <Edit2 className="w-3.5 h-3.5 text-slate-500" />
-                <span>Tahrirlash</span>
-              </button>
-              <button
-                onClick={() => handleDeleteDish(dish.id, dish.name)}
-                className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition"
-                title="O‘chirish"
-              >
-                <Trash2 className="w-4 h-4" />
+                Yopish
               </button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
-      {/* Add / Edit Dish Modal */}
+      {/* Add / Edit Dish Modal with Gallery Upload and Full Fields */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl border border-slate-200 animate-scale-up max-h-[92vh] flex flex-col">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
               <div className="flex items-center gap-2">
                 <Utensils className="w-5 h-5 text-amber-600" />
                 <h3 className="font-bold text-base text-slate-900">
-                  {editingDish ? 'Taomni Tahrirlash' : 'Yangi Taom Qo‘shish'}
+                  {editingDish ? 'Mahsulotni tahrirlash' : 'Yangi mahsulot qo‘shish'}
                 </h3>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSaveDish} className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Mahsulot nomi */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Taom nomi *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Mahsulot nomi *</label>
                 <input
                   type="text"
                   required
-                  placeholder="Masalan: Double Burger"
+                  placeholder="Masalan: Maxsus Lavash yoki Milliy Osh"
                   value={dishName}
                   onChange={(e) => setDishName(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
                 />
               </div>
 
+              {/* Rasm: Galereyadan tanlash (No URL requirement!) */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Mahsulot rasmi (Galereyadan tanlash)
+                </label>
+
+                {/* Hidden file input */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleGalleryFileSelect}
+                  className="hidden"
+                />
+
+                {dishImage ? (
+                  <div className="relative rounded-2xl overflow-hidden border border-slate-200 aspect-16/9 bg-slate-100 group">
+                    <img src={dishImage} alt="Preview" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-3 py-1.5 bg-white text-slate-900 rounded-xl text-xs font-bold shadow-md hover:bg-slate-100 transition flex items-center gap-1"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
+                        <span>O‘zgartirish</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDishImage('')}
+                        className="px-3 py-1.5 bg-red-600 text-white rounded-xl text-xs font-bold shadow-md hover:bg-red-700 transition flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>O‘chirish</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/50 hover:bg-amber-50 rounded-2xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2"
+                  >
+                    {uploadingImage ? (
+                      <>
+                        <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
+                        <span className="text-xs font-semibold text-amber-900">Rasm yuklanmoqda...</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shadow-xs">
+                          <ImageIcon className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-800">
+                            📱 Galereyadan tanlash
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            Telefon yoki kompyuter galereyasidan rasm tanlang (URL yozish shart emas)
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Kategoriya & Narx */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Kategoriya *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-700">Kategoriya *</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCategoryModalOpen(true)}
+                      className="text-[10px] text-amber-700 hover:underline font-semibold"
+                    >
+                      + Yangi
+                    </button>
+                  </div>
                   <select
                     value={dishCategory}
                     onChange={(e) => setDishCategory(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
                   >
-                    <option value="Fast food">Fast food</option>
-                    <option value="Taomlar">Taomlar (Milliy)</option>
-                    <option value="Ichimliklar">Ichimliklar</option>
-                    <option value="Salatlar">Salatlar</option>
-                    <option value="Desert">Desert</option>
-                    <option value="Souslar">Souslar</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.name}>
+                        {cat.icon} {cat.name}
+                      </option>
+                    ))}
+                    {categories.length === 0 && <option value="Boshqalar">Boshqalar</option>}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Narxi (so‘m) *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Narx (so‘m) *</label>
                   <input
                     type="number"
                     required
                     min={0}
-                    step={1000}
+                    step={500}
                     value={dishPrice}
                     onChange={(e) => setDishPrice(Number(e.target.value))}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-mono font-bold"
@@ -434,103 +855,167 @@ export const RestaurantMenuView: React.FC = () => {
                 </div>
               </div>
 
+              {/* Chegirma narxi & Mahsulot miqdori */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Chegirma narxi (ixtiyoriy)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={500}
+                    placeholder="Masalan: 30000"
+                    value={dishDiscountPrice ?? ''}
+                    onChange={(e) =>
+                      setDishDiscountPrice(e.target.value ? Number(e.target.value) : undefined)
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Mahsulot miqdori / Qoldiq (ixtiyoriy)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="Masalan: 50 ta"
+                    value={dishStockQuantity ?? ''}
+                    onChange={(e) =>
+                      setDishStockQuantity(e.target.value ? Number(e.target.value) : undefined)
+                    }
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Mavjud / mavjud emas holati */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 block">Sotuv holati</span>
+                  <span className="text-[11px] text-slate-500">
+                    {dishAvailable
+                      ? '✅ Sotuvda mavjud — mijozlar buyurtma bera oladi'
+                      : '❌ Mavjud emas (Stop-list) — mijozlar buyurtma bera olmaydi'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDishAvailable(!dishAvailable)}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-300 ${
+                    dishAvailable ? 'bg-emerald-600 justify-end' : 'bg-slate-300 justify-start'
+                  }`}
+                >
+                  <div className="bg-white w-4 h-4 rounded-full shadow-md" />
+                </button>
+              </div>
+
+              {/* Tavsif */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Tavsif</label>
                 <textarea
                   rows={2}
-                  placeholder="Tarkibi, masalliqlar, porsiya haqida ma'lumot..."
+                  placeholder="Tarkibi, masalliqlar, porsiya haqida batafsil ma'lumot..."
                   value={dishDescription}
                   onChange={(e) => setDishDescription(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
                 />
               </div>
 
+              {/* Qo‘shimcha ma’lumot */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Rasm havolasi (URL)</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Qo‘shimcha ma’lumot (ixtiyoriy)
+                </label>
                 <input
-                  type="url"
-                  placeholder="https://images.unsplash.com/..."
-                  value={dishImage}
-                  onChange={(e) => setDishImage(e.target.value)}
+                  type="text"
+                  placeholder="Masalan: 1 porsiya 350g • Tayyorlanish vaqti 15 daqiqa"
+                  value={dishExtraInfo}
+                  onChange={(e) => setDishExtraInfo(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
                 />
               </div>
 
-              {/* Addons Manager */}
-              <div className="pt-2 border-t border-slate-200 space-y-2">
-                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Qo‘shimcha masalliqlar (Add-ons)
+              {/* Addons / Qo‘shimcha masalliqlar */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <label className="block text-xs font-bold text-slate-700">
+                  Qo‘shimcha variantlar / Add-ons (Sous, Sir, Ichimlik va h.k.)
                 </label>
 
-                {/* Add new addon inputs */}
-                <div className="flex items-center gap-2">
+                {dishAddons.length > 0 && (
+                  <div className="space-y-1.5 mb-2">
+                    {dishAddons.map((addon) => (
+                      <div
+                        key={addon.id}
+                        className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-200 text-xs"
+                      >
+                        <span className="font-semibold text-slate-800">{addon.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-amber-800">
+                            +{addon.price.toLocaleString()} so‘m
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAddon(addon.id)}
+                            className="text-slate-400 hover:text-red-600 p-0.5"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Qo‘shimcha nomi (masalan: Pishloq)"
+                    placeholder="Qo‘shimcha nomi (masalan: Sir)"
                     value={newAddonName}
                     onChange={(e) => setNewAddonName(e.target.value)}
-                    className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white"
                   />
                   <input
                     type="number"
                     placeholder="Narxi"
                     value={newAddonPrice}
                     onChange={(e) => setNewAddonPrice(Number(e.target.value))}
-                    className="w-24 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                    className="w-24 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white font-mono"
                   />
                   <button
                     type="button"
                     onClick={handleAddAddon}
-                    className="px-3 py-1.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition"
+                    className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-xl transition"
                   >
-                    + Qo‘shish
+                    Qo‘shish
                   </button>
                 </div>
-
-                {/* Addons List */}
-                <div className="space-y-1.5 pt-1">
-                  {dishAddons.map((addon) => (
-                    <div
-                      key={addon.id}
-                      className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-200 text-xs"
-                    >
-                      <span className="font-medium text-slate-800">{addon.name}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold text-amber-700">+{addon.price.toLocaleString()} so‘m</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveAddon(addon.id)}
-                          className="text-slate-400 hover:text-red-600"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
 
-              {/* Availability checkbox */}
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="dishAvailableCheckbox"
-                  checked={dishAvailable}
-                  onChange={(e) => setDishAvailable(e.target.checked)}
-                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300"
-                />
-                <label htmlFor="dishAvailableCheckbox" className="text-xs font-semibold text-slate-800 cursor-pointer">
-                  Taom sotuvda mavjud (buyurtma qabul qilish mumkin)
-                </label>
-              </div>
-
-              <div className="pt-3">
+              {/* Submit Button */}
+              <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition"
+                >
+                  Bekor qilish
+                </button>
                 <button
                   type="submit"
-                  disabled={saving}
-                  className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-md transition disabled:opacity-50"
+                  disabled={saving || uploadingImage}
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5"
                 >
-                  {saving ? 'Saqlanmoqda...' : 'Menyuga Saqlash'}
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saqlanmoqda...</span>
+                    </>
+                  ) : (
+                    <span>Saqlash</span>
+                  )}
                 </button>
               </div>
             </form>

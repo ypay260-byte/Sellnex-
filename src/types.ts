@@ -511,11 +511,20 @@ export interface AdminSettings {
   updatedAt?: string;
 }
 
-// === RESTAURANT MODE TYPES ===
+// === RESTAURANT / CAFÉ MODE TYPES ===
 export interface RestaurantAddon {
   id: string;
   name: string;
   price: number;
+}
+
+export interface CafeCategory {
+  id: string;
+  restaurantId: string;
+  name: string;
+  orderIndex?: number;
+  icon?: string;
+  createdAt?: string;
 }
 
 export interface MenuItem {
@@ -525,20 +534,25 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number;
+  discountPrice?: number;
   category: string;
   image: string;
   isAvailable: boolean;
+  stockQuantity?: number;
+  extraInfo?: string;
   addons?: RestaurantAddon[];
+  storeType?: 'cafe';
   createdAt?: string;
   updatedAt?: string;
 }
 
-export type RestaurantOrderStatus = 'new' | 'preparing' | 'delivering' | 'delivered' | 'cancelled';
+export type RestaurantOrderStatus = 'new' | 'accepted' | 'preparing' | 'on_the_way' | 'delivering' | 'delivered' | 'cancelled';
 
 export interface RestaurantOrderItem {
   menuItemId: string;
   name: string;
   price: number;
+  discountPrice?: number;
   quantity: number;
   selectedAddons?: RestaurantAddon[];
   totalPrice: number;
@@ -563,6 +577,8 @@ export interface RestaurantOrder {
   status: RestaurantOrderStatus;
   paymentMethod: 'cash' | 'click' | 'payme' | 'card';
   paymentStatus?: 'pending' | 'paid';
+  storeType?: 'cafe';
+  receiptGenerated?: boolean;
   createdAt: string;
   updatedAt?: string;
 }
@@ -581,6 +597,7 @@ export interface RestaurantProfile {
   telegramBotToken?: string;
   telegramChatId?: string;
   isOpen?: boolean;
+  storeType?: 'cafe';
   createdAt: string;
   updatedAt?: string;
 }

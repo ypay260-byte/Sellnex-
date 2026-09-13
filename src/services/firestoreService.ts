@@ -43,6 +43,7 @@ import {
   AdminSettings,
   RestaurantProfile,
   MenuItem,
+  CafeCategory,
   RestaurantOrder,
   RestaurantOrderStatus,
 } from '../types';
@@ -75,6 +76,7 @@ export const COLLECTIONS = {
   ADMIN_NOTIFICATIONS: 'admin_notifications',
   RESTAURANTS: 'restaurants',
   MENU_ITEMS: 'menu_items',
+  CAFE_CATEGORIES: 'cafe_categories',
   RESTAURANT_ORDERS: 'restaurant_orders',
 } as const;
 
@@ -1417,6 +1419,7 @@ export const firestoreService = {
       const payload: MenuItem = {
         ...item,
         id,
+        storeType: 'cafe',
         updatedAt: new Date().toISOString(),
         createdAt: item.createdAt || new Date().toISOString(),
       };
@@ -1436,6 +1439,74 @@ export const firestoreService = {
       console.error('Failed to delete menu item', e);
       throw e;
     }
+  },
+
+  // === CAFÉ CATEGORIES ===
+  async getCafeCategories(restaurantId: string): Promise<CafeCategory[]> {
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.CAFE_CATEGORIES),
+        where('restaurantId', '==', restaurantId)
+      );
+      const snap = await getDocs(q);
+      const categories = snap.docs.map(d => ({ id: d.id, ...d.data() } as CafeCategory));
+      return categories.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    } catch (e) {
+      console.error('Failed to get cafe categories', e);
+      return [];
+    }
+  },
+
+  async saveCafeCategory(category: CafeCategory): Promise<CafeCategory> {
+    try {
+      const id = category.id || `cat_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const docRef = doc(db, COLLECTIONS.CAFE_CATEGORIES, id);
+      const payload: CafeCategory = {
+        ...category,
+        id,
+        createdAt: category.createdAt || new Date().toISOString(),
+      };
+      await setDoc(docRef, sanitizeData(payload), { merge: true });
+      return payload;
+    } catch (e) {
+      console.error('Failed to save cafe category', e);
+      throw e;
+    }
+  },
+
+  async deleteCafeCategory(id: string): Promise<void> {
+    try {
+      const docRef = doc(db, COLLECTIONS.CAFE_CATEGORIES, id);
+      await deleteDoc(docRef);
+    } catch (e) {
+      console.error('Failed to delete cafe category', e);
+      throw e;
+    }
+  },
+
+  // === CAFÉ GALLERY IMAGE UPLOAD ===
+  async uploadCafeImage(file: File): Promise<string> {
+    // Compress and prepare image
+    const compressedDataUrl = await compressReceiptFile(file, 900, 0.82);
+    
+    // Try to upload to Firebase Storage if available, else fallback cleanly to base64
+    try {
+      if (storage) {
+        const fileExt = file.name.split('.').pop() || 'jpg';
+        const storagePath = `cafe_images/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
+        const imageRef = ref(storage, storagePath);
+        
+        // Upload compressed data URL to storage
+        await uploadString(imageRef, compressedDataUrl, 'data_url');
+        const downloadUrl = await getDownloadURL(imageRef);
+        return downloadUrl;
+      }
+    } catch (storageErr) {
+      console.warn('Firebase Storage upload notice, using local optimized image data:', storageErr);
+    }
+    
+    // Guaranteed fallback: compressed base64 data URL
+    return compressedDataUrl;
   },
 
   async getRestaurantOrders(restaurantId: string): Promise<RestaurantOrder[]> {
@@ -1461,6 +1532,7 @@ export const firestoreService = {
         ...orderData,
         id,
         orderNumber: orderNum,
+        storeType: 'cafe',
         createdAt: new Date().toISOString(),
         status: orderData.status || 'new',
       };

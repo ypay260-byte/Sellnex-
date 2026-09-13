@@ -70,9 +70,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
   ];
 
   const restaurantMenuItems = [
-    { id: 'restaurant-dashboard', label: 'Buyurtmalar (Jonli)', icon: ShoppingBag, highlight: true },
-    { id: 'restaurant-menu', label: 'Menyu & Taomlar', icon: Utensils },
-    { id: 'restaurant-settings', label: 'Restoran & Telegram', icon: Settings },
+    { id: 'restaurant-dashboard', label: 'Buyurtmalar', icon: ShoppingBag, highlight: true },
+    { id: 'restaurant-menu', label: 'Menyu & Mahsulotlar', icon: Utensils },
+    { id: 'restaurant-settings', label: 'Café Sozlamalari', icon: Settings },
     { id: 'pricing', label: t('nav_pricing', 'Tariflar & Plans'), icon: Sparkles },
   ];
 

@@ -1,14 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { firestoreService } from '../../services/firestoreService';
-import { telegramService } from '../../services/telegramService';
 import { RestaurantProfile } from '../../types';
 import { SAMPLE_RESTAURANT } from '../../data/restaurantInitialData';
 import {
   Store,
-  Send,
   CheckCircle2,
-  AlertCircle,
   Clock,
   MapPin,
   Phone,
@@ -16,7 +13,12 @@ import {
   Copy,
   ExternalLink,
   Shield,
-  HelpCircle,
+  UploadCloud,
+  ImageIcon,
+  Loader2,
+  Bell,
+  Sparkles,
+  Layers,
 } from 'lucide-react';
 
 export const RestaurantSettingsView: React.FC = () => {
@@ -24,6 +26,7 @@ export const RestaurantSettingsView: React.FC = () => {
   const [restaurant, setRestaurant] = useState<RestaurantProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Form states
   const [name, setName] = useState('');
@@ -36,10 +39,7 @@ export const RestaurantSettingsView: React.FC = () => {
   const [description, setDescription] = useState('');
   const [isOpen, setIsOpen] = useState(true);
 
-  // Telegram states
-  const [telegramBotToken, setTelegramBotToken] = useState('');
-  const [telegramChatId, setTelegramChatId] = useState('');
-  const [testingBot, setTestingBot] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -53,8 +53,9 @@ export const RestaurantSettingsView: React.FC = () => {
             ...SAMPLE_RESTAURANT,
             id: `rest_${currentUser.id}`,
             ownerId: currentUser.id,
-            name: `${currentUser.name?.split(' ')[0] || 'Mening'}'s Restoran`,
-            slug: `restoran-${currentUser.id.slice(0, 6)}`,
+            name: `${currentUser.name?.split(' ')[0] || 'Mening'}'s Café`,
+            slug: `cafe-${currentUser.id.slice(0, 6)}`,
+            storeType: 'cafe',
           };
           await firestoreService.saveRestaurant(profile);
         }
@@ -70,8 +71,6 @@ export const RestaurantSettingsView: React.FC = () => {
           setDeliveryFee(profile.deliveryFee || 0);
           setDescription(profile.description || '');
           setIsOpen(profile.isOpen ?? true);
-          setTelegramBotToken(profile.telegramBotToken || '');
-          setTelegramChatId(profile.telegramChatId || '');
         }
       } catch (err) {
         console.error('Restaurant settings load error', err);
@@ -86,15 +85,33 @@ export const RestaurantSettingsView: React.FC = () => {
     };
   }, [currentUser]);
 
+  // Gallery logo upload
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const uploadedUrl = await firestoreService.uploadCafeImage(file);
+      setLogo(uploadedUrl);
+      showToast('Logo yuklandi', 'Café logotipi muvaffaqiyatli yuklandi', 'success');
+    } catch (err: any) {
+      showToast('Xatolik', 'Rasmni yuklab bo‘lmadi', 'error');
+    } finally {
+      setUploadingLogo(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!restaurant) return;
     if (!name.trim()) {
-      showToast('Nomi kiritilmadi', 'Restoran nomini kiriting', 'warning');
+      showToast('Nomi kiritilmadi', 'Café nomini kiriting', 'warning');
       return;
     }
     if (!slug.trim()) {
-      showToast('Havola kiritilmadi', 'Restoran slug havolasini kiriting', 'warning');
+      showToast('Havola kiritilmadi', 'Café slug havolasini kiriting', 'warning');
       return;
     }
 
@@ -112,44 +129,17 @@ export const RestaurantSettingsView: React.FC = () => {
         deliveryFee: Number(deliveryFee) || 0,
         description: description.trim(),
         isOpen,
-        telegramBotToken: telegramBotToken.trim(),
-        telegramChatId: telegramChatId.trim(),
+        storeType: 'cafe',
       };
 
       await firestoreService.saveRestaurant(updated);
       setRestaurant(updated);
       setSlug(cleanSlug);
-      showToast('Sozlamalar saqlandi', 'Restoran profili muvaffaqiyatli yangilandi', 'success');
+      showToast('Sozlamalar saqlandi', 'Café profili muvaffaqiyatli yangilandi', 'success');
     } catch (err: any) {
       showToast('Xatolik', err.message || 'Saqlab bo‘lmadi', 'error');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleTestTelegram = async () => {
-    const token = telegramBotToken.trim();
-    const chatId = telegramChatId.trim();
-
-    if (!chatId) {
-      showToast('Chat ID yo‘q', 'Iltimos, Telegram Chat ID kiriting', 'warning');
-      return;
-    }
-
-    setTestingBot(true);
-    try {
-      const testMsg = `🔔 <b>Sellnex Restoran Xabarnomasi</b>\n\n✅ Telegram Bot ulanishi muvaffaqiyatli tekshirildi!\n🍽️ Restoran: <b>${name || 'Mening Restoranim'}</b>\n\n<i>Endi yangi buyurtmalar to‘g‘ridan-to‘g‘ri shu yerga keladi!</i>`;
-      const res = await telegramService.sendMessage(testMsg, chatId, undefined, token || undefined);
-
-      if (res.success) {
-        showToast('Xabar yuborildi!', 'Telegramingizni tekshiring, test xabari yetib bordi.', 'success');
-      } else {
-        showToast('Xatolik yuz berdi', res.error || 'Telegram xabari bormadi. Token va Chat ID ni tekshiring.', 'error');
-      }
-    } catch (err: any) {
-      showToast('Xatolik', err.message, 'error');
-    } finally {
-      setTestingBot(false);
     }
   };
 
@@ -165,12 +155,15 @@ export const RestaurantSettingsView: React.FC = () => {
   }
 
   return (
-    <div id="restaurant-settings-view" className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs flex items-center justify-between">
+    <div id="cafe-settings-view" className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Restoran Sozlamalari</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+            Café Sozlamalari
+          </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Restoran profili, manzillar, yetkazib berish va Telegram buyurtma xabarnomalari.
+            Café profili, manzili, ish vaqti va yetkazib berish narxlari boshqaruvi.
           </p>
         </div>
 
@@ -188,8 +181,8 @@ export const RestaurantSettingsView: React.FC = () => {
       </div>
 
       <form onSubmit={handleSaveSettings} className="space-y-6">
-        {/* Basic Info */}
-        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
+        {/* Basic Info Card */}
+        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-4">
           <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
             <Store className="w-4 h-4 text-amber-600" />
             <span>Asosiy Ma'lumotlar</span>
@@ -197,24 +190,24 @@ export const RestaurantSettingsView: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Restoran / Kafe nomi *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Café / Restoran nomi *</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Masalan: Rayhon Milliy Taomlar"
+                placeholder="Masalan: Rayhon Milliy Taomlar yoki Evos Cafe"
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Restoran havolasi (Slug) *
+                Café havolasi (Slug) *
               </label>
               <div className="flex items-center">
                 <span className="px-3 py-2.5 bg-slate-100 border border-r-0 border-slate-200 rounded-l-xl text-xs text-slate-500 font-mono">
-                  sellnex.uz/restaurant/
+                  sellnex.uz/?restaurantSlug=
                 </span>
                 <input
                   type="text"
@@ -228,18 +221,51 @@ export const RestaurantSettingsView: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Logo yoki Rasm (URL)</label>
-              <input
-                type="url"
-                value={logo}
-                onChange={(e) => setLogo(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+          {/* Logo / Rasm with Gallery Picker */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Café Logotipi yoki Muqova Rasmi
+            </label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleLogoUpload}
+              className="hidden"
+            />
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <img
+                src={logo || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=150'}
+                alt="Café Logo"
+                className="w-20 h-20 rounded-2xl object-cover border border-slate-200 shadow-xs"
               />
+              <div className="space-y-2 flex-1 w-full">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingLogo}
+                  className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center gap-2"
+                >
+                  {uploadingLogo ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+                      <span>Yuklanmoqda...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-4 h-4 text-amber-600" />
+                      <span>📱 Galereyadan logo tanlash</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-[11px] text-slate-400">
+                  Telefon yoki kompyuter galereyasidan rasm tanlang (URL yozish shart emas)
+                </p>
+              </div>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Telefon raqam *</label>
               <input
@@ -249,6 +275,17 @@ export const RestaurantSettingsView: React.FC = () => {
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+998 90 123 45 67"
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Ish vaqti</label>
+              <input
+                type="text"
+                value={workingHours}
+                onChange={(e) => setWorkingHours(e.target.value)}
+                placeholder="09:00 - 23:00"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
               />
             </div>
           </div>
@@ -267,20 +304,9 @@ export const RestaurantSettingsView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Ish vaqti</label>
-              <input
-                type="text"
-                value={workingHours}
-                onChange={(e) => setWorkingHours(e.target.value)}
-                placeholder="09:00 - 23:00"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Yetkazib berish narxi (so‘m)</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Yetkazib berish narxi (so‘m)
+              </label>
               <input
                 type="number"
                 min={0}
@@ -289,85 +315,35 @@ export const RestaurantSettingsView: React.FC = () => {
                 onChange={(e) => setDeliveryFee(Number(e.target.value))}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-mono font-bold"
               />
-              <span className="text-[11px] text-slate-400 mt-1 block">0 qilib qo'yilsa - Bepul yetkazib berish deb ko'rinadi.</span>
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                0 qilib qo‘yilsa — Bepul yetkazib berish deb ko‘rinadi.
+              </span>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Tavsif</label>
-              <textarea
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Mazali milliy taomlar, tandir go'sht, shashliklar..."
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Café tavsifi</label>
+            <textarea
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Mazali milliy taomlar, tandir go'sht, shashliklar..."
+              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+            />
           </div>
         </div>
 
-        {/* Telegram Bot Integration Box */}
-        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <Send className="w-4 h-4 text-blue-600" />
-              <span>Telegram Botga Buyurtma Xabarnomalari</span>
-            </h2>
-            <span className="text-[11px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-md">
-              Eng muhim funksiya
-            </span>
+        {/* In-App Order System Info Banner (No Telegram required) */}
+        <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 space-y-2">
+          <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+            <Bell className="w-4 h-4 text-amber-700" />
+            <span>Sellnex Café Ilova Ichki Buyurtma Tizimi</span>
           </div>
-
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Har safar mijoz menyudan buyurtma berganda, ushbu Telegram botingizga yoki guruhingizga darhol to‘liq buyurtma
-            cheki va <strong>"✅ Qabul qilish"</strong> hamda <strong>"❌ Rad etish"</strong> interaktiv tugmalari bilan xabar boradi!
+          <p className="text-xs text-amber-950/80 leading-relaxed">
+            Café bo‘limida Telegram bot yoki chat ulash talab etilmaydi. Barcha buyurtmalar to‘g‘ridan-to‘g‘ri
+            Sellnex ilovasining <strong>"Buyurtmalar"</strong> bo‘limiga kelib tushadi, yangi buyurtma kelganda
+            ovozli signal chalinadi va cheklar chiqariladi.
           </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Telegram Bot Token (ixtiyoriy)</label>
-              <input
-                type="text"
-                value={telegramBotToken}
-                onChange={(e) => setTelegramBotToken(e.target.value)}
-                placeholder="123456789:ABCdefGhIJKlmNoPQ..."
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white font-mono"
-              />
-              <span className="text-[11px] text-slate-400 mt-1 block">
-                Agar bo'sh qoldirsangiz, Sellnex rasmiy Telegram boti orqali yuboriladi.
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Telegram Chat ID yoki Guruh ID *
-              </label>
-              <input
-                type="text"
-                value={telegramChatId}
-                onChange={(e) => setTelegramChatId(e.target.value)}
-                placeholder="Masalan: 123456789 yoki -10012345678"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white font-mono"
-              />
-              <span className="text-[11px] text-slate-400 mt-1 block">
-                O'z Telegram ID ingizni bilish uchun <strong>@userinfobot</strong> ga /start bosing.
-              </span>
-            </div>
-          </div>
-
-          <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              disabled={testingBot || !telegramChatId}
-              onClick={handleTestTelegram}
-              className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-40"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>{testingBot ? 'Yuborilmoqda...' : '🔔 Test xabar yuborish'}</span>
-            </button>
-            <span className="text-xs text-slate-400">
-              Bot va Chat ID to‘g‘ri ulanganligini tekshirish uchun test tugmasini bosing.
-            </span>
-          </div>
         </div>
 
         {/* Save Button */}
@@ -375,9 +351,16 @@ export const RestaurantSettingsView: React.FC = () => {
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md transition disabled:opacity-50"
+            className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md transition disabled:opacity-50 flex items-center gap-2"
           >
-            {saving ? 'Saqlanmoqda...' : 'Sozlamalarni Saqlash'}
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Saqlanmoqda...</span>
+              </>
+            ) : (
+              <span>Sozlamalarni Saqlash</span>
+            )}
           </button>
         </div>
       </form>
