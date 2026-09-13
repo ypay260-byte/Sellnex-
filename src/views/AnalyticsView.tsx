@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { analyticsService } from '../services/analyticsService';
 import { BackHeader } from '../components/common/BackHeader';
+import { DailySalesChart } from '../components/analytics/DailySalesChart';
 import {
   TrendingUp,
   DollarSign,
@@ -18,14 +19,16 @@ import {
 export const AnalyticsView: React.FC = () => {
   const { formatMoney, orders, products } = useApp();
 
-  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d'>('7d');
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d'>('30d');
 
   const summary = analyticsService.getSummary();
-  const timeline = analyticsService.getTimelineData();
   const trafficSources = analyticsService.getTrafficSources();
   const regionStats = analyticsService.getRegionalStats();
 
-  const maxTimelineRevenue = Math.max(...timeline.map((t) => t.revenue));
+  const daysNumber = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
+  const dailySalesData = useMemo(() => {
+    return analyticsService.getDailySalesPerformance(daysNumber, orders);
+  }, [daysNumber, orders]);
 
   return (
     <div id="analytics-view-root" className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
@@ -83,44 +86,13 @@ export const AnalyticsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Revenue & Profit Interactive Timeline Chart */}
-      <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="text-base font-bold text-slate-900">Revenue & Net Margin Dynamics</h3>
-            <p className="text-xs text-slate-500">Gross revenue vs supplier deductions & net seller earnings</p>
-          </div>
-          <div className="flex items-center gap-4 text-xs font-semibold">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-blue-600" /> Gross Sales</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-emerald-500" /> Net Profit</span>
-          </div>
-        </div>
-
-        <div className="h-64 flex items-end justify-between gap-4 pt-6 pb-2 px-4 border-b border-slate-100">
-          {timeline.map((point, idx) => {
-            const revHeight = maxTimelineRevenue > 0 ? (point.revenue / maxTimelineRevenue) * 100 : 30;
-            const profitHeight = maxTimelineRevenue > 0 ? (point.profit / maxTimelineRevenue) * 100 : 15;
-
-            return (
-              <div key={idx} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                <div className="flex items-end gap-1.5 w-full justify-center">
-                  <div
-                    style={{ height: `${Math.max(10, revHeight)}%` }}
-                    className="w-full max-w-[28px] rounded-t-lg bg-blue-600 group-hover:bg-blue-700 transition-all shadow-2xs"
-                    title={`Revenue: ${formatMoney(point.revenue)}`}
-                  />
-                  <div
-                    style={{ height: `${Math.max(8, profitHeight)}%` }}
-                    className="w-full max-w-[28px] rounded-t-lg bg-emerald-500 group-hover:bg-emerald-600 transition-all shadow-2xs"
-                    title={`Profit: ${formatMoney(point.profit)}`}
-                  />
-                </div>
-                <span className="text-xs font-semibold text-slate-500 mt-1">{point.label}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* Daily Sales Performance Recharts Chart Component */}
+      <DailySalesChart
+        data={dailySalesData}
+        formatMoney={formatMoney}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+      />
 
       {/* Traffic Sources & Regional Breakdown Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
