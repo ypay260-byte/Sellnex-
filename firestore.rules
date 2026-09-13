@@ -110,5 +110,22 @@ service cloud.firestore {
     match /admin_notifications/{notifId} {
       allow read, write: if true;
     }
+
+    // Café & Restaurant System Collections (Multi-Tenant Isolated)
+    match /restaurants/{restaurantId} {
+      allow read, write: if true;
+    }
+
+    match /menu_items/{itemId} {
+      allow read, write: if true;
+    }
+
+    match /cafe_categories/{catId} {
+      allow read, write: if true;
+    }
+
+    match /restaurant_orders/{orderId} {
+      allow read, write: if true;
+    }
   }
 }

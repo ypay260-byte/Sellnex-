@@ -3,7 +3,6 @@ import { useApp } from '../../context/AppContext';
 import { firestoreService } from '../../services/firestoreService';
 import { subscriptionService } from '../../services/subscriptionService';
 import { MenuItem, RestaurantProfile, RestaurantAddon, CafeCategory } from '../../types';
-import { SAMPLE_RESTAURANT, SAMPLE_MENU_ITEMS } from '../../data/restaurantInitialData';
 import { DEFAULT_CAFE_CATEGORIES } from '../../data/cafeInitialCategories';
 import {
   Utensils,
@@ -76,15 +75,10 @@ export const RestaurantMenuView: React.FC = () => {
       try {
         let profile = await firestoreService.getRestaurantByOwner(currentUser.id);
         if (!profile) {
-          profile = {
-            ...SAMPLE_RESTAURANT,
-            id: `rest_${currentUser.id}`,
-            ownerId: currentUser.id,
-            name: `${currentUser.name?.split(' ')[0] || 'Mening'}'s Café`,
-            slug: `cafe-${currentUser.id.slice(0, 5)}`,
-            storeType: 'cafe',
-          };
-          await firestoreService.saveRestaurant(profile);
+          profile = await firestoreService.createCafeForOwner(currentUser.id, {
+            name: `${currentUser.name?.split(' ')[0] || 'Mening'} Café`,
+            slug: `cafe-${currentUser.id.slice(0, 6)}`,
+          });
         }
 
         if (isMounted && profile) {

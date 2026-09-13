@@ -107,6 +107,7 @@ interface AppContextType {
   setPendingRegistration: (data: PendingRegistration | null) => void;
   login: (email: string, password?: string) => Promise<{ success: boolean; user?: User; error?: string }>;
   adminLogin: (email: string, password?: string, twoFactorCode?: string) => Promise<{ success: boolean; user?: User; error?: string }>;
+  loginWithTelegram: (params: { telegramUserId: string | number; name?: string; username?: string }) => Promise<{ success: boolean; user?: User; error?: string }>;
   signUp: (data: SignUpParams) => Promise<{ success: boolean; error?: string }>;
   completeOnboarding: (onboardingData: OnboardingData) => Promise<{ success: boolean; error?: string }>;
   switchBusinessType?: (type: 'store' | 'restaurant') => Promise<void>;
@@ -1213,6 +1214,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: false, error: res.error };
   };
 
+  const loginWithTelegram = async (params: {
+    telegramUserId: string | number;
+    name?: string;
+    username?: string;
+  }) => {
+    try {
+      const res = await authService.loginWithTelegram(params);
+      if (res.success && res.user) {
+        setCurrentUserState(res.user);
+        Storage.setCurrentUser(res.user);
+
+        if (res.cafe) {
+          const cafeAsStore: Store = {
+            id: res.cafe.id,
+            storeId: res.cafe.id,
+            ownerId: res.user.id,
+            name: res.cafe.name,
+            storeName: res.cafe.name,
+            slug: res.cafe.slug,
+            visibility: 'PUBLIC',
+            published: true,
+            domain: `${res.cafe.slug}.sellnex.uz`,
+            currency: 'UZS',
+            targetMarket: 'Uzbekistan',
+            sellType: 'My own products',
+            logo: res.cafe.logo,
+            createdAt: res.cafe.createdAt,
+            updatedAt: res.cafe.updatedAt,
+            theme: {
+              primaryColor: '#D97706',
+              secondaryColor: '#B45309',
+              fontFamily: 'Plus Jakarta Sans',
+              headerStyle: 'modern',
+              bannerImage: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&auto=format&fit=crop&q=80',
+              bannerTitle: res.cafe.name,
+              bannerSubtitle: res.cafe.description,
+              buttonText: 'Menyu',
+              showAnnouncement: true,
+              announcementText: '☕ Yangi buyurtmalar qabul qilinmoqda!',
+              productCardStyle: 'card',
+              footerText: `© ${new Date().getFullYear()} ${res.cafe.name}. Powered by Sellnex.`,
+              phone: res.cafe.phone,
+            },
+          };
+          setStoreState(cafeAsStore);
+          Storage.setStore(cafeAsStore);
+          setUserStoresState([cafeAsStore]);
+          Storage.setStores([cafeAsStore]);
+        }
+
+        showToast(
+          'Telegram orqali kirildi',
+          `Xush kelibsiz, ${res.user.name}! ${
+            res.isNewCafe ? 'Yangi alohida Café yaratildi (Menyu bo‘sh).' : 'Café menyusi yuklandi.'
+          }`,
+          'success'
+        );
+        navigateTo('restaurant-dashboard');
+        return { success: true, user: res.user };
+      }
+      showToast('Kirishda xatolik', res.error || 'Telegram orqali kirib bo‘lmadi', 'error');
+      return { success: false, error: res.error };
+    } catch (err: any) {
+      showToast('Xatolik', err.message || 'Kutilmagan xatolik yuz berdi', 'error');
+      return { success: false, error: err.message };
+    }
+  };
+
   const signUp = async (data: SignUpParams) => {
     const res = await authService.signUp(data);
     if (res.success && res.user) {
@@ -1897,6 +1966,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         switchBusinessType,
         login,
         adminLogin,
+        loginWithTelegram,
         signUp,
         logout,
         isLoadingAuth,

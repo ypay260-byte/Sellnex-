@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { firestoreService } from '../../services/firestoreService';
-import { RestaurantProfile, RestaurantOrder, RestaurantOrderStatus, MenuItem } from '../../types';
-import { SAMPLE_RESTAURANT, SAMPLE_MENU_ITEMS } from '../../data/restaurantInitialData';
+import { RestaurantProfile, RestaurantOrder, RestaurantOrderStatus } from '../../types';
 import { CafeReceiptModal } from '../../components/cafe/CafeReceiptModal';
 import {
   Clock,
@@ -75,31 +74,11 @@ export const RestaurantDashboardView: React.FC = () => {
       try {
         let profile = await firestoreService.getRestaurantByOwner(currentUser.id);
         if (!profile) {
-          const userFirstName = currentUser.name?.split(' ')[0] || 'My';
-          const defaultSlug = `${userFirstName.toLowerCase().replace(/[^a-z0-9]/g, '')}-cafe`;
-          profile = {
-            ...SAMPLE_RESTAURANT,
-            id: `rest_${currentUser.id}`,
-            ownerId: currentUser.id,
+          const userFirstName = currentUser.name?.split(' ')[0] || 'Mening';
+          profile = await firestoreService.createCafeForOwner(currentUser.id, {
             name: `${userFirstName}'s Café`,
-            slug: defaultSlug,
-            phone: currentUser.phone || '+998 90 123 45 67',
-            storeType: 'cafe',
-          };
-          await firestoreService.saveRestaurant(profile);
-
-          // Seed default sample menu items
-          await Promise.all(
-            SAMPLE_MENU_ITEMS.map((sample) =>
-              firestoreService.saveMenuItem({
-                ...sample,
-                id: `dish_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-                restaurantId: profile!.id,
-                ownerId: currentUser.id,
-                storeType: 'cafe',
-              } as MenuItem)
-            )
-          );
+            phone: currentUser.phone || '',
+          });
         }
 
         if (isMounted && profile) {

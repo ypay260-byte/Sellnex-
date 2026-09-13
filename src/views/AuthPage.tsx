@@ -14,13 +14,20 @@ import {
   Eye,
   EyeOff,
   Check,
+  Send,
+  Sparkles,
 } from 'lucide-react';
 
 export const AuthPage: React.FC = () => {
-  const { login, signUp, navigateTo, routeParams } = useApp();
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'reset-sent'>(
+  const { login, signUp, loginWithTelegram, navigateTo, routeParams } = useApp();
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'reset-sent' | 'telegram'>(
     routeParams?.mode === 'signup' ? 'signup' : 'login'
   );
+
+  // Telegram login state
+  const [tgUserId, setTgUserId] = useState('');
+  const [tgName, setTgName] = useState('');
+  const [tgLoading, setTgLoading] = useState(false);
 
   // Form states initialized empty for real new visitors
   const [name, setName] = useState('');
@@ -119,6 +126,25 @@ export const AuthPage: React.FC = () => {
     }
   };
 
+  const handleTelegramLogin = async (idToUse?: string, nameToUse?: string) => {
+    const finalId = (idToUse || tgUserId).trim();
+    const finalName = (nameToUse || tgName).trim();
+    if (!finalId) {
+      setErrorMsg('Telegram User ID kiritilishi shart (masalan: 111111111 yoki 222222222)');
+      return;
+    }
+    setErrorMsg('');
+    setTgLoading(true);
+    const res = await loginWithTelegram({
+      telegramUserId: finalId,
+      name: finalName || undefined,
+    });
+    setTgLoading(false);
+    if (!res.success) {
+      setErrorMsg(res.error || 'Telegram orqali kirib bo‘lmadi.');
+    }
+  };
+
   return (
     <div id="auth-page-root" className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
@@ -156,7 +182,7 @@ export const AuthPage: React.FC = () => {
                   id="tab-mode-login"
                   type="button"
                   onClick={() => { setMode('login'); setErrorMsg(''); }}
-                  className={`flex-1 pb-3 text-sm font-bold border-b-2 text-center transition-colors ${
+                  className={`flex-1 pb-3 text-xs sm:text-sm font-bold border-b-2 text-center transition-colors ${
                     mode === 'login' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'
                   }`}
                 >
@@ -166,11 +192,22 @@ export const AuthPage: React.FC = () => {
                   id="tab-mode-signup"
                   type="button"
                   onClick={() => { setMode('signup'); setErrorMsg(''); }}
-                  className={`flex-1 pb-3 text-sm font-bold border-b-2 text-center transition-colors ${
+                  className={`flex-1 pb-3 text-xs sm:text-sm font-bold border-b-2 text-center transition-colors ${
                     mode === 'signup' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'
                   }`}
                 >
                   Sign Up
+                </button>
+                <button
+                  id="tab-mode-telegram"
+                  type="button"
+                  onClick={() => { setMode('telegram'); setErrorMsg(''); }}
+                  className={`flex-1 pb-3 text-xs sm:text-sm font-bold border-b-2 text-center transition-colors flex items-center justify-center gap-1 ${
+                    mode === 'telegram' ? 'border-sky-500 text-sky-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <Send className="w-3.5 h-3.5 text-sky-500" />
+                  <span>Telegram Café</span>
                 </button>
               </div>
 
@@ -180,7 +217,98 @@ export const AuthPage: React.FC = () => {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === 'telegram' ? (
+                <div className="space-y-4">
+                  <div className="p-3 bg-sky-50 border border-sky-200 rounded-xl space-y-1">
+                    <p className="text-xs font-bold text-sky-900 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+                      <span>Multi-Tenant Café Izolyatsiyasi</span>
+                    </p>
+                    <p className="text-[11px] text-sky-800 leading-relaxed">
+                      Har bir Telegram hisobi o‘zining mustaqil <code>ownerId</code> va <code>cafeId</code> siga ega. Boshqa kafening menyusi yoki buyurtmalari hech qachon aralashmaydi.
+                    </p>
+                  </div>
+
+                  {/* Quick Test Accounts for verifying isolation */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-slate-700">
+                      ⚡ Sinov uchun 2 ta mustaqil Telegram hisobi:
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleTelegramLogin('111111111', 'Farrux Café')}
+                        disabled={tgLoading}
+                        className="p-2.5 bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded-xl text-left transition disabled:opacity-50"
+                      >
+                        <p className="text-xs font-bold text-slate-900">👤 1-hisob: Farrux</p>
+                        <p className="text-[10px] text-slate-500 font-mono">TG ID: 111111111</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleTelegramLogin('222222222', 'Dilshod Café')}
+                        disabled={tgLoading}
+                        className="p-2.5 bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded-xl text-left transition disabled:opacity-50"
+                      >
+                        <p className="text-xs font-bold text-slate-900">👤 2-hisob: Dilshod</p>
+                        <p className="text-[10px] text-slate-500 font-mono">TG ID: 222222222</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="relative flex py-1 items-center">
+                    <div className="flex-grow border-t border-slate-200"></div>
+                    <span className="flex-shrink mx-2 text-[10px] font-bold text-slate-400 uppercase">Yoki o‘z ID ingiz</span>
+                    <div className="flex-grow border-t border-slate-200"></div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Telegram User ID *
+                      </label>
+                      <input
+                        type="text"
+                        value={tgUserId}
+                        onChange={(e) => setTgUserId(e.target.value)}
+                        placeholder="Masalan: 987654321"
+                        className="block w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-hidden font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Ismingiz yoki Café Nomi (ixtiyoriy)
+                      </label>
+                      <input
+                        type="text"
+                        value={tgName}
+                        onChange={(e) => setTgName(e.target.value)}
+                        placeholder="Masalan: Bekzod Café"
+                        className="block w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-hidden"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleTelegramLogin()}
+                      disabled={tgLoading || !tgUserId.trim()}
+                      className="w-full py-3 px-4 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {tgLoading ? (
+                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          <span>Telegram orqali Caféga Kirish</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === 'signup' && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
@@ -288,7 +416,7 @@ export const AuthPage: React.FC = () => {
                         </div>
                         <div>
                           <p className="text-xs font-bold text-slate-900 leading-tight">Restoran / Kafe</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">Menyu, taomlar, Telegram bot</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Menyu, taomlar va buyurtmalar</p>
                         </div>
                       </button>
                     </div>
@@ -449,6 +577,7 @@ export const AuthPage: React.FC = () => {
                   )}
                 </button>
               </form>
+              )}
 
               {mode === 'forgot' && (
                 <div className="mt-4 text-center">

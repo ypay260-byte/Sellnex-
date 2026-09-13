@@ -9,7 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth } from './firebase';
 import { firestoreService } from './firestoreService';
-import { User, Store, OnboardingData, PendingRegistration } from '../types';
+import { User, Store, OnboardingData, PendingRegistration, RestaurantProfile } from '../types';
 
 export interface LoginParams {
   email: string;
@@ -706,6 +706,102 @@ export const authService = {
     } catch (err: any) {
       console.error('Admin login error:', err);
       return { success: false, error: err.message || 'Administrator authentication failed.' };
+    }
+  },
+
+  // === TELEGRAM AUTHENTICATION & CAFE MULTI-TENANT ISOLATION ===
+  async loginWithTelegram({
+    telegramUserId,
+    name,
+    username,
+  }: {
+    telegramUserId: string | number;
+    name?: string;
+    username?: string;
+  }): Promise<{ success: boolean; user?: User; cafe?: RestaurantProfile; isNewCafe?: boolean; error?: string }> {
+    const rawTgId = String(telegramUserId).trim();
+    if (!rawTgId) {
+      return { success: false, error: 'Telegram User ID kiritilishi shart.' };
+    }
+
+    const userId = `usr_tg_${rawTgId}`;
+    const cleanName =
+      name?.trim() ||
+      (username ? `@${username.replace(/^@/, '')}` : `Telegram User #${rawTgId.slice(-4)}`);
+
+    try {
+      // 1. Check if user already exists
+      let existingUser = await firestoreService.getUser(userId);
+      let isNewAccount = false;
+      let cafe: RestaurantProfile | null = null;
+
+      if (!existingUser) {
+        // Query if any user has telegramUserId == rawTgId
+        try {
+          const allUsers = await firestoreService.getAllUsers();
+          existingUser = allUsers.find((u) => (u as any).telegramUserId === rawTgId) || null;
+        } catch (e) {
+          console.warn('Telegram user query warning:', e);
+        }
+      }
+
+      if (!existingUser) {
+        isNewAccount = true;
+        // Generate guaranteed unique cafe ID for this new Telegram user
+        const uniqueCafeId = await firestoreService.generateUniqueCafeId();
+        const now = new Date();
+        const trialEnds = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+        const newUserProfile: User = {
+          id: userId,
+          telegramUserId: rawTgId,
+          name: cleanName,
+          email: `tg_${rawTgId}@sellnex.uz`,
+          phone: '',
+          role: 'seller',
+          businessType: 'restaurant',
+          storeId: uniqueCafeId,
+          restaurantId: uniqueCafeId,
+          plan: 'trial',
+          status: 'active',
+          subscriptionStatus: 'active',
+          startDate: now.toISOString(),
+          endDate: trialEnds,
+          trialEndsAt: trialEnds,
+          subscriptionExpiresAt: trialEnds,
+          productLimit: 10,
+          paymentAmount: 0,
+          createdAt: now.toISOString(),
+        };
+
+        await firestoreService.setUser(userId, newUserProfile);
+        existingUser = newUserProfile;
+
+        // Create the brand new isolated Café for this account with ZERO demo products!
+        cafe = await firestoreService.createCafeForOwner(userId, {
+          id: uniqueCafeId,
+          name: `${cleanName} Café`,
+          slug: `cafe-${rawTgId.slice(-6)}`,
+          phone: '',
+          address: 'Toshkent sh.',
+        });
+      } else {
+        // Existing Telegram user: load ONLY their own Cafe
+        cafe = await firestoreService.getRestaurantByOwner(existingUser.id);
+        if (!cafe) {
+          const uniqueCafeId = await firestoreService.generateUniqueCafeId();
+          cafe = await firestoreService.createCafeForOwner(existingUser.id, {
+            id: uniqueCafeId,
+            name: `${existingUser.name} Café`,
+            slug: `cafe-${rawTgId.slice(-6)}`,
+          });
+        }
+      }
+
+      return { success: true, user: existingUser, cafe, isNewCafe: isNewAccount };
+    } catch (err: any) {
+      console.error('Telegram login error:', err);
+      return { success: false, error: err.message || 'Telegram orqali kirib bo‘lmadi.' };
     }
   },
 

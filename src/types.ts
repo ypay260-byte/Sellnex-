@@ -25,6 +25,7 @@ export type BusinessType = 'store' | 'restaurant';
 
 export interface User {
   id: string;
+  telegramUserId?: string;
   name: string;
   email: string;
   phone: string;

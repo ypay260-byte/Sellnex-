@@ -1338,13 +1338,132 @@ export const firestoreService = {
     }
   },
 
-  // === RESTAURANT MODE CRUD & REALTIME ===
-  async getRestaurantByOwner(ownerId: string): Promise<RestaurantProfile | null> {
+  // === RESTAURANT & CAFÉ MODE CRUD & REALTIME (MULTI-TENANT ISOLATED) ===
+  async generateUniqueCafeId(): Promise<string> {
+    let attempts = 0;
+    while (attempts < 5) {
+      const candidate = `cafe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      try {
+        const docSnap = await getDoc(doc(db, COLLECTIONS.RESTAURANTS, candidate));
+        if (!docSnap.exists()) {
+          return candidate;
+        }
+      } catch {
+        return candidate;
+      }
+      attempts++;
+    }
+    return `cafe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  },
+
+  async generateUniqueCafeSlug(baseName: string, cafeId: string): Promise<string> {
+    const cleanBase = (baseName || 'cafe')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || `cafe-${cafeId.slice(-6)}`;
+
     try {
+      const q = query(collection(db, COLLECTIONS.RESTAURANTS), where('slug', '==', cleanBase));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        return cleanBase;
+      }
+      // If already taken, append unique short suffix
+      return `${cleanBase}-${cafeId.slice(-5)}`;
+    } catch {
+      return `${cleanBase}-${cafeId.slice(-5)}`;
+    }
+  },
+
+  async createCafeForOwner(
+    ownerId: string,
+    initialData?: Partial<RestaurantProfile>
+  ): Promise<RestaurantProfile> {
+    const cafeId = initialData?.id || (await this.generateUniqueCafeId());
+    const rawName = initialData?.name?.trim() || 'Mening Qahvaxonam';
+    const uniqueSlug = await this.generateUniqueCafeSlug(initialData?.slug || rawName, cafeId);
+
+    const profile: RestaurantProfile = {
+      id: cafeId,
+      ownerId: ownerId,
+      name: rawName,
+      slug: uniqueSlug,
+      logo:
+        initialData?.logo ||
+        'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=300&auto=format&fit=crop&q=80',
+      phone: initialData?.phone || '',
+      address: initialData?.address || 'Toshkent sh.',
+      workingHours: initialData?.workingHours || '09:00 - 23:00',
+      deliveryFee: initialData?.deliveryFee !== undefined ? Number(initialData.deliveryFee) : 15000,
+      description: initialData?.description || 'Mazali taomlar va tezkor yetkazib berish!',
+      isOpen: initialData?.isOpen ?? true,
+      storeType: 'cafe',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...initialData,
+    };
+
+    // Save newly created isolated cafe
+    await this.saveRestaurant(profile);
+
+    // Save the relation ownerId -> cafeId in user record
+    try {
+      const userRef = doc(db, COLLECTIONS.USERS, ownerId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        await updateDoc(
+          userRef,
+          sanitizeData({
+            restaurantId: cafeId,
+            storeId: cafeId,
+            businessType: 'restaurant',
+            updatedAt: new Date().toISOString(),
+          })
+        );
+      }
+    } catch (relErr) {
+      console.warn('Notice saving ownerId -> cafeId relation:', relErr);
+    }
+
+    return profile;
+  },
+
+  async getRestaurantByOwner(ownerId: string): Promise<RestaurantProfile | null> {
+    if (!ownerId) return null;
+    try {
+      // 1. First check if user document directly references a restaurantId
+      const userRef = doc(db, COLLECTIONS.USERS, ownerId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const uData = userSnap.data();
+        const directCafeId =
+          uData.restaurantId || (uData.businessType === 'restaurant' ? uData.storeId : null);
+        if (directCafeId) {
+          const directCafeDoc = await getDoc(doc(db, COLLECTIONS.RESTAURANTS, directCafeId));
+          if (directCafeDoc.exists()) {
+            const cafeData = { id: directCafeDoc.id, ...directCafeDoc.data() } as RestaurantProfile;
+            if (cafeData.ownerId === ownerId) {
+              return cafeData;
+            }
+          }
+        }
+      }
+
+      // 2. Query collection where ownerId == ownerId
       const q = query(collection(db, COLLECTIONS.RESTAURANTS), where('ownerId', '==', ownerId));
       const snap = await getDocs(q);
       if (!snap.empty) {
-        return { id: snap.docs[0].id, ...snap.docs[0].data() } as RestaurantProfile;
+        const matching = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() } as RestaurantProfile))
+          .filter((r) => r.ownerId === ownerId)
+          .sort(
+            (a, b) =>
+              new Date(b.updatedAt || b.createdAt).getTime() -
+              new Date(a.updatedAt || a.createdAt).getTime()
+          );
+        return matching[0] || null;
       }
       return null;
     } catch (e) {
@@ -1398,14 +1517,17 @@ export const firestoreService = {
   },
 
   async getMenuItems(restaurantId: string): Promise<MenuItem[]> {
+    if (!restaurantId) return [];
     try {
       const q = query(
         collection(db, COLLECTIONS.MENU_ITEMS),
         where('restaurantId', '==', restaurantId)
       );
       const snap = await getDocs(q);
-      const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as MenuItem));
-      return items.sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as MenuItem);
+      return items
+        .filter((item) => item.restaurantId === restaurantId)
+        .sort((a, b) => (a.category || '').localeCompare(b.category || ''));
     } catch (e) {
       console.error('Failed to get menu items', e);
       return [];
@@ -1443,14 +1565,17 @@ export const firestoreService = {
 
   // === CAFÉ CATEGORIES ===
   async getCafeCategories(restaurantId: string): Promise<CafeCategory[]> {
+    if (!restaurantId) return [];
     try {
       const q = query(
         collection(db, COLLECTIONS.CAFE_CATEGORIES),
         where('restaurantId', '==', restaurantId)
       );
       const snap = await getDocs(q);
-      const categories = snap.docs.map(d => ({ id: d.id, ...d.data() } as CafeCategory));
-      return categories.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+      const categories = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as CafeCategory);
+      return categories
+        .filter((c) => c.restaurantId === restaurantId)
+        .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
     } catch (e) {
       console.error('Failed to get cafe categories', e);
       return [];
@@ -1510,14 +1635,17 @@ export const firestoreService = {
   },
 
   async getRestaurantOrders(restaurantId: string): Promise<RestaurantOrder[]> {
+    if (!restaurantId) return [];
     try {
       const q = query(
         collection(db, COLLECTIONS.RESTAURANT_ORDERS),
         where('restaurantId', '==', restaurantId)
       );
       const snap = await getDocs(q);
-      const orders = snap.docs.map(d => ({ id: d.id, ...d.data() } as RestaurantOrder));
-      return orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const orders = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as RestaurantOrder);
+      return orders
+        .filter((o) => o.restaurantId === restaurantId)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (e) {
       console.error('Failed to get restaurant orders', e);
       return [];
@@ -1556,18 +1684,25 @@ export const firestoreService = {
   },
 
   subscribeRestaurantOrders(restaurantId: string, callback: (orders: RestaurantOrder[]) => void): () => void {
+    if (!restaurantId) return () => {};
     try {
       const q = query(
         collection(db, COLLECTIONS.RESTAURANT_ORDERS),
         where('restaurantId', '==', restaurantId)
       );
-      return onSnapshot(q, (snapshot) => {
-        const orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as RestaurantOrder));
-        orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        callback(orders);
-      }, (err) => {
-        console.warn('subscribeRestaurantOrders error:', err);
-      });
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          const orders = snapshot.docs
+            .map((d) => ({ id: d.id, ...d.data() }) as RestaurantOrder)
+            .filter((o) => o.restaurantId === restaurantId);
+          orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          callback(orders);
+        },
+        (err) => {
+          console.warn('subscribeRestaurantOrders error:', err);
+        }
+      );
     } catch (e) {
       console.error('Failed to subscribe to restaurant orders', e);
       return () => {};

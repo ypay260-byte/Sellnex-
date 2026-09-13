@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { firestoreService } from '../../services/firestoreService';
 import { RestaurantProfile, MenuItem, RestaurantAddon, RestaurantOrder, RestaurantOrderItem } from '../../types';
-import { SAMPLE_RESTAURANT, SAMPLE_MENU_ITEMS } from '../../data/restaurantInitialData';
 import { CafeReceiptModal } from '../../components/cafe/CafeReceiptModal';
 import {
   Utensils,
@@ -76,36 +75,15 @@ export const PublicRestaurantView: React.FC = () => {
           profile = await firestoreService.getRestaurantById(slugParam);
         }
 
-        if (!profile) {
-          // If not found, check if there's any restaurant or fallback to sample
-          const all = await firestoreService.getAllRestaurants();
-          if (all.length > 0) {
-            profile = all[0];
+        if (isMounted) {
+          if (profile) {
+            setRestaurant(profile);
+            const items = await firestoreService.getMenuItems(profile.id);
+            setMenuItems(items);
           } else {
-            profile = { ...SAMPLE_RESTAURANT, slug: slugParam };
-            try {
-              await firestoreService.saveRestaurant(profile);
-            } catch {}
+            setRestaurant(null);
+            setMenuItems([]);
           }
-        }
-
-        if (isMounted && profile) {
-          setRestaurant(profile);
-          let items = await firestoreService.getMenuItems(profile.id);
-          if (items.length === 0) {
-            // Seed sample menu items for instant rich view
-            const seeded = await Promise.all(
-              SAMPLE_MENU_ITEMS.map((sample) =>
-                firestoreService.saveMenuItem({
-                  ...sample,
-                  id: `dish_${Math.random().toString(36).slice(2, 8)}`,
-                  restaurantId: profile!.id,
-                } as MenuItem)
-              )
-            );
-            items = seeded;
-          }
-          setMenuItems(items);
         }
       } catch (err) {
         console.error('Failed to load restaurant data', err);

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { firestoreService } from '../../services/firestoreService';
 import { RestaurantProfile } from '../../types';
-import { SAMPLE_RESTAURANT } from '../../data/restaurantInitialData';
 import {
   Store,
   CheckCircle2,
@@ -49,15 +48,10 @@ export const RestaurantSettingsView: React.FC = () => {
       try {
         let profile = await firestoreService.getRestaurantByOwner(currentUser.id);
         if (!profile) {
-          profile = {
-            ...SAMPLE_RESTAURANT,
-            id: `rest_${currentUser.id}`,
-            ownerId: currentUser.id,
-            name: `${currentUser.name?.split(' ')[0] || 'Mening'}'s Café`,
+          profile = await firestoreService.createCafeForOwner(currentUser.id, {
+            name: `${currentUser.name?.split(' ')[0] || 'Mening'} Café`,
             slug: `cafe-${currentUser.id.slice(0, 6)}`,
-            storeType: 'cafe',
-          };
-          await firestoreService.saveRestaurant(profile);
+          });
         }
 
         if (isMounted && profile) {
