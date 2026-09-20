@@ -807,6 +807,7 @@ export const authService = {
 
   async logout(): Promise<void> {
     try {
+      firestoreService.clearCafeCache();
       await signOut(auth);
     } catch (err) {
       console.error('Sign out error:', err);

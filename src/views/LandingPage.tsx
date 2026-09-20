@@ -29,94 +29,94 @@ export const LandingPage: React.FC = () => {
   const howItWorksSteps = [
     {
       step: '01',
-      title: 'Import a Product',
-      desc: 'Paste any product link from Amazon, Alibaba, Uzum Market, or local suppliers. We instantly extract images, descriptions & variants.',
+      title: t('landing_step_1_title', 'Import a Product'),
+      desc: t('landing_step_1_desc', 'Paste any product link from Amazon, Alibaba, Uzum Market, or local suppliers. We instantly extract images, descriptions & variants.'),
       icon: Search,
-      badge: 'Auto-Import',
+      badge: t('landing_step_1_badge', 'Auto-Import'),
     },
     {
       step: '02',
-      title: 'Set Your Profit',
-      desc: 'Use our smart profit calculator. Enter fixed earnings (e.g. 75,000 UZS) or percentage margin. Selling price is calculated automatically.',
+      title: t('landing_step_2_title', 'Set Your Profit'),
+      desc: t('landing_step_2_desc', 'Use our smart profit calculator. Enter fixed earnings (e.g. 75,000 UZS) or percentage margin. Selling price is calculated automatically.'),
       icon: Percent,
-      badge: 'Smart Math',
+      badge: t('landing_step_2_badge', 'Smart Math'),
     },
     {
       step: '03',
-      title: 'Publish Your Store',
-      desc: 'Customize your branded storefront in 2 minutes with our drag-and-drop builder. Connect custom domain or use your free .sellnex.uz URL.',
+      title: t('landing_step_3_title', 'Publish Your Store'),
+      desc: t('landing_step_3_desc', 'Customize your branded storefront in 2 minutes with our drag-and-drop builder. Connect custom domain or use your free .sellnex.uz URL.'),
       icon: StoreIcon,
-      badge: 'Live Instantly',
+      badge: t('landing_step_3_badge', 'Live Instantly'),
     },
     {
       step: '04',
-      title: 'Share Your Link',
-      desc: 'Promote your store link across Instagram, Telegram, TikTok and WhatsApp with built-in affiliate and tracking campaign links.',
+      title: t('landing_step_4_title', 'Share Your Link'),
+      desc: t('landing_step_4_desc', 'Promote your store link across Instagram, Telegram, TikTok and WhatsApp with built-in affiliate and tracking campaign links.'),
       icon: Globe2,
-      badge: 'Multi-Channel',
+      badge: t('landing_step_4_badge', 'Multi-Channel'),
     },
     {
       step: '05',
-      title: 'Receive Orders & Paid',
-      desc: 'Accept local payments effortlessly with Click, Payme, Uzum Bank, and Cash on Delivery. Customer funds transfer directly.',
+      title: t('landing_step_5_title', 'Receive Orders & Paid'),
+      desc: t('landing_step_5_desc', 'Accept local payments effortlessly with Click, Payme, Uzum Bank, and Cash on Delivery. Customer funds transfer directly.'),
       icon: CreditCard,
-      badge: 'Uzbekistan Switch',
+      badge: t('landing_step_5_badge', 'Uzbekistan Switch'),
     },
     {
       step: '06',
-      title: 'Automate Fulfillment',
-      desc: 'Sit back as our automation engine automatically routes orders to suppliers, tracks courier dispatch, and updates your customer.',
+      title: t('landing_step_6_title', 'Automate Fulfillment'),
+      desc: t('landing_step_6_desc', 'Sit back as our automation engine automatically routes orders to suppliers, tracks courier dispatch, and updates your customer.'),
       icon: Bot,
-      badge: 'Hands-Free',
+      badge: t('landing_step_6_badge', 'Hands-Free'),
     },
   ];
 
   const features = [
     {
-      title: 'Storefront Builder',
-      desc: 'Shopify-style customizable storefronts optimized for mobile conversion in Uzbekistan.',
+      title: t('landing_feat_1_title', 'Storefront Builder'),
+      desc: t('landing_feat_1_desc', 'Shopify-style customizable storefronts optimized for mobile conversion in Uzbekistan.'),
       icon: StoreIcon,
       color: 'bg-blue-50 text-blue-600',
     },
     {
-      title: '1-Click Product Importer',
-      desc: 'Extract supplier costs, stock, high-res photos and variants from any major e-commerce marketplace.',
+      title: t('landing_feat_2_title', '1-Click Product Importer'),
+      desc: t('landing_feat_2_desc', 'Extract supplier costs, stock, high-res photos and variants from any major e-commerce marketplace.'),
       icon: Zap,
       color: 'bg-amber-50 text-amber-600',
     },
     {
-      title: 'Dynamic Profit Calculator',
-      desc: 'Calculate supplier base + logistics + payment commission + your net profit in real-time.',
+      title: t('landing_feat_3_title', 'Dynamic Profit Calculator'),
+      desc: t('landing_feat_3_desc', 'Calculate supplier base + logistics + payment commission + your net profit in real-time.'),
       icon: Percent,
       color: 'bg-emerald-50 text-emerald-600',
     },
     {
-      title: 'Click & Payme Native Gateways',
-      desc: 'Pre-integrated national payment switch with support for Click, Payme, and Uzum Bank installments.',
+      title: t('landing_feat_4_title', 'Click & Payme Native Gateways'),
+      desc: t('landing_feat_4_desc', 'Pre-integrated national payment switch with support for Click, Payme, and Uzum Bank installments.'),
       icon: CreditCard,
       color: 'bg-indigo-50 text-indigo-600',
     },
     {
-      title: 'Uzum Market Ecosystem',
-      desc: 'Sync inventory, export orders, and manage cross-platform marketplace channels seamlessly.',
+      title: t('landing_feat_5_title', 'Uzum Market Ecosystem'),
+      desc: t('landing_feat_5_desc', 'Sync inventory, export orders, and manage cross-platform marketplace channels seamlessly.'),
       icon: Layers,
       color: 'bg-purple-50 text-purple-600',
     },
     {
-      title: 'Dropship Order Automation',
-      desc: 'Auto-dispatch orders to suppliers, auto-sync stock, and send Telegram bot alerts instantly.',
+      title: t('landing_feat_6_title', 'Dropship Order Automation'),
+      desc: t('landing_feat_6_desc', 'Auto-dispatch orders to suppliers, auto-sync stock, and send Telegram bot alerts instantly.'),
       icon: Bot,
       color: 'bg-cyan-50 text-cyan-600',
     },
     {
-      title: 'Real-time Analytics',
-      desc: 'Monitor GMV, net margins, traffic channels (Telegram, TikTok, IG), and best-sellers.',
+      title: t('landing_feat_7_title', 'Real-time Analytics'),
+      desc: t('landing_feat_7_desc', 'Monitor GMV, net margins, traffic channels (Telegram, TikTok, IG), and best-sellers.'),
       icon: TrendingUp,
       color: 'bg-rose-50 text-rose-600',
     },
     {
-      title: 'Regional Delivery & Couriers',
-      desc: 'Automated dispatch with UzPost, BTS Cargo, Fargo Express, and Yandex Delivery across all 12 regions.',
+      title: t('landing_feat_8_title', 'Regional Delivery & Couriers'),
+      desc: t('landing_feat_8_desc', 'Automated dispatch with UzPost, BTS Cargo, Fargo Express, and Yandex Delivery across all 12 regions.'),
       icon: Truck,
       color: 'bg-teal-50 text-teal-600',
     },
@@ -179,7 +179,7 @@ export const LandingPage: React.FC = () => {
             className="px-2.5 sm:px-4 lg:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-500/25 transition-all hover:scale-[1.02] flex items-center gap-1 shrink-0 whitespace-nowrap min-h-[34px] sm:min-h-[40px]"
           >
             <span className="hidden sm:inline">{t('nav_signup', 'Sign Up')}</span>
-            <span className="sm:hidden">{t('nav_signup', 'Sign Up').length > 10 ? "Ro'yxat" : t('nav_signup', 'Sign Up')}</span>
+            <span className="sm:hidden">{t('nav_signup_short', "Ro'yxat")}</span>
             <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
@@ -239,9 +239,9 @@ export const LandingPage: React.FC = () => {
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>Qurilma bo'yicha kirish:</span>
+              <span>{t('landing_device_selector_title', "Qurilma bo'yicha kirish:")}</span>
             </span>
-            <span className="text-[11px] text-slate-400">Telegram & Web tayyor</span>
+            <span className="text-[11px] text-slate-400">{t('landing_device_ready_badge', 'Telegram & Web tayyor')}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -262,9 +262,9 @@ export const LandingPage: React.FC = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 flex items-center gap-1">
-                  <span>📱 Telefon / Mini App</span>
+                  <span>{t('landing_device_mobile_title', '📱 Telefon / Mini App')}</span>
                 </p>
-                <p className="text-[11px] text-slate-500 truncate">Mobil & Telegram Mini App</p>
+                <p className="text-[11px] text-slate-500 truncate">{t('landing_device_mobile_desc', 'Mobil & Telegram Mini App')}</p>
               </div>
             </button>
 
@@ -285,9 +285,9 @@ export const LandingPage: React.FC = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 flex items-center gap-1">
-                  <span>💻 Kompyuter / Desktop</span>
+                  <span>{t('landing_device_desktop_title', '💻 Kompyuter / Desktop')}</span>
                 </p>
-                <p className="text-[11px] text-slate-500 truncate">Keng ekranli Boshqaruv paneli</p>
+                <p className="text-[11px] text-slate-500 truncate">{t('landing_device_desktop_desc', 'Keng ekranli Boshqaruv paneli')}</p>
               </div>
             </button>
           </div>
@@ -297,19 +297,19 @@ export const LandingPage: React.FC = () => {
         <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm font-medium text-slate-500">
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>No Inventory Required</span>
+            <span>{t('landing_pill_no_inventory', 'No Inventory Required')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Click & Payme Ready</span>
+            <span>{t('landing_pill_payments_ready', 'Click & Payme Ready')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>24-48h Delivery in Uzbekistan</span>
+            <span>{t('landing_pill_delivery', '24-48h Delivery in Uzbekistan')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Automatic Profit Calculator</span>
+            <span>{t('landing_pill_profit_calc', 'Automatic Profit Calculator')}</span>
           </div>
         </div>
 
@@ -326,7 +326,7 @@ export const LandingPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] bg-emerald-500/20 text-emerald-400 font-semibold px-2 py-0.5 rounded border border-emerald-500/30">
-                  ● Order Auto-Fulfillment: ACTIVE
+                  {t('landing_mockup_auto_active', '● Order Auto-Fulfillment: ACTIVE')}
                 </span>
               </div>
             </div>
@@ -334,22 +334,22 @@ export const LandingPage: React.FC = () => {
             {/* Simulated mini dashboard preview */}
             <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-4 gap-4 text-white">
               <div className="bg-slate-800/90 p-4 rounded-xl border border-slate-700/60">
-                <p className="text-xs text-slate-400 font-medium">Total Revenue</p>
+                <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_revenue', 'Total Revenue')}</p>
                 <p className="text-xl sm:text-2xl font-bold text-white mt-1">12,450,000 UZS</p>
-                <span className="text-xs text-emerald-400 font-semibold mt-1 inline-block">↑ +24.8% this week</span>
+                <span className="text-xs text-emerald-400 font-semibold mt-1 inline-block">{t('landing_mockup_revenue_change', '↑ +24.8% this week')}</span>
               </div>
               <div className="bg-slate-800/90 p-4 rounded-xl border border-slate-700/60">
-                <p className="text-xs text-slate-400 font-medium">Net Profit</p>
+                <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_profit', 'Net Profit')}</p>
                 <p className="text-xl sm:text-2xl font-bold text-emerald-400 mt-1">3,240,000 UZS</p>
-                <span className="text-xs text-slate-400 mt-1 inline-block">Avg. margin: 26.0%</span>
+                <span className="text-xs text-slate-400 mt-1 inline-block">{t('landing_mockup_margin', 'Avg. margin: 26.0%')}</span>
               </div>
               <div className="bg-slate-800/90 p-4 rounded-xl border border-slate-700/60">
-                <p className="text-xs text-slate-400 font-medium">Orders Placed</p>
+                <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_orders', 'Orders Placed')}</p>
                 <p className="text-xl sm:text-2xl font-bold text-white mt-1">128</p>
-                <span className="text-xs text-blue-400 mt-1 inline-block">100% automated dropship</span>
+                <span className="text-xs text-blue-400 mt-1 inline-block">{t('landing_mockup_orders_sub', '100% automated dropship')}</span>
               </div>
               <div className="bg-slate-800/90 p-4 rounded-xl border border-slate-700/60">
-                <p className="text-xs text-slate-400 font-medium">Active Products</p>
+                <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_products', 'Active Products')}</p>
                 <p className="text-xl sm:text-2xl font-bold text-white mt-1">42</p>
                 <span className="text-xs text-amber-400 mt-1 inline-block">Amazon • Alibaba • Uzum</span>
               </div>
@@ -358,7 +358,7 @@ export const LandingPage: React.FC = () => {
             {/* Interactive Try Button inside mockup */}
             <div className="bg-slate-950/80 px-6 py-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-3 text-slate-300">
-                <span className="text-blue-400 font-semibold">Latest Order #SL-1024:</span>
+                <span className="text-blue-400 font-semibold">{t('landing_mockup_latest_order', 'Latest Order')} #SL-1024:</span>
                 <span>Wireless ANC Headphones • 350,000 UZS via Click</span>
                 <span className="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-mono">+75,000 UZS Profit</span>
               </div>
@@ -367,7 +367,7 @@ export const LandingPage: React.FC = () => {
                 onClick={() => navigateTo('dashboard')}
                 className="text-blue-400 hover:text-blue-300 font-semibold underline underline-offset-4"
               >
-                Launch Dashboard →
+                {t('landing_mockup_launch', 'Launch Dashboard →')}
               </button>
             </div>
           </div>
@@ -379,13 +379,13 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <span className="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-              End-to-End Workflow
+              {t('landing_workflow_badge', 'End-to-End Workflow')}
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-3">
-              How Sellnex Works
+              {t('landing_workflow_title', 'How Sellnex Works')}
             </h2>
             <p className="text-slate-600 mt-3 text-sm sm:text-base">
-              Start your dropshipping business in Uzbekistan in 6 simple, automated steps.
+              {t('landing_workflow_subtitle', 'Start your dropshipping business in Uzbekistan in 6 simple, automated steps.')}
             </p>
           </div>
 
@@ -410,7 +410,7 @@ export const LandingPage: React.FC = () => {
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                     <span className="font-semibold text-blue-600">{s.badge}</span>
-                    <span className="text-slate-400">Step {s.step} of 06</span>
+                    <span className="text-slate-400">{t('landing_step_of', 'Step {step} of 06').replace('{step}', s.step)}</span>
                   </div>
                 </div>
               );
@@ -420,9 +420,9 @@ export const LandingPage: React.FC = () => {
           {/* Quick Import Interactive Teaser */}
           <div className="mt-12 bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <h4 className="text-xl font-bold text-slate-900">Want to test importing a product right now?</h4>
+              <h4 className="text-xl font-bold text-slate-900">{t('landing_teaser_title', 'Want to test importing a product right now?')}</h4>
               <p className="text-slate-600 text-sm mt-1">
-                Try pasting any Amazon, Alibaba or Uzum link into our calculator to see instant profit margins.
+                {t('landing_teaser_desc', 'Try pasting any Amazon, Alibaba or Uzum link into our calculator to see instant profit margins.')}
               </p>
             </div>
             <button
@@ -431,7 +431,7 @@ export const LandingPage: React.FC = () => {
               className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition-all shrink-0 flex items-center gap-2"
             >
               <Zap className="w-4 h-4" />
-              <span>Open Product Importer & Profit Calculator</span>
+              <span>{t('landing_teaser_btn', 'Open Product Importer & Profit Calculator')}</span>
             </button>
           </div>
         </div>
@@ -441,13 +441,13 @@ export const LandingPage: React.FC = () => {
       <section id="features" className="py-20 px-4 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-14">
           <span className="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-            Platform Capabilities
+            {t('landing_feat_badge', 'Platform Capabilities')}
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-3">
-            Everything You Need to Scale
+            {t('landing_feat_title', 'Everything You Need to Scale')}
           </h2>
           <p className="text-slate-600 mt-3 text-sm sm:text-base">
-            Built specifically for Central Asian entrepreneurs, creators, and commerce operators.
+            {t('landing_feat_subtitle', 'Enterprise-grade dropshipping and e-commerce tools built for high conversion')}
           </p>
         </div>
 
@@ -477,13 +477,13 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <span className="text-xs font-bold uppercase tracking-widest text-blue-400 bg-blue-950 px-3 py-1 rounded-full border border-blue-800">
-              Connected Ecosystem
+              {t('landing_eco_badge', 'Connected Ecosystem')}
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
-              Marketplaces, Suppliers & Local Payments
+              {t('landing_eco_title', 'Marketplaces, Suppliers & Local Payments')}
             </h2>
             <p className="text-slate-400 mt-3 text-sm sm:text-base">
-              Connect your favorite platforms with real automated integrations.
+              {t('landing_eco_subtitle', 'Connect your favorite platforms with real automated integrations.')}
             </p>
           </div>
 
@@ -511,7 +511,7 @@ export const LandingPage: React.FC = () => {
               onClick={() => navigateTo('integrations')}
               className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold border border-slate-700 transition-colors inline-flex items-center gap-2"
             >
-              <span>Manage Integrations in Dashboard</span>
+              <span>{t('landing_eco_btn', 'Manage Integrations in Dashboard')}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -522,13 +522,13 @@ export const LandingPage: React.FC = () => {
       <section id="pricing" className="py-20 px-4 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-14">
           <span className="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-            Simple Pricing
+            {t('landing_pricing_badge', 'Simple Pricing')}
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-3">
-            Transparent Plans for Every Seller
+            {t('landing_pricing_title', 'Transparent Plans for Every Seller')}
           </h2>
           <p className="text-slate-600 mt-3 text-sm sm:text-base">
-            Start for free and scale your commerce revenue as you grow.
+            {t('landing_pricing_subtitle', 'Start for free and scale your commerce revenue as you grow.')}
           </p>
         </div>
 
@@ -537,10 +537,10 @@ export const LandingPage: React.FC = () => {
           <div className="bg-white rounded-2xl p-7 border border-slate-200 shadow-sm flex flex-col justify-between">
             <div>
               <h3 className="text-lg font-bold text-slate-900">FREE</h3>
-              <p className="text-xs text-slate-500 mt-1">Perfect for trying out dropshipping</p>
+              <p className="text-xs text-slate-500 mt-1">{t('landing_plan_free_desc', 'Perfect for trying out dropshipping')}</p>
               <div className="my-6">
                 <span className="text-3xl sm:text-4xl font-extrabold text-slate-900">0 UZS</span>
-                <span className="text-xs text-slate-500 ml-1">/ month</span>
+                <span className="text-xs text-slate-500 ml-1">{t('landing_per_month', '/ month')}</span>
               </div>
               <ul className="space-y-3 text-xs sm:text-sm text-slate-600">
                 <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Up to 10 products</li>
@@ -554,21 +554,21 @@ export const LandingPage: React.FC = () => {
               onClick={() => navigateTo('auth', { mode: 'signup' })}
               className="mt-8 w-full py-3 rounded-xl border border-slate-300 hover:bg-slate-50 font-semibold text-slate-800 text-sm transition-colors"
             >
-              Get Started Free
+              {t('landing_plan_free_btn', 'Get Started Free')}
             </button>
           </div>
 
           {/* Pro Plan (Featured) */}
           <div className="bg-blue-600 rounded-2xl p-7 text-white shadow-xl shadow-blue-500/20 relative flex flex-col justify-between border-2 border-blue-500">
             <div className="absolute -top-3.5 right-6 bg-amber-400 text-slate-900 text-[11px] font-black uppercase tracking-wider px-3 py-0.5 rounded-full shadow-xs">
-              Most Popular
+              {t('landing_plan_pro_badge', 'Most Popular')}
             </div>
             <div>
               <h3 className="text-lg font-bold">PRO</h3>
-              <p className="text-xs text-blue-100 mt-1">For active online sellers & dropshippers</p>
+              <p className="text-xs text-blue-100 mt-1">{t('landing_plan_pro_desc', 'For active online sellers & dropshippers')}</p>
               <div className="my-6">
                 <span className="text-3xl sm:text-4xl font-extrabold text-white">99,000 UZS</span>
-                <span className="text-xs text-blue-200 ml-1">/ month</span>
+                <span className="text-xs text-blue-200 ml-1">{t('landing_per_month', '/ month')}</span>
               </div>
               <ul className="space-y-3 text-xs sm:text-sm text-blue-50">
                 <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-200 shrink-0" /> 1,000 products</li>
@@ -583,7 +583,7 @@ export const LandingPage: React.FC = () => {
               onClick={() => navigateTo('pricing')}
               className="mt-8 w-full py-3 rounded-xl bg-white hover:bg-slate-100 font-bold text-blue-700 text-sm shadow-md transition-colors"
             >
-              Subscribe to PRO
+              {t('landing_plan_pro_btn', 'Subscribe to PRO')}
             </button>
           </div>
 
@@ -591,10 +591,10 @@ export const LandingPage: React.FC = () => {
           <div className="bg-white rounded-2xl p-7 border border-slate-200 shadow-sm flex flex-col justify-between">
             <div>
               <h3 className="text-lg font-bold text-slate-900">BUSINESS</h3>
-              <p className="text-xs text-slate-500 mt-1">For large volume agencies & multi-stores</p>
+              <p className="text-xs text-slate-500 mt-1">{t('landing_plan_biz_desc', 'For large volume agencies & multi-stores')}</p>
               <div className="my-6">
                 <span className="text-3xl sm:text-4xl font-extrabold text-slate-900">299,000 UZS</span>
-                <span className="text-xs text-slate-500 ml-1">/ month</span>
+                <span className="text-xs text-slate-500 ml-1">{t('landing_per_month', '/ month')}</span>
               </div>
               <ul className="space-y-3 text-xs sm:text-sm text-slate-600">
                 <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Unlimited products & stores</li>
@@ -608,7 +608,7 @@ export const LandingPage: React.FC = () => {
               onClick={() => navigateTo('pricing')}
               className="mt-8 w-full py-3 rounded-xl border border-slate-300 hover:bg-slate-50 font-semibold text-slate-800 text-sm transition-colors"
             >
-              Upgrade to Business
+              {t('landing_plan_biz_btn', 'Upgrade to Business')}
             </button>
           </div>
         </div>
@@ -623,19 +623,19 @@ export const LandingPage: React.FC = () => {
             </div>
             <div>
               <span className="text-base font-black text-white">SELLNEX</span>
-              <p className="text-xs text-slate-400">Sell. Automate. Grow.</p>
+              <p className="text-xs text-slate-400">{t('landing_footer_tagline', 'Sell. Automate. Grow.')}</p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-6 text-xs text-slate-400">
-            <button onClick={() => navigateTo('dashboard')} className="hover:text-white">Dashboard</button>
-            <button onClick={() => navigateTo('pricing')} className="hover:text-white">Pricing</button>
-            <button onClick={() => navigateTo('auth', { mode: 'signup' })} className="hover:text-white">Start Selling</button>
-            <button onClick={() => navigateTo('admin')} className="hover:text-white text-amber-400">Admin Portal</button>
+            <button onClick={() => navigateTo('dashboard')} className="hover:text-white">{t('nav_dashboard', 'Dashboard')}</button>
+            <button onClick={() => navigateTo('pricing')} className="hover:text-white">{t('nav_pricing', 'Pricing')}</button>
+            <button onClick={() => navigateTo('auth', { mode: 'signup' })} className="hover:text-white">{t('btn_start_selling', 'Start Selling')}</button>
+            <button onClick={() => navigateTo('admin')} className="hover:text-white text-amber-400">{t('nav_admin', 'Admin Portal')}</button>
           </div>
 
           <p className="text-xs text-slate-400">
-            © 2026 Sellnex Technologies. Built for Uzbekistan & Central Asia.
+            © 2026 Sellnex Technologies. {t('landing_footer_desc', 'Built for Uzbekistan & Central Asia.')}
           </p>
         </div>
       </footer>

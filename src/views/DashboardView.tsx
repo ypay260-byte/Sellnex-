@@ -35,6 +35,7 @@ export const DashboardView: React.FC = () => {
     copyStoreLink,
     openShareModal,
     currentUser,
+    t,
   } = useApp();
 
   const [activeChartTab, setActiveChartTab] = useState<'revenue' | 'profit'>('revenue');
@@ -55,13 +56,15 @@ export const DashboardView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">Seller Dashboard</h1>
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">
+              {t('dash_title', 'Sotuvchi paneli')}
+            </h1>
             <span className="rounded-full bg-blue-100 text-blue-800 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider">
               {currentUser?.plan?.toUpperCase() || 'STARTER'}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Welcome back, {currentUser?.name || 'Seller'}. Manage your store operations, orders, and public links.
+            {t('dash_welcome', 'Xush kelibsiz, {name}. Doʻkoningiz, buyurtmalar va havolalarni boshqaring.').replace('{name}', currentUser?.name || 'Sotuvchi')}
           </p>
         </div>
 
@@ -71,7 +74,7 @@ export const DashboardView: React.FC = () => {
             onClick={() => navigateTo('public-store', { storeSlug: store.slug })}
             className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs min-h-[40px]"
           >
-            <span>Open Store</span>
+            <span>{t('dash_open_store', 'Doʻkonni ochish')}</span>
             <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
           </button>
           <button
@@ -80,7 +83,7 @@ export const DashboardView: React.FC = () => {
             className="rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white transition-colors flex items-center gap-1.5 shadow-sm min-h-[40px]"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Add / Import Product</span>
+            <span>{t('dash_add_product', 'Mahsulot qoʻshish / Import')}</span>
           </button>
         </div>
       </div>
@@ -93,9 +96,11 @@ export const DashboardView: React.FC = () => {
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-xs font-extrabold text-slate-900">Your Live Public Store Link</p>
+              <p className="text-xs font-extrabold text-slate-900">
+                {t('dash_live_link_title', 'Faol ommaviy doʻkoningiz havolasi')}
+              </p>
               <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.2 rounded-full">
-                Online & No-Login Required
+                {t('dash_live_badge', 'Online • Kirish talab etilmaydi')}
               </span>
             </div>
             <p className="text-xs text-blue-700 font-mono font-bold mt-0.5 select-all truncate">
@@ -111,13 +116,13 @@ export const DashboardView: React.FC = () => {
             className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl border border-blue-200 transition-colors flex items-center gap-1.5 min-h-[38px]"
           >
             <Link2 className="w-3.5 h-3.5" />
-            <span>Copy Store Link</span>
+            <span>{t('dash_copy_link', 'Doʻkon havolasini nusxalash')}</span>
           </button>
           <button
             id="dash-share-store-link"
             onClick={() =>
               openShareModal({
-                title: 'Share Your Sellnex Store',
+                title: t('dash_share_social', 'Ijtimoiy tarmoqlarda ulashish'),
                 subtitle: 'Add this link to your Instagram bio, TikTok, or Telegram channel.',
                 url: getStoreUrl(store.slug),
               })
@@ -125,7 +130,7 @@ export const DashboardView: React.FC = () => {
             className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-xs min-h-[38px]"
           >
             <Share2 className="w-3.5 h-3.5" />
-            <span>Share on Social</span>
+            <span>{t('dash_share_social', 'Ijtimoiy tarmoqlarda ulashish')}</span>
           </button>
         </div>
       </div>
@@ -136,11 +141,13 @@ export const DashboardView: React.FC = () => {
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-xs">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Your Store is Ready</span>
+              <span>{t('dash_store_active_badge', 'Doʻkoningiz tayyor')}</span>
             </div>
-            <h2 className="text-xl font-extrabold tracking-tight">Welcome to your new Sellnex Store!</h2>
+            <h2 className="text-xl font-extrabold tracking-tight">
+              {t('dash_welcome_banner_title', 'Yangi Sellnex doʻkoningizga xush kelibsiz!')}
+            </h2>
             <p className="text-xs text-blue-100 max-w-xl">
-              Your public store is live. Choose between <strong>Personal Products</strong> (your own stock) or <strong>Dropshipping</strong> (Uzum Market / AliExpress) to start selling.
+              {t('dash_welcome_banner_desc', 'Ommaviy doʻkoningiz faol. Shaxsiy mahsulotlar (oʻz omboringiz) yoki dropshipping (Uzum Market / AliExpress) orqali savdoni boshlang.')}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
@@ -149,14 +156,14 @@ export const DashboardView: React.FC = () => {
               className="px-4 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Add First Product</span>
+              <span>{t('dash_add_first_product', 'Birinchi mahsulotni qoʻshish')}</span>
             </button>
             <button
               onClick={() => navigateTo('store-builder')}
               className="px-4 py-2.5 rounded-xl bg-blue-700/80 hover:bg-blue-700 text-white font-semibold text-xs border border-white/20 transition-all flex items-center gap-1.5"
             >
               <StoreIcon className="w-4 h-4" />
-              <span>Customize Store</span>
+              <span>{t('dash_customize_store', 'Doʻkonni sozlash')}</span>
             </button>
           </div>
         </div>
@@ -166,34 +173,40 @@ export const DashboardView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Card 1: Total Revenue */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-2">
-          <p className="text-xs font-semibold text-slate-500">Total Revenue</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {t('dash_stat_revenue', 'Jami tushum')}
+          </p>
           <p className="text-2xl font-black text-slate-900">
             {formatMoney(summary.totalRevenue || 0)}
           </p>
           <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-emerald-600">
             <ArrowUpRight className="h-3 w-3" />
-            <span>{orders.length > 0 ? '+12.5% this week' : '0 orders this week'}</span>
+            <span>{orders.length > 0 ? `+12.5% ${t('dash_this_week_change', 'bu hafta')}` : `0 ${t('dash_this_week_change', 'bu hafta')}`}</span>
           </div>
         </div>
 
         {/* Card 2: Total Orders */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-2">
-          <p className="text-xs font-semibold text-slate-500">Total Orders</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {t('dash_stat_orders', 'Jami buyurtmalar')}
+          </p>
           <p className="text-2xl font-black text-slate-900">{orders.length}</p>
           <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-blue-600">
             <ShoppingBag className="h-3 w-3" />
-            <span>{orders.filter((o) => o.orderStatus === 'Pending').length} pending processing</span>
+            <span>{orders.filter((o) => o.orderStatus === 'Pending').length} {t('dash_pending_processing', 'koʻrib chiqilmoqda')}</span>
           </div>
         </div>
 
         {/* Card 3: Est. Profit */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-2">
-          <p className="text-xs font-semibold text-slate-500">Est. Net Profit</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {t('dash_stat_profit', 'Sof foyda')}
+          </p>
           <p className="text-2xl font-black text-emerald-600">
             +{formatMoney(summary.totalProfit || 0)}
           </p>
           <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-slate-500">
-            <span>{summary.profitMarginPercent || 0}% Average margin</span>
+            <span>{summary.profitMarginPercent || 0}% {t('dash_stat_margin_avg', 'Oʻrtacha marja')}</span>
           </div>
         </div>
 
@@ -203,16 +216,18 @@ export const DashboardView: React.FC = () => {
           className="rounded-2xl border border-blue-600 bg-blue-600 p-6 text-white shadow-lg shadow-blue-500/10 space-y-2 cursor-pointer transition-all hover:bg-blue-700"
         >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-blue-100 uppercase tracking-wider">Catalog Usage</p>
+            <p className="text-xs font-bold text-blue-100 uppercase tracking-wider">
+              {t('dash_stat_catalog_usage', 'Katalogdan foydalanish')}
+            </p>
             <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">Manage &rarr;</span>
           </div>
           <p className="text-2xl font-black text-white">
-            {products.length} <span className="text-xs font-medium text-blue-200">items</span>
+            {products.length} <span className="text-xs font-medium text-blue-200">{t('trial_products_count', 'ta mahsulot')}</span>
           </p>
           <div className="mt-3 flex items-center gap-1 text-[10px] font-bold text-blue-100">
             <Package className="w-3.5 h-3.5" />
             <span>
-              Plan: {currentUser?.plan?.toUpperCase() || 'FREE TRIAL'} ({products.length} /{' '}
+              Tarif: {currentUser?.plan?.toUpperCase() || 'FREE TRIAL'} ({products.length} /{' '}
               {currentUser?.productLimit ||
                 (currentUser?.plan === 'premium' || currentUser?.plan === 'premium_pro'
                   ? 110
@@ -232,13 +247,15 @@ export const DashboardView: React.FC = () => {
         {/* Left 2 Cols: Recent Orders Table */}
         <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col overflow-hidden">
           <div className="border-b border-slate-100 px-6 py-4 flex justify-between items-center">
-            <h2 className="text-sm font-bold text-slate-900">Recent Customer Orders</h2>
+            <h2 className="text-sm font-bold text-slate-900">
+              {t('dash_recent_orders_title', 'Mijozlarning soʻnggi buyurtmalari')}
+            </h2>
             <button
               id="dash-view-all-orders-btn"
               onClick={() => navigateTo('orders')}
               className="text-xs text-blue-600 font-bold hover:underline"
             >
-              View All Orders
+              {t('dash_view_all_orders', 'Barcha buyurtmalar')}
             </button>
           </div>
           <div className="flex-1 overflow-x-auto">
@@ -246,11 +263,11 @@ export const DashboardView: React.FC = () => {
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    <th className="px-6 py-3">Order ID</th>
-                    <th className="px-6 py-3">Customer</th>
-                    <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3">Amount</th>
-                    <th className="px-6 py-3">Profit</th>
+                    <th className="px-6 py-3">{t('dash_th_order_id', 'Buyurtma ID')}</th>
+                    <th className="px-6 py-3">{t('dash_th_customer', 'Mijoz')}</th>
+                    <th className="px-6 py-3">{t('dash_th_status', 'Holat')}</th>
+                    <th className="px-6 py-3">{t('dash_th_amount', 'Summa')}</th>
+                    <th className="px-6 py-3">{t('dash_th_profit', 'Foyda')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
@@ -289,16 +306,18 @@ export const DashboardView: React.FC = () => {
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <ShoppingBag className="w-6 h-6" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">No orders received yet</h3>
+                <h3 className="text-sm font-bold text-slate-800">
+                  {t('dash_no_orders_title', 'Hozircha buyurtmalar yoʻq')}
+                </h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Share your public store link on Instagram, TikTok, or Telegram. Orders placed by customers will appear here in real-time.
+                  {t('dash_no_orders_desc', 'Doʻkoningiz havolasini Instagram, TikTok yoki Telegramda ulashing. Mijozlar bergan buyurtmalar bu yerda darhol aks etadi.')}
                 </p>
                 <button
                   onClick={() => copyStoreLink(store.slug)}
                   className="inline-flex items-center gap-1.5 text-xs text-blue-600 font-bold hover:underline"
                 >
                   <Link2 className="w-3.5 h-3.5" />
-                  <span>Copy and share store link</span>
+                  <span>{t('dash_copy_link', 'Doʻkon havolasini nusxalash')}</span>
                 </button>
               </div>
             )}
@@ -307,7 +326,9 @@ export const DashboardView: React.FC = () => {
 
         {/* Right 1 Col: Store Status Widget */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col p-6 space-y-4">
-          <h2 className="text-sm font-bold text-slate-900">Store Quick Status</h2>
+          <h2 className="text-sm font-bold text-slate-900">
+            {t('dash_quick_status_title', 'Doʻkon holati')}
+          </h2>
           <div className="flex-1 space-y-4">
             <div className="flex items-center gap-4 rounded-xl border border-slate-100 p-4 bg-slate-50/50">
               <div className="h-10 w-10 bg-white rounded-lg border border-slate-200/80 flex items-center justify-center text-slate-500 shadow-2xs">
@@ -317,7 +338,7 @@ export const DashboardView: React.FC = () => {
                 <p className="text-xs font-bold text-slate-900 truncate">{store.name}</p>
                 <p className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Storefront is Active & Public
+                  {t('dash_store_active_badge', 'Doʻkoningiz faol va ochiq')}
                 </p>
               </div>
               <button
@@ -331,25 +352,31 @@ export const DashboardView: React.FC = () => {
 
             <div className="rounded-xl bg-slate-50 p-4 border border-slate-100 space-y-2">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Business Modes</span>
-                <span className="text-[10px] font-bold text-slate-700">{products.length} Products</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  {t('dash_business_modes', 'Biznes rejimlari')}
+                </span>
+                <span className="text-[10px] font-bold text-slate-700">{products.length} {t('trial_products_count', 'Mahsulot')}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center gap-2">
                   <Boxes className="w-4 h-4 text-purple-600" />
                   <div>
-                    <span className="text-[10px] text-slate-400 block font-semibold">Personal</span>
+                    <span className="text-[10px] text-slate-400 block font-semibold">
+                      {t('dash_mode_personal', 'Shaxsiy')}
+                    </span>
                     <span className="font-black text-slate-800">
-                      {products.filter((p) => p.businessMode === 'personal' || !p.businessMode).length} items
+                      {products.filter((p) => p.businessMode === 'personal' || !p.businessMode).length} {t('trial_products_count', 'ta')}
                     </span>
                   </div>
                 </div>
                 <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center gap-2">
                   <Zap className="w-4 h-4 text-blue-600" />
                   <div>
-                    <span className="text-[10px] text-slate-400 block font-semibold">Dropship</span>
+                    <span className="text-[10px] text-slate-400 block font-semibold">
+                      {t('dash_mode_dropship', 'Dropship')}
+                    </span>
                     <span className="font-black text-slate-800">
-                      {products.filter((p) => p.businessMode === 'dropshipping').length} items
+                      {products.filter((p) => p.businessMode === 'dropshipping').length} {t('trial_products_count', 'ta')}
                     </span>
                   </div>
                 </div>
@@ -363,7 +390,7 @@ export const DashboardView: React.FC = () => {
                 className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 py-3 text-xs font-bold text-white flex items-center justify-center gap-2 transition-colors shadow-xs"
               >
                 <StoreIcon className="w-4 h-4" />
-                <span>Open Storefront Customizer</span>
+                <span>{t('dash_open_customizer', 'Doʻkon konstruktorini ochish')}</span>
               </button>
             </div>
           </div>
@@ -376,8 +403,12 @@ export const DashboardView: React.FC = () => {
         <div className="lg:col-span-8 bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Revenue & Profit Overview</h3>
-              <p className="text-xs text-slate-500">Performance across Click, Payme, and Uzum Bank</p>
+              <h3 className="text-base font-bold text-slate-900">
+                {t('dash_chart_title', 'Tushum va foyda dinamikasi')}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {t('dash_chart_subtitle', 'Click, Payme va Uzum Bank orqali toʻlovlar')}
+              </p>
             </div>
 
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
@@ -389,7 +420,7 @@ export const DashboardView: React.FC = () => {
                   activeChartTab === 'revenue' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Revenue (UZS)
+                {t('dash_chart_tab_revenue', 'Tushum (UZS)')}
               </button>
               <button
                 id="tab-chart-profit"
@@ -399,7 +430,7 @@ export const DashboardView: React.FC = () => {
                   activeChartTab === 'profit' ? 'bg-white text-emerald-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Net Profit (UZS)
+                {t('dash_chart_tab_profit', 'Sof foyda (UZS)')}
               </button>
             </div>
           </div>
@@ -433,12 +464,14 @@ export const DashboardView: React.FC = () => {
         {/* Right 4 Cols: Best Selling Products with Direct Share Links */}
         <div className="lg:col-span-4 bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900">Top Products</h3>
+            <h3 className="text-sm font-bold text-slate-900">
+              {t('dash_top_products', 'Ommabop mahsulotlar')}
+            </h3>
             <button
               onClick={() => navigateTo('products')}
               className="text-xs text-blue-600 font-bold hover:underline"
             >
-              All Products
+              {t('dash_all_products', 'Barcha mahsulotlar')}
             </button>
           </div>
 
@@ -463,7 +496,7 @@ export const DashboardView: React.FC = () => {
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => copyStoreLink(store.slug)}
-                    title="Copy Store Link"
+                    title={t('dash_copy_link', 'Doʻkon havolasini nusxalash')}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                   >
                     <Link2 className="w-3.5 h-3.5" />

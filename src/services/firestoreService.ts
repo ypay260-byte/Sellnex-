@@ -19,6 +19,7 @@ import {
   uploadString,
   getDownloadURL,
 } from 'firebase/storage';
+import { signInAnonymously } from 'firebase/auth';
 import { db, storage, auth } from './firebase';
 import {
   User,
@@ -79,6 +80,21 @@ export const COLLECTIONS = {
   CAFE_CATEGORIES: 'cafe_categories',
   RESTAURANT_ORDERS: 'restaurant_orders',
 } as const;
+
+// === In-Memory Multi-Tenant Isolation Cache for Café ===
+interface CafeCacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const CAFE_CACHE_TTL_MS = 60 * 1000; // 60s TTL for background staleness; instantaneous in-session switches
+
+const cafeMemoryCache = {
+  profileByOwner: new Map<string, CafeCacheEntry<RestaurantProfile>>(),
+  profileById: new Map<string, CafeCacheEntry<RestaurantProfile>>(),
+  categories: new Map<string, CafeCacheEntry<CafeCategory[]>>(),
+  menuItems: new Map<string, CafeCacheEntry<MenuItem[]>>(),
+};
 
 // Helper to strip undefined fields for Firestore setDoc / updateDoc compatibility
 function isFirestoreSentinel(val: any): boolean {
@@ -1430,8 +1446,24 @@ export const firestoreService = {
     return profile;
   },
 
-  async getRestaurantByOwner(ownerId: string): Promise<RestaurantProfile | null> {
+  // Clear Cafe cache on user switch or sign out
+  clearCafeCache(): void {
+    cafeMemoryCache.profileByOwner.clear();
+    cafeMemoryCache.profileById.clear();
+    cafeMemoryCache.categories.clear();
+    cafeMemoryCache.menuItems.clear();
+  },
+
+  async getRestaurantByOwner(ownerId: string, forceRefresh = false): Promise<RestaurantProfile | null> {
     if (!ownerId) return null;
+    const now = Date.now();
+    if (!forceRefresh) {
+      const cached = cafeMemoryCache.profileByOwner.get(ownerId);
+      if (cached && now - cached.timestamp < CAFE_CACHE_TTL_MS) {
+        return cached.data;
+      }
+    }
+
     try {
       // 1. First check if user document directly references a restaurantId
       const userRef = doc(db, COLLECTIONS.USERS, ownerId);
@@ -1445,6 +1477,8 @@ export const firestoreService = {
           if (directCafeDoc.exists()) {
             const cafeData = { id: directCafeDoc.id, ...directCafeDoc.data() } as RestaurantProfile;
             if (cafeData.ownerId === ownerId) {
+              cafeMemoryCache.profileByOwner.set(ownerId, { data: cafeData, timestamp: now });
+              cafeMemoryCache.profileById.set(cafeData.id, { data: cafeData, timestamp: now });
               return cafeData;
             }
           }
@@ -1463,7 +1497,12 @@ export const firestoreService = {
               new Date(b.updatedAt || b.createdAt).getTime() -
               new Date(a.updatedAt || a.createdAt).getTime()
           );
-        return matching[0] || null;
+        const result = matching[0] || null;
+        if (result) {
+          cafeMemoryCache.profileByOwner.set(ownerId, { data: result, timestamp: now });
+          cafeMemoryCache.profileById.set(result.id, { data: result, timestamp: now });
+        }
+        return result;
       }
       return null;
     } catch (e) {
@@ -1492,12 +1531,25 @@ export const firestoreService = {
     }
   },
 
-  async getRestaurantById(id: string): Promise<RestaurantProfile | null> {
+  async getRestaurantById(id: string, forceRefresh = false): Promise<RestaurantProfile | null> {
+    if (!id) return null;
+    const now = Date.now();
+    if (!forceRefresh) {
+      const cached = cafeMemoryCache.profileById.get(id);
+      if (cached && now - cached.timestamp < CAFE_CACHE_TTL_MS) {
+        return cached.data;
+      }
+    }
     try {
       const docRef = doc(db, COLLECTIONS.RESTAURANTS, id);
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-        return { id: snap.id, ...snap.data() } as RestaurantProfile;
+        const profile = { id: snap.id, ...snap.data() } as RestaurantProfile;
+        cafeMemoryCache.profileById.set(id, { data: profile, timestamp: now });
+        if (profile.ownerId) {
+          cafeMemoryCache.profileByOwner.set(profile.ownerId, { data: profile, timestamp: now });
+        }
+        return profile;
       }
       return null;
     } catch (e) {
@@ -1509,15 +1561,30 @@ export const firestoreService = {
   async saveRestaurant(restaurant: RestaurantProfile): Promise<void> {
     try {
       const docRef = doc(db, COLLECTIONS.RESTAURANTS, restaurant.id);
-      await setDoc(docRef, sanitizeData({ ...restaurant, updatedAt: new Date().toISOString() }), { merge: true });
+      const payload = { ...restaurant, updatedAt: new Date().toISOString() };
+      await setDoc(docRef, sanitizeData(payload), { merge: true });
+
+      // Immediate cache sync
+      const now = Date.now();
+      cafeMemoryCache.profileById.set(restaurant.id, { data: payload, timestamp: now });
+      if (restaurant.ownerId) {
+        cafeMemoryCache.profileByOwner.set(restaurant.ownerId, { data: payload, timestamp: now });
+      }
     } catch (e) {
       console.error('Failed to save restaurant', e);
       throw e;
     }
   },
 
-  async getMenuItems(restaurantId: string): Promise<MenuItem[]> {
+  async getMenuItems(restaurantId: string, forceRefresh = false): Promise<MenuItem[]> {
     if (!restaurantId) return [];
+    const now = Date.now();
+    if (!forceRefresh) {
+      const cached = cafeMemoryCache.menuItems.get(restaurantId);
+      if (cached && now - cached.timestamp < CAFE_CACHE_TTL_MS) {
+        return cached.data;
+      }
+    }
     try {
       const q = query(
         collection(db, COLLECTIONS.MENU_ITEMS),
@@ -1525,9 +1592,11 @@ export const firestoreService = {
       );
       const snap = await getDocs(q);
       const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as MenuItem);
-      return items
+      const sorted = items
         .filter((item) => item.restaurantId === restaurantId)
         .sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+      cafeMemoryCache.menuItems.set(restaurantId, { data: sorted, timestamp: now });
+      return sorted;
     } catch (e) {
       console.error('Failed to get menu items', e);
       return [];
@@ -1546,6 +1615,21 @@ export const firestoreService = {
         createdAt: item.createdAt || new Date().toISOString(),
       };
       await setDoc(docRef, sanitizeData(payload), { merge: true });
+
+      // Immediate in-memory cache update
+      if (payload.restaurantId) {
+        const cached = cafeMemoryCache.menuItems.get(payload.restaurantId);
+        let list = cached ? [...cached.data] : [];
+        const idx = list.findIndex((x) => x.id === payload.id);
+        if (idx > -1) {
+          list[idx] = payload;
+        } else {
+          list.push(payload);
+        }
+        list.sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+        cafeMemoryCache.menuItems.set(payload.restaurantId, { data: list, timestamp: Date.now() });
+      }
+
       return payload;
     } catch (e) {
       console.error('Failed to save menu item', e);
@@ -1553,10 +1637,28 @@ export const firestoreService = {
     }
   },
 
-  async deleteMenuItem(id: string): Promise<void> {
+  async deleteMenuItem(id: string, restaurantId?: string): Promise<void> {
     try {
       const docRef = doc(db, COLLECTIONS.MENU_ITEMS, id);
       await deleteDoc(docRef);
+
+      // Immediate in-memory cache update
+      if (restaurantId) {
+        const cached = cafeMemoryCache.menuItems.get(restaurantId);
+        if (cached) {
+          cafeMemoryCache.menuItems.set(restaurantId, {
+            data: cached.data.filter((item) => item.id !== id),
+            timestamp: Date.now(),
+          });
+        }
+      } else {
+        for (const [rId, entry] of cafeMemoryCache.menuItems.entries()) {
+          cafeMemoryCache.menuItems.set(rId, {
+            data: entry.data.filter((item) => item.id !== id),
+            timestamp: Date.now(),
+          });
+        }
+      }
     } catch (e) {
       console.error('Failed to delete menu item', e);
       throw e;
@@ -1564,8 +1666,15 @@ export const firestoreService = {
   },
 
   // === CAFÉ CATEGORIES ===
-  async getCafeCategories(restaurantId: string): Promise<CafeCategory[]> {
+  async getCafeCategories(restaurantId: string, forceRefresh = false): Promise<CafeCategory[]> {
     if (!restaurantId) return [];
+    const now = Date.now();
+    if (!forceRefresh) {
+      const cached = cafeMemoryCache.categories.get(restaurantId);
+      if (cached && now - cached.timestamp < CAFE_CACHE_TTL_MS) {
+        return cached.data;
+      }
+    }
     try {
       const q = query(
         collection(db, COLLECTIONS.CAFE_CATEGORIES),
@@ -1573,9 +1682,11 @@ export const firestoreService = {
       );
       const snap = await getDocs(q);
       const categories = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as CafeCategory);
-      return categories
+      const sorted = categories
         .filter((c) => c.restaurantId === restaurantId)
         .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+      cafeMemoryCache.categories.set(restaurantId, { data: sorted, timestamp: now });
+      return sorted;
     } catch (e) {
       console.error('Failed to get cafe categories', e);
       return [];
@@ -1592,6 +1703,21 @@ export const firestoreService = {
         createdAt: category.createdAt || new Date().toISOString(),
       };
       await setDoc(docRef, sanitizeData(payload), { merge: true });
+
+      // Immediate in-memory cache update
+      if (payload.restaurantId) {
+        const cached = cafeMemoryCache.categories.get(payload.restaurantId);
+        let list = cached ? [...cached.data] : [];
+        const idx = list.findIndex((c) => c.id === payload.id);
+        if (idx > -1) {
+          list[idx] = payload;
+        } else {
+          list.push(payload);
+        }
+        list.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+        cafeMemoryCache.categories.set(payload.restaurantId, { data: list, timestamp: Date.now() });
+      }
+
       return payload;
     } catch (e) {
       console.error('Failed to save cafe category', e);
@@ -1599,39 +1725,151 @@ export const firestoreService = {
     }
   },
 
-  async deleteCafeCategory(id: string): Promise<void> {
+  async deleteCafeCategory(id: string, restaurantId?: string): Promise<void> {
     try {
       const docRef = doc(db, COLLECTIONS.CAFE_CATEGORIES, id);
       await deleteDoc(docRef);
+
+      // Immediate in-memory cache update
+      if (restaurantId) {
+        const cached = cafeMemoryCache.categories.get(restaurantId);
+        if (cached) {
+          cafeMemoryCache.categories.set(restaurantId, {
+            data: cached.data.filter((c) => c.id !== id),
+            timestamp: Date.now(),
+          });
+        }
+      } else {
+        for (const [rId, entry] of cafeMemoryCache.categories.entries()) {
+          cafeMemoryCache.categories.set(rId, {
+            data: entry.data.filter((c) => c.id !== id),
+            timestamp: Date.now(),
+          });
+        }
+      }
     } catch (e) {
       console.error('Failed to delete cafe category', e);
       throw e;
     }
   },
 
-  // === CAFÉ GALLERY IMAGE UPLOAD ===
-  async uploadCafeImage(file: File): Promise<string> {
-    // Compress and prepare image
-    const compressedDataUrl = await compressReceiptFile(file, 900, 0.82);
-    
-    // Try to upload to Firebase Storage if available, else fallback cleanly to base64
-    try {
-      if (storage) {
-        const fileExt = file.name.split('.').pop() || 'jpg';
-        const storagePath = `cafe_images/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
-        const imageRef = ref(storage, storagePath);
-        
-        // Upload compressed data URL to storage
-        await uploadString(imageRef, compressedDataUrl, 'data_url');
-        const downloadUrl = await getDownloadURL(imageRef);
-        return downloadUrl;
-      }
-    } catch (storageErr) {
-      console.warn('Firebase Storage upload notice, using local optimized image data:', storageErr);
+  // === CAFÉ PRODUCT & LOGO IMAGE UPLOAD (STRICT PER-CAFÉ ISOLATION) ===
+  /**
+   * Uploads product image to isolated path: cafes/{cafeId}/products/{productId}/image_{timestamp}.{ext}
+   * Enforces validation, client-side compression/resizing, and returns clean Firebase Storage download URL.
+   */
+  async uploadCafeProductImage(
+    cafeId: string,
+    productId: string,
+    file: File | Blob,
+    fileName?: string
+  ): Promise<string> {
+    const cleanCafeId = (cafeId || '').trim();
+    const cleanProductId = (productId || '').trim();
+
+    if (!cleanCafeId) {
+      throw new Error('Café identifikatori (cafeId) ko‘rsatilmadi.');
     }
-    
-    // Guaranteed fallback: compressed base64 data URL
-    return compressedDataUrl;
+    if (!cleanProductId) {
+      throw new Error('Mahsulot identifikatori (productId) ko‘rsatilmadi.');
+    }
+
+    // Validate MIME types
+    if (file instanceof File) {
+      const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      const fileType = (file.type || '').toLowerCase();
+      if (fileType && !allowed.includes(fileType)) {
+        throw new Error('Faqat JPG, JPEG, PNG yoki WebP formatdagi rasmlar qabul qilinadi.');
+      }
+    }
+
+    // Ensure user has auth token or anonymous token
+    if (!auth.currentUser) {
+      try {
+        await signInAnonymously(auth);
+      } catch (authErr) {
+        console.warn('Anonymous session notice before storage upload:', authErr);
+      }
+    }
+
+    // 1. Client-side compression & optimization
+    let blobToUpload: Blob;
+    let mimeType = 'image/jpeg';
+    let dataUrlFallback = '';
+
+    try {
+      const compResult = await compressProductImageBlob(file, 1200, 0.85);
+      blobToUpload = compResult.blob;
+      mimeType = compResult.mimeType;
+      dataUrlFallback = compResult.dataUrl;
+    } catch (compErr) {
+      console.warn('Image compression fallback to source file:', compErr);
+      blobToUpload = file;
+      mimeType = file.type || 'image/jpeg';
+    }
+
+    const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
+    const storagePath = `cafes/${cleanCafeId}/products/${cleanProductId}/image_${Date.now()}.${ext}`;
+
+    if (!storage) {
+      if (dataUrlFallback) return dataUrlFallback;
+      throw new Error('Firebase Storage servisi mavjud emas.');
+    }
+
+    try {
+      const imageRef = ref(storage, storagePath);
+      const snapshot = await uploadBytes(imageRef, blobToUpload, {
+        contentType: mimeType,
+        customMetadata: {
+          cafeId: cleanCafeId,
+          productId: cleanProductId,
+          originalName: fileName || (file instanceof File ? file.name : 'product.jpg'),
+          uploadedAt: new Date().toISOString(),
+        },
+      });
+
+      const downloadUrl = await getDownloadURL(snapshot.ref);
+      if (!downloadUrl) {
+        throw new Error('Yuklangan rasm manzilini (download URL) olib bo‘lmadi.');
+      }
+      return downloadUrl;
+    } catch (storageErr: any) {
+      console.error('Firebase Storage upload error:', storageErr);
+      // If Storage fails due to permissions or network, and we have an optimized dataUrl, provide fallback or report clear error
+      if (storageErr?.code === 'storage/unauthorized' || storageErr?.code === 'storage/unknown') {
+        if (dataUrlFallback) {
+          console.warn('Using optimized dataUrl fallback for offline/preview resilience');
+          return dataUrlFallback;
+        }
+      }
+      throw new Error(
+        `Rasm yuklashda xatolik yuz berdi: ${storageErr?.message || 'Server javob bermadi'}`
+      );
+    }
+  },
+
+  /**
+   * Uploads cafe logo to isolated path: cafes/{cafeId}/logo/logo_{timestamp}.{ext}
+   */
+  async uploadCafeLogo(cafeId: string, file: File | Blob): Promise<string> {
+    const cleanCafeId = (cafeId || '').trim();
+    if (!cleanCafeId) throw new Error('Café ID ko‘rsatilmadi.');
+
+    const ext = (file instanceof File ? file.name.split('.').pop() : 'jpg') || 'jpg';
+    const storagePath = `cafes/${cleanCafeId}/logo/logo_${Date.now()}.${ext}`;
+
+    if (!storage) throw new Error('Firebase Storage mavjud emas');
+
+    const imageRef = ref(storage, storagePath);
+    const snapshot = await uploadBytes(imageRef, file);
+    return getDownloadURL(snapshot.ref);
+  },
+
+  // Backwards compatibility wrapper
+  async uploadCafeImage(file: File, cafeId?: string, productId?: string): Promise<string> {
+    const targetCafeId = cafeId || 'default';
+    const targetProductId = productId || `product_${Date.now()}`;
+    return this.uploadCafeProductImage(targetCafeId, targetProductId, file, file.name);
   },
 
   async getRestaurantOrders(restaurantId: string): Promise<RestaurantOrder[]> {
@@ -1786,6 +2024,92 @@ export async function compressReceiptFile(file: File, maxDimension = 1200, quali
 
         const compressed = canvas.toDataURL('image/jpeg', quality);
         resolve(compressed);
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Client-side product image compression helper.
+ * Supports JPG, JPEG, PNG, WebP.
+ * Resizes down to maxDimension (e.g. 1200px) and outputs an optimized Blob.
+ */
+export async function compressProductImageBlob(
+  file: File | Blob,
+  maxDimension = 1200,
+  quality = 0.85
+): Promise<{ blob: Blob; mimeType: string; dataUrl: string }> {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return { blob: file, mimeType: file.type || 'image/jpeg', dataUrl: '' };
+  }
+
+  // Determine target output mime type
+  const originalType = file.type?.toLowerCase() || '';
+  const isPng = originalType.includes('png');
+  const isWebp = originalType.includes('webp');
+  const outputMime = isWebp ? 'image/webp' : isPng ? 'image/png' : 'image/jpeg';
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = (err) => reject(new Error('Faylni o‘qib bo‘lmadi'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Rasm ma‘lumotlarini ochib bo‘lmadi'));
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Rasm canvasini yaratib bo‘lmadi'));
+          return;
+        }
+
+        // For non-PNG/non-WebP, fill white background
+        if (!isPng && !isWebp) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, width, height);
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL(outputMime, quality);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve({ blob, mimeType: outputMime, dataUrl });
+            } else {
+              // Fallback to dataUrl conversion
+              const parts = dataUrl.split(',');
+              const bstr = atob(parts[1]);
+              let n = bstr.length;
+              const u8arr = new Uint8Array(n);
+              while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+              }
+              const fallbackBlob = new Blob([u8arr], { type: outputMime });
+              resolve({ blob: fallbackBlob, mimeType: outputMime, dataUrl });
+            }
+          },
+          outputMime,
+          quality
+        );
       };
       img.src = e.target?.result as string;
     };

@@ -4,7 +4,7 @@ import { subscriptionService } from '../../services/subscriptionService';
 import { Sparkles, AlertCircle, ArrowRight, Package } from 'lucide-react';
 
 export const TrialBanner: React.FC = () => {
-  const { currentUser, products, navigateTo } = useApp();
+  const { currentUser, products, navigateTo, t } = useApp();
   const trialInfo = subscriptionService.getTrialStatus(currentUser);
 
   if (!currentUser || currentUser.role === 'admin') {
@@ -21,7 +21,8 @@ export const TrialBanner: React.FC = () => {
         <div className="flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-rose-200 shrink-0" />
           <span>
-            <strong>Your subscription has expired.</strong> Upgrade your plan to continue adding products and managing your store.
+            <strong>{t('trial_expired_title', 'Obuna muddati tugagan.')}</strong>{' '}
+            {t('trial_expired_desc', 'Mahsulotlar qoʻshish va doʻkonni boshqarishda davom etish uchun tarifingizni yangilang.')}
           </span>
         </div>
         <button
@@ -29,7 +30,7 @@ export const TrialBanner: React.FC = () => {
           onClick={() => navigateTo('pricing')}
           className="bg-white text-rose-700 hover:bg-rose-50 px-3.5 py-1.5 rounded-xl font-black text-xs shrink-0 flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
         >
-          <span>Upgrade Plan</span>
+          <span>{t('trial_btn_upgrade', 'Tarifni yangilash')}</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -51,11 +52,11 @@ export const TrialBanner: React.FC = () => {
           <span className="flex items-center gap-2 flex-wrap">
             <span className="flex items-center gap-1 font-bold">
               <Sparkles className="w-3.5 h-3.5 text-blue-200" />
-              <span>Free Trial:</span>
+              <span>{t('trial_active_title', 'Sinov davri:')}</span>
             </span>
             <span className="text-blue-100 font-semibold">{trialInfo.formattedRemaining}</span>
             <span className="hidden sm:inline-block bg-white/20 px-2 py-0.5 rounded-md text-[11px] font-mono">
-              {products.length} / 5 products
+              {products.length} / 5 {t('trial_products_count', 'ta mahsulot')}
             </span>
           </span>
         </div>
@@ -64,7 +65,7 @@ export const TrialBanner: React.FC = () => {
           onClick={() => navigateTo('pricing')}
           className="bg-white/15 hover:bg-white/25 text-white border border-white/30 px-3 py-1 rounded-xl font-bold text-xs shrink-0 flex items-center gap-1.5 transition-all cursor-pointer"
         >
-          <span>Upgrade Plan</span>
+          <span>{t('trial_btn_upgrade', 'Tarifni yangilash')}</span>
           <ArrowRight className="w-3 h-3" />
         </button>
       </div>

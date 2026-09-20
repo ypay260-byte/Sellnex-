@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { firestoreService } from '../../services/firestoreService';
 import { RestaurantProfile, RestaurantOrder, RestaurantOrderStatus } from '../../types';
@@ -65,12 +65,25 @@ export const RestaurantDashboardView: React.FC = () => {
     }
   };
 
+  // Sound toggle ref to avoid listener re-creation
+  const soundEnabledRef = useRef(soundEnabled);
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
+
+  const showToastRef = useRef(showToast);
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
+
   // Load restaurant profile
   useEffect(() => {
     let isMounted = true;
     async function initRestaurant() {
-      if (!currentUser) return;
-      setLoading(true);
+      if (!currentUser?.id) return;
+      if (!restaurant) {
+        setLoading(true);
+      }
       try {
         let profile = await firestoreService.getRestaurantByOwner(currentUser.id);
         if (!profile) {
@@ -95,23 +108,27 @@ export const RestaurantDashboardView: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [currentUser]);
+  }, [currentUser?.id]);
 
-  // Real-time Firestore subscription to orders
+  // Real-time Firestore subscription to orders (unsubscribed cleanly on unmount/route change)
   useEffect(() => {
     if (!restaurant?.id) return;
 
     const unsub = firestoreService.subscribeRestaurantOrders(restaurant.id, (freshOrders) => {
       if (freshOrders.length > prevOrdersCount.current && prevOrdersCount.current > 0) {
-        playNewOrderSound();
-        showToast('🔔 Yangi Buyurtma!', 'Café uchun yangi buyurtma kelib tushdi!', 'success');
+        if (soundEnabledRef.current) {
+          playNewOrderSound();
+        }
+        showToastRef.current('🔔 Yangi Buyurtma!', 'Café uchun yangi buyurtma kelib tushdi!', 'success');
       }
       prevOrdersCount.current = freshOrders.length;
       setOrders(freshOrders);
     });
 
-    return () => unsub();
-  }, [restaurant?.id, soundEnabled, showToast]);
+    return () => {
+      unsub();
+    };
+  }, [restaurant?.id]);
 
   // Status transition handler (in-app, no telegram chat dependency)
   const handleUpdateStatus = async (order: RestaurantOrder, newStatus: RestaurantOrderStatus) => {
@@ -134,37 +151,71 @@ export const RestaurantDashboardView: React.FC = () => {
     setIsReceiptOpen(true);
   };
 
-  // Stats calculation
-  const totalOrdersCount = orders.length;
-  const newOrdersCount = orders.filter((o) => o.status === 'new').length;
-  const acceptedOrdersCount = orders.filter((o) => o.status === 'accepted').length;
-  const preparingOrdersCount = orders.filter((o) => o.status === 'preparing').length;
-  const onTheWayOrdersCount = orders.filter((o) => o.status === 'on_the_way' || o.status === 'delivering').length;
-  const deliveredOrdersCount = orders.filter((o) => o.status === 'delivered').length;
-  const cancelledOrdersCount = orders.filter((o) => o.status === 'cancelled').length;
+  // Memoized stats calculation for ultra-smooth UI
+  const {
+    totalOrdersCount,
+    newOrdersCount,
+    acceptedOrdersCount,
+    preparingOrdersCount,
+    onTheWayOrdersCount,
+    deliveredOrdersCount,
+    cancelledOrdersCount,
+    totalRevenue,
+  } = useMemo(() => {
+    let newCount = 0;
+    let acceptedCount = 0;
+    let preparingCount = 0;
+    let onTheWayCount = 0;
+    let deliveredCount = 0;
+    let cancelledCount = 0;
+    let revenue = 0;
 
-  const totalRevenue = orders
-    .filter((o) => o.status !== 'cancelled')
-    .reduce((sum, o) => sum + o.totalAmount, 0);
+    for (const o of orders) {
+      if (o.status === 'new') newCount++;
+      else if (o.status === 'accepted') acceptedCount++;
+      else if (o.status === 'preparing') preparingCount++;
+      else if (o.status === 'on_the_way' || o.status === 'delivering') onTheWayCount++;
+      else if (o.status === 'delivered') deliveredCount++;
+      else if (o.status === 'cancelled') cancelledCount++;
 
-  // Filtered orders list
-  const filteredOrders = orders.filter((o) => {
-    const isMatchingStatus =
-      activeFilter === 'all'
-        ? true
-        : activeFilter === 'on_the_way'
-        ? o.status === 'on_the_way' || o.status === 'delivering'
-        : o.status === activeFilter;
+      if (o.status !== 'cancelled') {
+        revenue += o.totalAmount || 0;
+      }
+    }
 
-    const matchesSearch =
-      !searchQuery.trim() ||
-      o.orderNumber.includes(searchQuery) ||
-      o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.customerPhone.includes(searchQuery) ||
-      o.deliveryAddress.toLowerCase().includes(searchQuery.toLowerCase());
+    return {
+      totalOrdersCount: orders.length,
+      newOrdersCount: newCount,
+      acceptedOrdersCount: acceptedCount,
+      preparingOrdersCount: preparingCount,
+      onTheWayOrdersCount: onTheWayCount,
+      deliveredOrdersCount: deliveredCount,
+      cancelledOrdersCount: cancelledCount,
+      totalRevenue: revenue,
+    };
+  }, [orders]);
 
-    return isMatchingStatus && matchesSearch;
-  });
+  // Memoized filtered orders list
+  const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return orders.filter((o) => {
+      const isMatchingStatus =
+        activeFilter === 'all'
+          ? true
+          : activeFilter === 'on_the_way'
+          ? o.status === 'on_the_way' || o.status === 'delivering'
+          : o.status === activeFilter;
+
+      const matchesSearch =
+        !q ||
+        (o.orderNumber && o.orderNumber.toLowerCase().includes(q)) ||
+        (o.customerName && o.customerName.toLowerCase().includes(q)) ||
+        (o.customerPhone && o.customerPhone.includes(q)) ||
+        (o.deliveryAddress && o.deliveryAddress.toLowerCase().includes(q));
+
+      return isMatchingStatus && matchesSearch;
+    });
+  }, [orders, activeFilter, searchQuery]);
 
   const copyPublicRestaurantLink = () => {
     if (!restaurant) return;

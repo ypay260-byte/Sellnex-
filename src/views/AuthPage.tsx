@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { authService, validatePasswordRequirements } from '../services/authService';
+import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import {
   ShoppingBag,
   ArrowRight,
@@ -19,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export const AuthPage: React.FC = () => {
-  const { login, signUp, loginWithTelegram, navigateTo, routeParams } = useApp();
+  const { login, signUp, loginWithTelegram, navigateTo, routeParams, t } = useApp();
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'reset-sent' | 'telegram'>(
     routeParams?.mode === 'signup' ? 'signup' : 'login'
   );
@@ -70,31 +71,31 @@ export const AuthPage: React.FC = () => {
           navigateTo('dashboard');
         }
       } else {
-        setErrorMsg(res.error || 'Failed to sign in. Please verify your credentials.');
+        setErrorMsg(res.error || t('auth_error_signin', 'Failed to sign in. Please verify your credentials.'));
       }
     } else if (mode === 'signup') {
       if (!name.trim()) {
-        setErrorMsg('Please enter your full name.');
+        setErrorMsg(t('auth_error_name', 'Please enter your full name.'));
         setLoading(false);
         return;
       }
       if (!email.trim()) {
-        setErrorMsg('Please enter your email address.');
+        setErrorMsg(t('auth_error_email', 'Please enter your email address.'));
         setLoading(false);
         return;
       }
       if (!phone.trim()) {
-        setErrorMsg('Please enter your phone number.');
+        setErrorMsg(t('auth_error_phone', 'Please enter your phone number.'));
         setLoading(false);
         return;
       }
       if (!pwCheck.isValid) {
-        setErrorMsg('Please meet all password requirements: 1 uppercase, 1 lowercase, 1 number, 1 dot (.), 8+ characters.');
+        setErrorMsg(t('auth_error_pw_req', 'Please meet all password requirements: 1 uppercase, 1 lowercase, 1 number, 1 dot (.), 8+ characters.'));
         setLoading(false);
         return;
       }
       if (password !== confirmPassword) {
-        setErrorMsg('Passwords do not match. Please verify.');
+        setErrorMsg(t('auth_pw_mismatch', 'Passwords do not match. Please verify.'));
         setLoading(false);
         return;
       }
@@ -116,7 +117,7 @@ export const AuthPage: React.FC = () => {
           navigateTo('onboarding');
         }
       } else {
-        setErrorMsg(res.error || 'Failed to create account.');
+        setErrorMsg(res.error || t('auth_error_create', 'Failed to create account.'));
       }
     } else if (mode === 'forgot') {
       const res = await authService.resetPassword(email);
@@ -130,7 +131,7 @@ export const AuthPage: React.FC = () => {
     const finalId = (idToUse || tgUserId).trim();
     const finalName = (nameToUse || tgName).trim();
     if (!finalId) {
-      setErrorMsg('Telegram User ID kiritilishi shart (masalan: 111111111 yoki 222222222)');
+      setErrorMsg(t('auth_error_tg_id', 'Telegram User ID kiritilishi shart (masalan: 111111111 yoki 222222222)'));
       return;
     }
     setErrorMsg('');
@@ -141,12 +142,17 @@ export const AuthPage: React.FC = () => {
     });
     setTgLoading(false);
     if (!res.success) {
-      setErrorMsg(res.error || 'Telegram orqali kirib bo‘lmadi.');
+      setErrorMsg(res.error || t('auth_error_tg_fail', 'Telegram orqali kirib bo‘lmadi.'));
     }
   };
 
   return (
-    <div id="auth-page-root" className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div id="auth-page-root" className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative">
+      {/* Top right language switcher */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-8 z-20">
+        <LanguageSwitcher variant="compact" />
+      </div>
+
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <button
           id="auth-brand-logo"
@@ -158,17 +164,18 @@ export const AuthPage: React.FC = () => {
           </div>
           <span className="text-2xl font-black text-slate-900 tracking-tight">SELLNEX</span>
         </button>
+
         <h2 className="mt-4 text-2xl font-extrabold text-slate-900">
-          {mode === 'login' && 'Log In to Sellnex'}
-          {mode === 'signup' && 'Create Your Seller Account'}
-          {mode === 'forgot' && 'Reset Your Password'}
-          {mode === 'reset-sent' && 'Check Your Email'}
+          {mode === 'login' && t('auth_login_headline', 'Sellnex tizimiga kirish')}
+          {mode === 'signup' && t('auth_signup_headline', 'Sotuvchi hisobini yaratish')}
+          {mode === 'forgot' && t('auth_forgot_headline', 'Parolni tiklash')}
+          {mode === 'reset-sent' && t('auth_reset_sent_headline', 'Pochtani tekshiring')}
         </h2>
         <p className="mt-1 text-xs sm:text-sm text-slate-600">
-          {mode === 'login' && 'Enter your registered email and password to access your dashboard.'}
-          {mode === 'signup' && 'Register your account to start selling across Uzbekistan.'}
-          {mode === 'forgot' && 'Enter your registered email to receive a password reset link.'}
-          {mode === 'reset-sent' && 'We have dispatched password recovery instructions.'}
+          {mode === 'login' && t('auth_login_desc', 'Boshqaruv paneliga kirish uchun email va parolingizni kiriting.')}
+          {mode === 'signup' && t('auth_signup_desc', 'Oʻzbekiston boʻylab savdoni boshlash uchun roʻyxatdan oʻting.')}
+          {mode === 'forgot' && t('auth_forgot_desc', 'Parolni tiklash havolasini olish uchun emailingizni kiriting.')}
+          {mode === 'reset-sent' && t('auth_reset_sent_desc', 'Parolni tiklash boʻyicha koʻrsatmalar yuborildi.')}
         </p>
       </div>
 
@@ -186,7 +193,7 @@ export const AuthPage: React.FC = () => {
                     mode === 'login' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'
                   }`}
                 >
-                  Log In
+                  {t('auth_tab_login', 'Kirish')}
                 </button>
                 <button
                   id="tab-mode-signup"
@@ -196,7 +203,7 @@ export const AuthPage: React.FC = () => {
                     mode === 'signup' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'
                   }`}
                 >
-                  Sign Up
+                  {t('auth_tab_signup', 'Roʻyxatdan oʻtish')}
                 </button>
                 <button
                   id="tab-mode-telegram"
@@ -207,7 +214,7 @@ export const AuthPage: React.FC = () => {
                   }`}
                 >
                   <Send className="w-3.5 h-3.5 text-sky-500" />
-                  <span>Telegram Café</span>
+                  <span>{t('auth_tab_telegram', 'Telegram Kafe')}</span>
                 </button>
               </div>
 
@@ -222,36 +229,36 @@ export const AuthPage: React.FC = () => {
                   <div className="p-3 bg-sky-50 border border-sky-200 rounded-xl space-y-1">
                     <p className="text-xs font-bold text-sky-900 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-sky-600" />
-                      <span>Multi-Tenant Café Izolyatsiyasi</span>
+                      <span>{t('auth_tg_isolation_title', 'Multi-Tenant Kafe Izolyatsiyasi')}</span>
                     </p>
                     <p className="text-[11px] text-sky-800 leading-relaxed">
-                      Har bir Telegram hisobi o‘zining mustaqil <code>ownerId</code> va <code>cafeId</code> siga ega. Boshqa kafening menyusi yoki buyurtmalari hech qachon aralashmaydi.
+                      {t('auth_tg_isolation_desc', 'Har bir Telegram hisobi mustaqil ownerId va cafeId ga ega. Boshqa kafening menyusi yoki buyurtmalari hech qachon aralashmaydi.')}
                     </p>
                   </div>
 
                   {/* Quick Test Accounts for verifying isolation */}
                   <div className="space-y-2">
                     <label className="block text-xs font-bold text-slate-700">
-                      ⚡ Sinov uchun 2 ta mustaqil Telegram hisobi:
+                      ⚡ {t('auth_tg_test_accounts', 'Sinov uchun 2 ta mustaqil Telegram hisobi:')}
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => handleTelegramLogin('111111111', 'Farrux Café')}
+                        onClick={() => handleTelegramLogin('111111111', 'Farrux')}
                         disabled={tgLoading}
                         className="p-2.5 bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded-xl text-left transition disabled:opacity-50"
                       >
-                        <p className="text-xs font-bold text-slate-900">👤 1-hisob: Farrux</p>
+                        <p className="text-xs font-bold text-slate-900">👤 {t('auth_tg_account_1', '1-hisob: Farrux')}</p>
                         <p className="text-[10px] text-slate-500 font-mono">TG ID: 111111111</p>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => handleTelegramLogin('222222222', 'Dilshod Café')}
+                        onClick={() => handleTelegramLogin('222222222', 'Dilshod')}
                         disabled={tgLoading}
                         className="p-2.5 bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-300 rounded-xl text-left transition disabled:opacity-50"
                       >
-                        <p className="text-xs font-bold text-slate-900">👤 2-hisob: Dilshod</p>
+                        <p className="text-xs font-bold text-slate-900">👤 {t('auth_tg_account_2', '2-hisob: Dilshod')}</p>
                         <p className="text-[10px] text-slate-500 font-mono">TG ID: 222222222</p>
                       </button>
                     </div>
@@ -259,14 +266,16 @@ export const AuthPage: React.FC = () => {
 
                   <div className="relative flex py-1 items-center">
                     <div className="flex-grow border-t border-slate-200"></div>
-                    <span className="flex-shrink mx-2 text-[10px] font-bold text-slate-400 uppercase">Yoki o‘z ID ingiz</span>
+                    <span className="flex-shrink mx-2 text-[10px] font-bold text-slate-400 uppercase">
+                      {t('auth_tg_or_custom_id', 'Yoki oʻz ID ingiz')}
+                    </span>
                     <div className="flex-grow border-t border-slate-200"></div>
                   </div>
 
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Telegram User ID *
+                        {t('auth_tg_user_id_label', 'Telegram User ID *')}
                       </label>
                       <input
                         type="text"
@@ -279,7 +288,7 @@ export const AuthPage: React.FC = () => {
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Ismingiz yoki Café Nomi (ixtiyoriy)
+                        {t('auth_tg_name_label', 'Ismingiz yoki Kafe Nomi (ixtiyoriy)')}
                       </label>
                       <input
                         type="text"
@@ -301,7 +310,7 @@ export const AuthPage: React.FC = () => {
                       ) : (
                         <>
                           <Send className="w-4 h-4" />
-                          <span>Telegram orqali Caféga Kirish</span>
+                          <span>{t('auth_tg_btn_enter', 'Telegram orqali Kafega Kirish')}</span>
                         </>
                       )}
                     </button>
@@ -311,7 +320,9 @@ export const AuthPage: React.FC = () => {
                 <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === 'signup' && (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      {t('auth_full_name', 'Ism va Familiya')}
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                         <User className="w-4 h-4" />
@@ -331,7 +342,7 @@ export const AuthPage: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    {mode === 'login' ? 'Email yoki Telefon raqam' : 'Email Address'}
+                    {mode === 'login' ? t('auth_email_or_phone', 'Email yoki Telefon raqam') : t('auth_email_address', 'Elektron pochta manzili')}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -351,7 +362,9 @@ export const AuthPage: React.FC = () => {
 
                 {mode === 'signup' && (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      {t('auth_phone_number', 'Telefon raqam')}
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                         <Phone className="w-4 h-4" />
@@ -373,7 +386,7 @@ export const AuthPage: React.FC = () => {
                 {mode === 'signup' && (
                   <div className="pt-1 pb-1 space-y-2">
                     <label className="block text-xs font-bold text-slate-800">
-                      Sellnex'dan qanday foydalanmoqchisiz?
+                      {t('auth_business_type_title', 'Sellnex’dan qanday foydalanmoqchisiz?')}
                     </label>
                     <div className="grid grid-cols-2 gap-2.5">
                       <button
@@ -393,8 +406,12 @@ export const AuthPage: React.FC = () => {
                           )}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-900 leading-tight">Online do‘kon</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">Mahsulot sotish, savat va do‘kon</p>
+                          <p className="text-xs font-bold text-slate-900 leading-tight">
+                            {t('auth_type_store', 'Online doʻkon')}
+                          </p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            {t('auth_type_store_desc', 'Mahsulot sotish, savat va doʻkon')}
+                          </p>
                         </div>
                       </button>
 
@@ -415,8 +432,12 @@ export const AuthPage: React.FC = () => {
                           )}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-900 leading-tight">Restoran / Kafe</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">Menyu, taomlar va buyurtmalar</p>
+                          <p className="text-xs font-bold text-slate-900 leading-tight">
+                            {t('auth_type_cafe', 'Restoran / Kafe')}
+                          </p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            {t('auth_type_cafe_desc', 'Menyu, taomlar va buyurtmalar')}
+                          </p>
                         </div>
                       </button>
                     </div>
@@ -426,7 +447,9 @@ export const AuthPage: React.FC = () => {
                 {mode !== 'forgot' && (
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-semibold text-slate-700">Password</label>
+                      <label className="block text-xs font-semibold text-slate-700">
+                        {t('auth_password_label', 'Parol')}
+                      </label>
                       {mode === 'login' && (
                         <button
                           id="btn-forgot-pw"
@@ -434,7 +457,7 @@ export const AuthPage: React.FC = () => {
                           onClick={() => setMode('forgot')}
                           className="text-xs text-blue-600 hover:text-blue-700 font-medium"
                         >
-                          Forgot password?
+                          {t('auth_forgot_password_link', 'Parolni unutdingizmi?')}
                         </button>
                       )}
                     </div>
@@ -462,13 +485,15 @@ export const AuthPage: React.FC = () => {
                       </button>
                     </div>
 
-                    {/* Live Password Requirements (Requirement 8) */}
+                    {/* Live Password Requirements */}
                     {mode === 'signup' && (
                       <div className="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5 text-xs">
                         <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200/60">
-                          <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wide">Password Requirements</span>
+                          <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wide">
+                            {t('auth_password_requirements', 'Parol talablari')}
+                          </span>
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${pwCheck.isValid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                            {pwCheck.isValid ? 'Strong Password' : 'Incomplete'}
+                            {pwCheck.isValid ? t('auth_req_strong', 'Kuchli parol') : t('auth_req_incomplete', 'Toʻliq emas')}
                           </span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
@@ -478,7 +503,7 @@ export const AuthPage: React.FC = () => {
                             ) : (
                               <span className="w-3.5 h-3.5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 text-[9px] text-slate-400">•</span>
                             )}
-                            <span>1 uppercase letter (A-Z)</span>
+                            <span>{t('auth_req_upper', '1 ta katta harf (A-Z)')}</span>
                           </div>
                           <div className={`flex items-center gap-1.5 ${pwCheck.hasLower ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
                             {pwCheck.hasLower ? (
@@ -486,7 +511,7 @@ export const AuthPage: React.FC = () => {
                             ) : (
                               <span className="w-3.5 h-3.5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 text-[9px] text-slate-400">•</span>
                             )}
-                            <span>1 lowercase letter (a-z)</span>
+                            <span>{t('auth_req_lower', '1 ta kichik harf (a-z)')}</span>
                           </div>
                           <div className={`flex items-center gap-1.5 ${pwCheck.hasNumber ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
                             {pwCheck.hasNumber ? (
@@ -494,7 +519,7 @@ export const AuthPage: React.FC = () => {
                             ) : (
                               <span className="w-3.5 h-3.5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 text-[9px] text-slate-400">•</span>
                             )}
-                            <span>1 number (0-9)</span>
+                            <span>{t('auth_req_number', '1 ta raqam (0-9)')}</span>
                           </div>
                           <div className={`flex items-center gap-1.5 ${pwCheck.hasDot ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
                             {pwCheck.hasDot ? (
@@ -502,7 +527,7 @@ export const AuthPage: React.FC = () => {
                             ) : (
                               <span className="w-3.5 h-3.5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 text-[9px] text-slate-400">•</span>
                             )}
-                            <span>1 dot (.)</span>
+                            <span>{t('auth_req_dot', '1 ta nuqta (.)')}</span>
                           </div>
                           <div className={`flex items-center gap-1.5 sm:col-span-2 ${pwCheck.hasMinLength ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
                             {pwCheck.hasMinLength ? (
@@ -510,7 +535,7 @@ export const AuthPage: React.FC = () => {
                             ) : (
                               <span className="w-3.5 h-3.5 rounded-full border border-slate-300 flex items-center justify-center shrink-0 text-[9px] text-slate-400">•</span>
                             )}
-                            <span>Minimum 8 characters (e.g. Sellnex1.)</span>
+                            <span>{t('auth_req_min_length', 'Kamida 8 ta belgi (masalan: Sellnex1.)')}</span>
                           </div>
                         </div>
                       </div>
@@ -520,7 +545,9 @@ export const AuthPage: React.FC = () => {
 
                 {mode === 'signup' && (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Confirm Password</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      {t('auth_confirm_password', 'Parolni tasdiqlang')}
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                         <Lock className="w-4 h-4" />
@@ -546,12 +573,12 @@ export const AuthPage: React.FC = () => {
                     </div>
                     {confirmPassword && password !== confirmPassword && (
                       <p className="mt-1 text-[11px] text-rose-600 font-medium flex items-center gap-1">
-                        <XCircle className="w-3 h-3" /> Passwords do not match
+                        <XCircle className="w-3 h-3" /> {t('auth_pw_mismatch', 'Parollar mos kelmadi')}
                       </p>
                     )}
                     {confirmPassword && password === confirmPassword && (
                       <p className="mt-1 text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-                        <Check className="w-3 h-3" /> Passwords match
+                        <Check className="w-3 h-3" /> {t('auth_pw_match', 'Parollar mos keldi')}
                       </p>
                     )}
                   </div>
@@ -568,9 +595,9 @@ export const AuthPage: React.FC = () => {
                   ) : (
                     <>
                       <span>
-                        {mode === 'login' && 'Sign In to Dashboard'}
-                        {mode === 'signup' && 'Register'}
-                        {mode === 'forgot' && 'Send Password Reset Link'}
+                        {mode === 'login' && t('auth_btn_signin_dashboard', 'Boshqaruv paneliga kirish')}
+                        {mode === 'signup' && t('auth_btn_register', 'Roʻyxatdan oʻtish')}
+                        {mode === 'forgot' && t('auth_btn_send_reset', 'Tiklash havolasini yuborish')}
                       </span>
                       <ArrowRight className="w-4 h-4" />
                     </>
@@ -587,7 +614,7 @@ export const AuthPage: React.FC = () => {
                     onClick={() => setMode('login')}
                     className="text-xs text-blue-600 hover:underline font-semibold"
                   >
-                    ← Back to Sign In
+                    {t('auth_btn_back_to_login', '← Kirish sahifasiga qaytish')}
                   </button>
                 </div>
               )}
@@ -597,24 +624,27 @@ export const AuthPage: React.FC = () => {
               <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Recovery Link Dispatched</h3>
+              <h3 className="text-base font-bold text-slate-900">
+                {t('auth_recovery_dispatched', 'Tiklash havolasi yuborildi')}
+              </h3>
               <p className="text-xs text-slate-600 leading-relaxed">{resetSuccessMsg}</p>
               <button
                 onClick={() => setMode('login')}
                 className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs"
               >
-                Return to Login
+                {t('auth_btn_return_login', 'Kirishga qaytish')}
               </button>
             </div>
           )}
         </div>
 
         <p className="mt-4 text-center text-xs text-slate-500">
-          Sellnex E-Commerce Cloud • Uzbekistan & Central Asia
+          {t('auth_footer_cloud', 'Sellnex E-Commerce Cloud • Oʻzbekiston va Markaziy Osiyo')}
         </p>
       </div>
     </div>
   );
 };
+
 
 

@@ -418,7 +418,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [language, setLanguageState] = useState<Language>(() => {
     try {
       const saved = localStorage.getItem('sellnex_lang');
-      if (saved === 'uz' || saved === 'ru' || saved === 'en') return saved;
+      if (saved === 'uz' || saved === 'ru' || saved === 'en') {
+        if (typeof document !== 'undefined') {
+          document.documentElement.lang = saved;
+        }
+        return saved;
+      }
     } catch {
       // fallback
     }
@@ -429,6 +434,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLanguageState(newLang);
     try {
       localStorage.setItem('sellnex_lang', newLang);
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = newLang;
+      }
     } catch {
       // ignore
     }
@@ -490,18 +498,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [historyStack, setHistoryStack] = useState<{ route: string; params: Record<string, string> }[]>([]);
 
   // Toast system
-  const showToast = (title: string, description?: string, type: ToastMessage['type'] = 'success') => {
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const showToast = useCallback((title: string, description?: string, type: ToastMessage['type'] = 'success') => {
     const id = `toast-${Date.now()}-${Math.random()}`;
     const newToast: ToastMessage = { id, title, description, type };
     setToasts((prev) => [...prev, newToast]);
     setTimeout(() => {
       removeToast(id);
     }, 4500);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, [removeToast]);
 
   // URL Generation Helpers (Strictly unique per store using store.slug or store.id)
   // Generates clean standard web URLs (/store/:storeId) supported natively by Vercel rewrites

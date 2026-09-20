@@ -80,18 +80,18 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
             <button
               id="topbar-back-btn"
               onClick={navigateBack}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold shrink-0 min-h-[40px] transition-colors border border-slate-200 shadow-2xs"
-              title="Orqaga qaytish"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold shrink-0 min-h-[40px] transition-colors border border-slate-200 shadow-2xs cursor-pointer"
+              title={t('topbar_back', 'Orqaga')}
             >
               <ArrowLeft className="w-4 h-4 text-slate-700" />
-              <span className="hidden sm:inline font-semibold">Orqaga</span>
+              <span className="hidden sm:inline font-semibold">{t('topbar_back', 'Orqaga')}</span>
             </button>
           )}
 
           <button
             id="mobile-menu-trigger"
             onClick={onOpenMobileMenu}
-            className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 min-h-[40px] min-w-[40px] flex items-center justify-center shrink-0"
+            className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 min-h-[40px] min-w-[40px] flex items-center justify-center shrink-0 cursor-pointer"
             aria-label="Open navigation menu"
           >
             <Menu className="w-5 h-5" />
@@ -101,11 +101,11 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
           <button
             id="topbar-search-trigger"
             onClick={handleSearchClick}
-            className="w-full max-w-md flex items-center justify-between px-3 sm:px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-500 text-xs font-medium transition-colors border border-slate-200/60 text-left group min-h-[40px]"
+            className="w-full max-w-md flex items-center justify-between px-3 sm:px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-500 text-xs font-medium transition-colors border border-slate-200/60 text-left group min-h-[40px] cursor-pointer"
           >
             <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
               <Search className="w-4 h-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
-              <span className="truncate text-[11px] sm:text-xs">{t('search_placeholder', 'Search products, orders...')}</span>
+              <span className="truncate text-[11px] sm:text-xs">{t('topbar_search_placeholder', 'Mahsulotlar, buyurtmalar, mijozlarni qidirish...')}</span>
             </div>
             <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-500 shadow-2xs shrink-0">
               ⌘K
@@ -119,10 +119,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
           <button
             id="topbar-quick-import-btn"
             onClick={() => navigateTo('import-product')}
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold border border-blue-200/60 transition-colors min-h-[38px]"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold border border-blue-200/60 transition-colors min-h-[38px] cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>{t('topbar_import_btn', 'Import Product')}</span>
+            <span>{t('topbar_import_btn', 'Mahsulot importi')}</span>
           </button>
 
           {/* Store Switcher Dropdown */}
@@ -132,7 +132,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
                 id="topbar-store-dropdown-btn"
                 type="button"
                 onClick={() => setStoreSwitcherOpen(!storeSwitcherOpen)}
-                className="flex items-center gap-1.5 text-left hover:text-blue-600 transition-colors"
+                className="flex items-center gap-1.5 text-left hover:text-blue-600 transition-colors cursor-pointer"
               >
                 <StoreIcon className="w-3.5 h-3.5 text-slate-500" />
                 <span className="font-semibold text-slate-800 truncate max-w-[110px]">
@@ -143,8 +143,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
               <button
                 id="topbar-preview-store"
                 onClick={() => navigateTo('public-store', { storeSlug: store?.slug || store?.id })}
-                title={t('nav_view_store', 'Open public storefront')}
-                className="text-blue-600 hover:text-blue-700 ml-1 p-0.5 min-h-[28px] min-w-[28px] flex items-center justify-center"
+                title={t('nav_view_store', 'Doʻkonni koʻrish')}
+                className="text-blue-600 hover:text-blue-700 ml-1 p-0.5 min-h-[28px] min-w-[28px] flex items-center justify-center cursor-pointer"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
               </button>
@@ -161,9 +161,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
                   className="absolute right-0 mt-1.5 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs"
                 >
                   <div className="px-3.5 py-2 border-b border-slate-100 flex items-center justify-between">
-                    <span className="font-bold text-slate-500 uppercase text-[10px] tracking-wider">Your Stores</span>
+                    <span className="font-bold text-slate-500 uppercase text-[10px] tracking-wider">{t('topbar_your_stores', 'Your Stores')}</span>
                     <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                      {userStores.length} {userStores.length === 1 ? 'Store' : 'Stores'}
+                      {userStores.length} {userStores.length === 1 ? t('topbar_store_singular', 'doʻkon') : t('topbar_store_plural', 'doʻkon')}
                     </span>
                   </div>
 
@@ -177,7 +177,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
                             setStoreSwitcherOpen(false);
                             switchStore(s.id);
                           }}
-                          className={`w-full flex items-center justify-between px-3.5 py-2 text-left transition-colors ${
+                          className={`w-full flex items-center justify-between px-3.5 py-2 text-left transition-colors cursor-pointer ${
                             isActive ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
                           }`}
                         >
@@ -190,7 +190,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
                             <span className="truncate">{s.name}</span>
                           </div>
                           {isActive && (
-                            <span className="text-[10px] text-blue-600 font-bold">Active</span>
+                            <span className="text-[10px] text-blue-600 font-bold">{t('status_active', 'Faol')}</span>
                           )}
                         </button>
                       );
@@ -204,10 +204,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
                         setStoreSwitcherOpen(false);
                         setCreateStoreModalOpen(true);
                       }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors"
+                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>+ Create Another Store</span>
+                      <span>{t('topbar_create_another_store', '+ Create Another Store')}</span>
                     </button>
                   </div>
                 </div>
@@ -223,19 +223,19 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
             id="topbar-device-switch-btn"
             type="button"
             onClick={() => setDeviceModalOpen(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors min-h-[38px]"
-            title="Qurilma rejimini tanlash (Telefon / Kompyuter)"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors min-h-[38px] cursor-pointer"
+            title={t('topbar_device_title', 'Qurilma rejimini tanlash (Telefon / Kompyuter)')}
           >
             <Smartphone className="w-3.5 h-3.5 text-blue-600 sm:hidden" />
             <Monitor className="w-3.5 h-3.5 text-indigo-600 hidden sm:block" />
-            <span className="hidden md:inline">{t('device_mode', 'Qurilma')}</span>
+            <span className="hidden md:inline">{t('topbar_device_label', 'Qurilma')}</span>
           </button>
 
           {/* Notification Bell */}
           <button
             id="topbar-notifications-btn"
             onClick={handleNotifClick}
-            className="relative p-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="relative p-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
             title={t('topbar_notifications', 'Notifications')}
             aria-label="Notifications"
           >
@@ -252,14 +252,14 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
             <button
               id="topbar-profile-btn"
               onClick={() => setProfileOpen(!profileOpen)}
-              className="flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors min-h-[44px]"
+              className="flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors min-h-[44px] cursor-pointer"
               aria-label="User Profile"
             >
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
                 {currentUser?.name ? currentUser.name.charAt(0) : 'U'}
               </div>
               <div className="hidden xl:block text-left">
-                <p className="text-xs font-semibold text-slate-900 leading-none">{currentUser?.name || 'Seller'}</p>
+                <p className="text-xs font-semibold text-slate-900 leading-none">{currentUser?.name || t('topbar_seller_account', 'Sotuvchi hisobi')}</p>
                 <p className="text-[10px] text-blue-600 font-mono mt-0.5">/store/{store?.slug || 'store'}</p>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
@@ -276,13 +276,13 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
                   className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs"
                 >
                   <div className="px-3.5 py-2 border-b border-slate-100">
-                    <p className="font-semibold text-slate-900">{currentUser?.name || 'Seller Account'}</p>
+                    <p className="font-semibold text-slate-900">{currentUser?.name || t('topbar_seller_account', 'Sotuvchi hisobi')}</p>
                     <p className="text-slate-500 text-[11px] truncate">{currentUser?.email || ''}</p>
                     <div className="mt-1 flex items-center gap-1">
                       <span className="text-[10px] uppercase font-bold bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded">
                         {currentUser?.plan || 'PRO'} Plan
                       </span>
-                      <span className="text-[10px] text-emerald-600 font-medium">● Verified Seller</span>
+                      <span className="text-[10px] text-emerald-600 font-medium">● {t('topbar_verified_seller', 'Tasdiqlangan sotuvchi')}</span>
                     </div>
                   </div>
 
@@ -292,10 +292,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
                       setProfileOpen(false);
                       navigateTo('settings');
                     }}
-                    className="w-full flex items-center gap-2 px-3.5 py-2 text-slate-700 hover:bg-slate-50 text-left"
+                    className="w-full flex items-center gap-2 px-3.5 py-2 text-slate-700 hover:bg-slate-50 text-left cursor-pointer"
                   >
                     <Settings className="w-4 h-4 text-slate-400" />
-                    <span>Store & Account Settings</span>
+                    <span>{t('topbar_store_settings', 'Store & Account Settings')}</span>
                   </button>
 
                   <button
@@ -304,10 +304,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
                       setProfileOpen(false);
                       navigateTo('store-builder');
                     }}
-                    className="w-full flex items-center gap-2 px-3.5 py-2 text-slate-700 hover:bg-slate-50 text-left"
+                    className="w-full flex items-center gap-2 px-3.5 py-2 text-slate-700 hover:bg-slate-50 text-left cursor-pointer"
                   >
                     <StoreIcon className="w-4 h-4 text-slate-400" />
-                    <span>Customizer / Store Builder</span>
+                    <span>{t('topbar_store_builder', 'Customizer / Store Builder')}</span>
                   </button>
 
                   {currentUser?.role === 'admin' && (
@@ -317,10 +317,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
                         setProfileOpen(false);
                         navigateTo('admin');
                       }}
-                      className="w-full flex items-center gap-2 px-3.5 py-2 text-amber-700 hover:bg-amber-50 text-left"
+                      className="w-full flex items-center gap-2 px-3.5 py-2 text-amber-700 hover:bg-amber-50 text-left cursor-pointer"
                     >
                       <ShieldAlert className="w-4 h-4 text-amber-500" />
-                      <span>Platform Admin Portal</span>
+                      <span>{t('topbar_admin_portal', 'Platform Admin Portal')}</span>
                     </button>
                   )}
 
@@ -332,10 +332,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu, onOpenSearch, 
                       setProfileOpen(false);
                       logout();
                     }}
-                    className="w-full flex items-center gap-2 px-3.5 py-2 text-rose-600 hover:bg-rose-50 text-left font-medium"
+                    className="w-full flex items-center gap-2 px-3.5 py-2 text-rose-600 hover:bg-rose-50 text-left font-medium cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" />
-                    <span>Sign Out</span>
+                    <span>{t('topbar_sign_out', 'Sign Out')}</span>
                   </button>
                 </div>
               </>

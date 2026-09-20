@@ -34,6 +34,7 @@ export interface User {
   restaurantId?: string;
   businessType?: BusinessType;
   plan: PlanType;
+  deviceType?: 'phone' | 'computer' | string;
   status: 'active' | 'suspended' | 'expired';
   subscriptionStatus?: 'active' | 'expired' | 'trial';
   startDate?: string;
@@ -328,7 +329,7 @@ export interface DeviceLog {
 }
 
 export interface IntegrationCredentials {
-  service: 'click' | 'payme' | 'uzumbank' | 'uzum_market';
+  service: 'click' | 'payme' | 'uzumbank' | 'uzum_market' | 'paynet';
   connected: boolean;
   merchantId?: string;
   serviceId?: string;
@@ -336,6 +337,29 @@ export interface IntegrationCredentials {
   apiKey?: string;
   testMode: boolean;
   connectedAt?: string;
+}
+
+export type PaynetTransactionStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
+
+export interface PaynetTransaction {
+  id: string;
+  transactionId: string;
+  paynetTransactionId: string;
+  userId: string;
+  userEmail?: string;
+  userPhone?: string;
+  planId?: PlanType;
+  orderId?: string;
+  amount: number;
+  currency: 'UZS';
+  paymentType: 'subscription' | 'order';
+  status: PaynetTransactionStatus;
+  cashierCode?: string;
+  qrCodeUrl?: string;
+  checkoutUrl?: string;
+  createdAt: string;
+  paidAt?: string;
+  errorMessage?: string;
 }
 
 export interface NotificationItem {

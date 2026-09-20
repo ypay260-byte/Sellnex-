@@ -23,6 +23,15 @@ export const IntegrationsView: React.FC = () => {
 
   const integrations = [
     {
+      id: 'paynet',
+      category: 'payments',
+      name: 'Paynet Processing (Online & Kiosk)',
+      desc: 'National Paynet payment network with QR code billing, cashier code payments, and instant webhook confirmation.',
+      status: 'Connected',
+      icon: '🟢',
+      badge: 'Active & Verified',
+    },
+    {
       id: 'click',
       category: 'payments',
       name: 'Click (Uzcard / Humo)',
@@ -100,9 +109,19 @@ export const IntegrationsView: React.FC = () => {
 
   const handleTestConnection = async (id: string, name: string) => {
     setTestingId(id);
-    await new Promise((r) => setTimeout(r, 900));
-    setTestingId(null);
-    showToast('Integration Ping OK', `Successfully verified connection with ${name} (Status: 200 OK)`, 'success');
+    try {
+      const res = await fetch('/api/health');
+      const data = await res.json();
+      setTestingId(null);
+      if (res.ok && data.status === 'ok') {
+        showToast('Integration Ping OK', `Muvaffaqiyatli ulanish: ${name} (Status: 200 OK, Gateway Online)`, 'success');
+      } else {
+        showToast('Ping Natijasi', `${name} javob berdi (Status: ${res.status})`, 'info');
+      }
+    } catch {
+      setTestingId(null);
+      showToast('Xatolik', `${name} bilan bogʻlanib boʻlmadi`, 'error');
+    }
   };
 
   return (

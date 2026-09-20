@@ -439,6 +439,11 @@ export const PublicRestaurantView: React.FC = () => {
                     <img
                       src={dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'}
                       alt={dish.name}
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500';
+                      }}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                     />
                     <span className="absolute top-2.5 left-2.5 bg-black/65 backdrop-blur-xs text-white text-[11px] font-medium px-2 py-0.5 rounded-md">

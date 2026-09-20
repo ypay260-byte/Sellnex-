@@ -24,6 +24,7 @@ export interface Translations {
   nav_features: string;
   nav_login: string;
   nav_signup: string;
+  nav_signup_short: string;
   nav_view_store: string;
 
   // Common UI
@@ -83,6 +84,100 @@ export interface Translations {
   landing_cta_subtitle: string;
   landing_footer_desc: string;
   landing_footer_rights: string;
+
+  // Device selector
+  landing_device_selector_title: string;
+  landing_device_ready_badge: string;
+  landing_device_mobile_title: string;
+  landing_device_mobile_desc: string;
+  landing_device_desktop_title: string;
+  landing_device_desktop_desc: string;
+
+  // Value Pills
+  landing_pill_no_inventory: string;
+  landing_pill_payments_ready: string;
+  landing_pill_delivery: string;
+  landing_pill_profit_calc: string;
+
+  // Workflow (6 steps)
+  landing_workflow_badge: string;
+  landing_workflow_title: string;
+  landing_workflow_subtitle: string;
+  landing_step_of: string;
+  landing_step_1_title: string;
+  landing_step_1_desc: string;
+  landing_step_1_badge: string;
+  landing_step_2_title: string;
+  landing_step_2_desc: string;
+  landing_step_2_badge: string;
+  landing_step_3_title: string;
+  landing_step_3_desc: string;
+  landing_step_3_badge: string;
+  landing_step_4_title: string;
+  landing_step_4_desc: string;
+  landing_step_4_badge: string;
+  landing_step_5_title: string;
+  landing_step_5_desc: string;
+  landing_step_5_badge: string;
+  landing_step_6_title: string;
+  landing_step_6_desc: string;
+  landing_step_6_badge: string;
+
+  // Teaser
+  landing_teaser_title: string;
+  landing_teaser_desc: string;
+  landing_teaser_btn: string;
+
+  // Features
+  landing_feat_badge: string;
+  landing_feat_1_title: string;
+  landing_feat_1_desc: string;
+  landing_feat_2_title: string;
+  landing_feat_2_desc: string;
+  landing_feat_3_title: string;
+  landing_feat_3_desc: string;
+  landing_feat_4_title: string;
+  landing_feat_4_desc: string;
+  landing_feat_5_title: string;
+  landing_feat_5_desc: string;
+  landing_feat_6_title: string;
+  landing_feat_6_desc: string;
+  landing_feat_7_title: string;
+  landing_feat_7_desc: string;
+  landing_feat_8_title: string;
+  landing_feat_8_desc: string;
+
+  // Ecosystem & Integrations
+  landing_eco_badge: string;
+  landing_eco_title: string;
+  landing_eco_subtitle: string;
+  landing_eco_btn: string;
+
+  // Pricing
+  landing_pricing_badge: string;
+  landing_pricing_title: string;
+  landing_pricing_subtitle: string;
+  landing_per_month: string;
+  landing_plan_free_desc: string;
+  landing_plan_free_btn: string;
+  landing_plan_pro_badge: string;
+  landing_plan_pro_desc: string;
+  landing_plan_pro_btn: string;
+  landing_plan_biz_desc: string;
+  landing_plan_biz_btn: string;
+
+  // Mockup & Footer
+  landing_mockup_auto_active: string;
+  landing_mockup_revenue: string;
+  landing_mockup_revenue_change: string;
+  landing_mockup_profit: string;
+  landing_mockup_margin: string;
+  landing_mockup_orders: string;
+  landing_mockup_orders_sub: string;
+  landing_mockup_products: string;
+  landing_mockup_latest_order: string;
+  landing_mockup_launch: string;
+  landing_footer_tagline: string;
 
   // Product Import
   import_title: string;
@@ -200,6 +295,209 @@ export interface Translations {
   settings_tab_domain: string;
   settings_language_label: string;
   settings_save_btn: string;
+
+  // Auth Extended
+  auth_login_headline: string;
+  auth_signup_headline: string;
+  auth_forgot_headline: string;
+  auth_reset_sent_headline: string;
+  auth_login_desc: string;
+  auth_signup_desc: string;
+  auth_forgot_desc: string;
+  auth_reset_sent_desc: string;
+  auth_tab_login: string;
+  auth_tab_signup: string;
+  auth_tab_telegram: string;
+  auth_email_or_phone: string;
+  auth_email_address: string;
+  auth_phone_number: string;
+  auth_full_name: string;
+  auth_forgot_password_link: string;
+  auth_password_label: string;
+  auth_password_requirements: string;
+  auth_req_strong: string;
+  auth_req_incomplete: string;
+  auth_req_upper: string;
+  auth_req_lower: string;
+  auth_req_number: string;
+  auth_req_dot: string;
+  auth_req_min_length: string;
+  auth_confirm_password: string;
+  auth_pw_match: string;
+  auth_pw_mismatch: string;
+  auth_btn_signin_dashboard: string;
+  auth_btn_register: string;
+  auth_btn_send_reset: string;
+  auth_btn_back_to_login: string;
+  auth_recovery_dispatched: string;
+  auth_btn_return_login: string;
+  auth_business_type_title: string;
+  auth_type_store: string;
+  auth_type_store_desc: string;
+  auth_type_cafe: string;
+  auth_type_cafe_desc: string;
+  auth_tg_isolation_title: string;
+  auth_tg_isolation_desc: string;
+  auth_tg_test_accounts: string;
+  auth_tg_account_1: string;
+  auth_tg_account_2: string;
+  auth_tg_or_custom_id: string;
+  auth_tg_user_id_label: string;
+  auth_tg_name_label: string;
+  auth_tg_btn_enter: string;
+  auth_footer_cloud: string;
+
+  // Dashboard
+  dash_title: string;
+  dash_welcome: string;
+  dash_open_store: string;
+  dash_add_product: string;
+  dash_live_link_title: string;
+  dash_live_badge: string;
+  dash_copy_link: string;
+  dash_share_social: string;
+  dash_welcome_banner_title: string;
+  dash_welcome_banner_desc: string;
+  dash_add_first_product: string;
+  dash_customize_store: string;
+  dash_stat_revenue: string;
+  dash_stat_orders: string;
+  dash_stat_profit: string;
+  dash_stat_catalog_usage: string;
+  dash_stat_margin_avg: string;
+  dash_pending_processing: string;
+  dash_this_week_change: string;
+  dash_recent_orders_title: string;
+  dash_view_all_orders: string;
+  dash_th_order_id: string;
+  dash_th_customer: string;
+  dash_th_status: string;
+  dash_th_amount: string;
+  dash_th_profit: string;
+  dash_no_orders_title: string;
+  dash_no_orders_desc: string;
+  dash_quick_status_title: string;
+  dash_store_active_badge: string;
+  dash_business_modes: string;
+  dash_mode_personal: string;
+  dash_mode_dropship: string;
+  dash_open_customizer: string;
+  dash_chart_title: string;
+  dash_chart_subtitle: string;
+  dash_chart_tab_revenue: string;
+  dash_chart_tab_profit: string;
+  dash_top_products: string;
+  dash_all_products: string;
+
+  // Topbar / Sidebar / Common
+  topbar_your_stores: string;
+  topbar_create_another_store: string;
+  topbar_store_settings: string;
+  topbar_store_builder: string;
+  topbar_admin_portal: string;
+  topbar_sign_out: string;
+  trial_expired_title: string;
+  trial_expired_desc: string;
+  trial_btn_upgrade: string;
+  trial_active_title: string;
+  trial_products_count: string;
+  sidebar_preview: string;
+  sidebar_copy_link: string;
+  sidebar_switch_to_store: string;
+  sidebar_switch_to_cafe: string;
+  sidebar_change_mode: string;
+  sidebar_admin_panel: string;
+  mobile_tab_home: string;
+  mobile_tab_products: string;
+  mobile_tab_orders: string;
+  mobile_tab_store: string;
+  mobile_tab_more: string;
+  mobile_drawer_title: string;
+  mobile_drawer_subtitle: string;
+  mobile_view_store: string;
+
+  // Additional Common / Topbar / Sidebar / Search / Device / Pricing
+  topbar_back: string;
+  topbar_search_placeholder: string;
+  topbar_device_title: string;
+  topbar_device_label: string;
+  topbar_seller_account: string;
+  topbar_store_singular: string;
+  topbar_store_plural: string;
+  sidebar_limit_used: string;
+  sidebar_upgrade: string;
+  sidebar_integrations_title: string;
+  sidebar_live_badge: string;
+  sidebar_admin_badge: string;
+  search_input_placeholder: string;
+  search_stores_heading: string;
+  search_products_heading: string;
+  search_orders_heading: string;
+  search_customers_heading: string;
+  search_no_results: string;
+  search_cost_label: string;
+  search_price_label: string;
+  search_profit_label: string;
+  device_modal_badge: string;
+  device_modal_title: string;
+  device_modal_subtitle: string;
+  device_phone_title: string;
+  device_phone_desc: string;
+  device_computer_title: string;
+  device_computer_desc: string;
+  device_selected_badge: string;
+  device_continue_btn: string;
+  device_modal_footer: string;
+  pricing_page_title: string;
+  pricing_page_subtitle: string;
+  pricing_current_plan: string;
+  pricing_active_sub: string;
+  pricing_free_trial: string;
+  pricing_catalog_limit: string;
+  pricing_products_unit: string;
+  pricing_existing_products: string;
+  pricing_status_label: string;
+  pricing_login_register: string;
+  pricing_starter_quick_btn: string;
+  pricing_select_plan_btn: string;
+  pricing_current_active_badge: string;
+  pricing_trial_period_badge: string;
+  pricing_auth_required_title: string;
+  pricing_auth_required_desc: string;
+  pricing_checkout_success_title: string;
+  pricing_checkout_close_btn: string;
+  pricing_checkout_badge: string;
+  pricing_checkout_activate_title: string;
+  pricing_user_label: string;
+  pricing_tab_paynet: string;
+  pricing_tab_paynet_speed: string;
+  pricing_tab_card: string;
+  pricing_paynet_connecting: string;
+  pricing_paynet_official_gateway: string;
+  pricing_paynet_scan_qr: string;
+  pricing_paynet_cashier_code_label: string;
+  pricing_paynet_tx_id: string;
+  pricing_paynet_total_amount: string;
+  pricing_paynet_status_pending: string;
+  pricing_paynet_status_paid: string;
+  pricing_paynet_status_cancelled: string;
+  pricing_paynet_status_failed: string;
+  pricing_paynet_btn_verify: string;
+  pricing_qa_simulator_title: string;
+  pricing_qa_btn_success: string;
+  pricing_qa_btn_cancel: string;
+  pricing_qa_btn_reject: string;
+  pricing_paynet_load_failed: string;
+  pricing_card_recipient_label: string;
+  pricing_card_official_tag: string;
+  pricing_receipt_upload_label: string;
+  pricing_receipt_attached_title: string;
+  pricing_receipt_ready_admin: string;
+  pricing_receipt_drop_hint: string;
+  pricing_receipt_formats_hint: string;
+  pricing_sender_phone_label: string;
+  pricing_tx_note_label: string;
+  pricing_btn_submit_receipt: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -227,6 +525,7 @@ export const translations: Record<Language, Translations> = {
     nav_features: 'Imkoniyatlar',
     nav_login: 'Kirish',
     nav_signup: 'Roʻyxatdan oʻtish',
+    nav_signup_short: "Ro'yxat",
     nav_view_store: 'Doʻkonni koʻrish',
 
     // Common UI
@@ -286,6 +585,100 @@ export const translations: Record<Language, Translations> = {
     landing_cta_subtitle: '14 kunlik bepul sinov muddati. Dasturlash bilimlari talab qilinmaydi.',
     landing_footer_desc: 'Oʻzbekistonda zamonaviy elektron tijorat va dropshipping ekotizimi.',
     landing_footer_rights: 'Barcha huquqlar himoyalangan.',
+
+    // Device selector
+    landing_device_selector_title: 'Qurilma boʻyicha kirish:',
+    landing_device_ready_badge: 'Telegram & Web tayyor',
+    landing_device_mobile_title: '📱 Telefon / Mini App',
+    landing_device_mobile_desc: 'Mobil va Telegram Mini App',
+    landing_device_desktop_title: '💻 Kompyuter / Desktop',
+    landing_device_desktop_desc: 'Keng ekranli Boshqaruv paneli',
+
+    // Value Pills
+    landing_pill_no_inventory: 'Omborxona talab qilinmaydi',
+    landing_pill_payments_ready: 'Click va Payme ulangan',
+    landing_pill_delivery: 'Oʻzbekiston boʻylab 24-48 soatda yetkazish',
+    landing_pill_profit_calc: 'Avtomatik sof foyda kalkulyatori',
+
+    // Workflow (6 steps)
+    landing_workflow_badge: 'Bosqichma-bosqich jarayon',
+    landing_workflow_title: 'Sellnex qanday ishlaydi?',
+    landing_workflow_subtitle: 'Oʻzbekistonda dropshipping biznesingizni 6 ta oddiy, avtomatlashtirilgan qadamda boshlang.',
+    landing_step_of: '06 dan {step}-qadam',
+    landing_step_1_title: 'Mahsulotni import qilish',
+    landing_step_1_desc: 'Amazon, Alibaba, Uzum Market yoki mahalliy yetkazib beruvchilardan istalgan mahsulot havolasini kiriting. Rasmlar, tavsif va variantlar bir zumda yuklanadi.',
+    landing_step_1_badge: 'Avto-import',
+    landing_step_2_title: 'Foydangizni belgilang',
+    landing_step_2_desc: 'Aqlli foyda kalkulyatoridan foydalaning. Belgilangan daromad (masalan, 75 000 soʻm) yoki foizli marjani kiriting. Sotuv narxi avtomatik hisoblanadi.',
+    landing_step_2_badge: 'Aqlli hisob-kitob',
+    landing_step_3_title: 'Doʻkoningizni ishga tushiring',
+    landing_step_3_desc: 'Qulay konstruktor yordamida oʻz brendingiz vitrinasini 2 daqiqada yarating. Shaxsiy domeningizni ulang yoki bepul .sellnex.uz manzilidan foydalaning.',
+    landing_step_3_badge: 'Bir zumda tayyor',
+    landing_step_4_title: 'Havolangizni ulashing',
+    landing_step_4_desc: 'Doʻkoningiz havolasini Instagram, Telegram, TikTok va WhatsApp orqali targʻib qiling. Hamkorlik va reklama monitoringi tizimi oʻrnatilgan.',
+    landing_step_4_badge: 'Barcha tarmoqlarda',
+    landing_step_5_title: 'Buyurtma va toʻlovlarni qabul qiling',
+    landing_step_5_desc: 'Click, Payme, Uzum Bank va yetkazib berilganda naqd toʻlov (COD) orqali oson toʻlov qabul qiling. Pul toʻgʻridan-toʻgʻri hisobingizga tushadi.',
+    landing_step_5_badge: 'Milliy toʻlovlar',
+    landing_step_6_title: 'Yetkazishni avtomatlashtiring',
+    landing_step_6_desc: 'Bizning avtomatizatsiya tizimimiz buyurtmalarni avtomatik tarzda yetkazib beruvchilarga yoʻnaltiradi, kuryerni kuzatadi va xaridoringizga xabar beradi.',
+    landing_step_6_badge: 'Avtomatlashtirilgan',
+
+    // Teaser
+    landing_teaser_title: 'Mahsulot importini hoziroq sinab koʻrmoqchimisiz?',
+    landing_teaser_desc: 'Bir zumda sof foyda va marjani hisoblash uchun Amazon, Alibaba yoki Uzum havolasini kalkulyatorimizga kiriting.',
+    landing_teaser_btn: 'Mahsulot importi va foyda kalkulyatorini ochish',
+
+    // Features
+    landing_feat_badge: 'Platforma imkoniyatlari',
+    landing_feat_1_title: 'Doʻkon Konstruktori',
+    landing_feat_1_desc: 'Oʻzbekiston bozoriga moslashtirilgan, mobil konversiyasi yuqori boʻlgan Shopify uslubidagi internet-doʻkon.',
+    landing_feat_2_title: '1 bosishda mahsulot importi',
+    landing_feat_2_desc: 'Istalgan yirik marketpleysdan ulgurji narxlar, zaxira, yuqori sifatli rasmlar va variantlarni bir zumda yuklab oling.',
+    landing_feat_3_title: 'Dinamik foyda kalkulyatori',
+    landing_feat_3_desc: 'Yetkazib beruvchi narxi + logistika + toʻlov komissiyasi + sof daromadingizni real vaqtda hisoblang.',
+    landing_feat_4_title: 'Click va Payme toʻlov shlyuzlari',
+    landing_feat_4_desc: 'Click, Payme, Uzum Bank va muddatli toʻlovlarni qoʻllab-quvvatlovchi integratsiyalashgan toʻlov moduli.',
+    landing_feat_5_title: 'Uzum Market Ekotizimi',
+    landing_feat_5_desc: 'Mahsulot zaxirasini sinxronlash, buyurtmalarni eksport qilish va kanallarni qulay boshqarish.',
+    landing_feat_6_title: 'Buyurtmalarni avtomatlashtirish',
+    landing_feat_6_desc: 'Buyurtmalarni yetkazib beruvchilarga avtomatik joʻnatish, zaxiralarni yangilash va Telegram bot bildirishnomalari.',
+    landing_feat_7_title: 'Real-vaqt Tahlili',
+    landing_feat_7_desc: 'Umumiy aylanma (GMV), sof foyda, trafik manbalari (Telegram, TikTok, IG) va ommabop mahsulotlarni kuzating.',
+    landing_feat_8_title: 'Viloyatlar boʻylab yetkazib berish',
+    landing_feat_8_desc: 'UzPost, BTS Cargo, Fargo Express va Yandex Delivery orqali 12 ta viloyat boʻyicha avtomatlashtirilgan joʻnatish.',
+
+    // Ecosystem & Integrations
+    landing_eco_badge: 'Bogʻlangan ekotizim',
+    landing_eco_title: 'Marketpleyslar, Yetkazib beruvchilar va Toʻlov tizimlari',
+    landing_eco_subtitle: 'Sevimli platformalaringizni tayyor avtomatlashtirilgan integratsiyalar bilan ulang.',
+    landing_eco_btn: 'Boshqaruv panelida integratsiyalarni koʻrish',
+
+    // Pricing
+    landing_pricing_badge: 'Shaffof tariflar',
+    landing_pricing_title: 'Har bir sotuvchi uchun mos rejalar',
+    landing_pricing_subtitle: 'Bepul sinovdan boshlang va biznesingiz bilan birga daromadingizni oshiring.',
+    landing_per_month: '/ oyiga',
+    landing_plan_free_desc: 'Dropshippingni boshlab sinab koʻrish uchun qulay',
+    landing_plan_free_btn: 'Bepul boshlash',
+    landing_plan_pro_badge: 'Eng ommabop',
+    landing_plan_pro_desc: 'Faol onlayn sotuvchilar va dropshipperlar uchun',
+    landing_plan_pro_btn: 'PRO tarifiga ulanish',
+    landing_plan_biz_desc: 'Katta aylanmaga ega agentliklar va tarmoq doʻkonlar uchun',
+    landing_plan_biz_btn: 'Business tarifiga oʻtish',
+
+    // Mockup & Footer
+    landing_mockup_auto_active: '● Buyurtmalarni avtomatlashtirish: FAOL',
+    landing_mockup_revenue: 'Umumiy tushum',
+    landing_mockup_revenue_change: '↑ +24.8% bu hafta',
+    landing_mockup_profit: 'Sof foyda',
+    landing_mockup_margin: 'Oʻrtacha marja: 26.0%',
+    landing_mockup_orders: 'Qabul qilingan buyurtmalar',
+    landing_mockup_orders_sub: '100% avtomatik dropshipping',
+    landing_mockup_products: 'Faol mahsulotlar',
+    landing_mockup_latest_order: 'Oxirgi buyurtma',
+    landing_mockup_launch: 'Boshqaruv panelini ochish →',
+    landing_footer_tagline: 'Soting. Avtomatlashtiring. Oʻsing.',
 
     // Product Import
     import_title: 'Mahsulotni import qilish va Foyda belgilash',
@@ -403,6 +796,209 @@ export const translations: Record<Language, Translations> = {
     settings_tab_domain: 'Shaxsiy domen',
     settings_language_label: 'Tizim tili',
     settings_save_btn: 'Oʻzgarishlarni saqlash',
+
+    // Auth Extended
+    auth_login_headline: 'Sellnex tizimiga kirish',
+    auth_signup_headline: 'Sotuvchi hisobini yaratish',
+    auth_forgot_headline: 'Parolni tiklash',
+    auth_reset_sent_headline: 'Pochtani tekshiring',
+    auth_login_desc: 'Boshqaruv paneliga kirish uchun email va parolingizni kiriting.',
+    auth_signup_desc: 'Oʻzbekiston boʻylab savdoni boshlash uchun roʻyxatdan oʻting.',
+    auth_forgot_desc: 'Parolni tiklash havolasini olish uchun emailingizni kiriting.',
+    auth_reset_sent_desc: 'Parolni tiklash boʻyicha koʻrsatmalar yuborildi.',
+    auth_tab_login: 'Kirish',
+    auth_tab_signup: 'Roʻyxatdan oʻtish',
+    auth_tab_telegram: 'Telegram Kafe',
+    auth_email_or_phone: 'Email yoki Telefon raqam',
+    auth_email_address: 'Elektron pochta manzili',
+    auth_phone_number: 'Telefon raqam',
+    auth_full_name: 'Ism va Familiya',
+    auth_forgot_password_link: 'Parolni unutdingizmi?',
+    auth_password_label: 'Parol',
+    auth_password_requirements: 'Parol talablari',
+    auth_req_strong: 'Kuchli parol',
+    auth_req_incomplete: 'Toʻliq emas',
+    auth_req_upper: '1 ta katta harf (A-Z)',
+    auth_req_lower: '1 ta kichik harf (a-z)',
+    auth_req_number: '1 ta raqam (0-9)',
+    auth_req_dot: '1 ta nuqta (.)',
+    auth_req_min_length: 'Kamida 8 ta belgi (masalan: Sellnex1.)',
+    auth_confirm_password: 'Parolni tasdiqlang',
+    auth_pw_match: 'Parollar mos keldi',
+    auth_pw_mismatch: 'Parollar mos kelmadi',
+    auth_btn_signin_dashboard: 'Boshqaruv paneliga kirish',
+    auth_btn_register: 'Roʻyxatdan oʻtish',
+    auth_btn_send_reset: 'Tiklash havolasini yuborish',
+    auth_btn_back_to_login: '← Kirish sahifasiga qaytish',
+    auth_recovery_dispatched: 'Tiklash havolasi yuborildi',
+    auth_btn_return_login: 'Kirishga qaytish',
+    auth_business_type_title: 'Sellnex’dan qanday foydalanmoqchisiz?',
+    auth_type_store: 'Online doʻkon',
+    auth_type_store_desc: 'Mahsulot sotish, savat va doʻkon',
+    auth_type_cafe: 'Restoran / Kafe',
+    auth_type_cafe_desc: 'Menyu, taomlar va buyurtmalar',
+    auth_tg_isolation_title: 'Multi-Tenant Kafe Izolyatsiyasi',
+    auth_tg_isolation_desc: 'Har bir Telegram hisobi mustaqil ownerId va cafeId ga ega. Boshqa kafening menyusi yoki buyurtmalari hech qachon aralashmaydi.',
+    auth_tg_test_accounts: 'Sinov uchun 2 ta mustaqil Telegram hisobi:',
+    auth_tg_account_1: '1-hisob: Farrux',
+    auth_tg_account_2: '2-hisob: Dilshod',
+    auth_tg_or_custom_id: 'Yoki oʻz ID ingiz',
+    auth_tg_user_id_label: 'Telegram User ID *',
+    auth_tg_name_label: 'Ismingiz yoki Kafe Nomi (ixtiyoriy)',
+    auth_tg_btn_enter: 'Telegram orqali Kafega Kirish',
+    auth_footer_cloud: 'Sellnex E-Commerce Cloud • Oʻzbekiston va Markaziy Osiyo',
+
+    // Dashboard
+    dash_title: 'Sotuvchi paneli',
+    dash_welcome: 'Xush kelibsiz, {name}. Doʻkoningiz, buyurtmalar va havolalarni boshqaring.',
+    dash_open_store: 'Doʻkonni ochish',
+    dash_add_product: 'Mahsulot qoʻshish / import',
+    dash_live_link_title: 'Sizning faol doʻkon havolangiz',
+    dash_live_badge: 'Onlayn • Kirish talab etilmaydi',
+    dash_copy_link: 'Doʻkon havolasini nusxalash',
+    dash_share_social: 'Ijtimoiy tarmoqlarga ulashish',
+    dash_welcome_banner_title: 'Yangi Sellnex doʻkoningizga xush kelibsiz!',
+    dash_welcome_banner_desc: 'Sizning ommaviy doʻkoningiz faol. Shaxsiy mahsulotlar (oʻz omboringiz) yoki dropshipping (Uzum Market / AliExpress) orqali savdoni boshlang.',
+    dash_add_first_product: 'Birinchi mahsulotni qoʻshish',
+    dash_customize_store: 'Doʻkonni sozlash',
+    dash_stat_revenue: 'Umumiy tushum',
+    dash_stat_orders: 'Jami buyurtmalar',
+    dash_stat_profit: 'Kutilayotgan sof foyda',
+    dash_stat_catalog_usage: 'Katalog hajmi',
+    dash_stat_margin_avg: 'Oʻrtacha rentabellik',
+    dash_pending_processing: 'ta kutilayotgan buyurtma',
+    dash_this_week_change: 'bu hafta',
+    dash_recent_orders_title: 'Soʻnggi xaridor buyurtmalari',
+    dash_view_all_orders: 'Barcha buyurtmalarni koʻrish',
+    dash_th_order_id: 'Buyurtma ID',
+    dash_th_customer: 'Mijoz',
+    dash_th_status: 'Holat',
+    dash_th_amount: 'Summa',
+    dash_th_profit: 'Foyda',
+    dash_no_orders_title: 'Hali buyurtmalar kelmadi',
+    dash_no_orders_desc: 'Doʻkon havolangizni Instagram, TikTok yoki Telegramda ulashing. Mijozlar buyurtmalari bu yerda real vaqtda paydo boʻladi.',
+    dash_quick_status_title: 'Doʻkon holati',
+    dash_store_active_badge: 'Doʻkon faol va ommaga ochiq',
+    dash_business_modes: 'Biznes rejimlari',
+    dash_mode_personal: 'Shaxsiy',
+    dash_mode_dropship: 'Dropship',
+    dash_open_customizer: 'Doʻkon konstruktorini ochish',
+    dash_chart_title: 'Daromad va Foyda dinamikasi',
+    dash_chart_subtitle: 'Click, Payme va Uzum Bank orqali tushumlar',
+    dash_chart_tab_revenue: 'Tushum (UZS)',
+    dash_chart_tab_profit: 'Sof foyda (UZS)',
+    dash_top_products: 'Ommabop mahsulotlar',
+    dash_all_products: 'Barcha mahsulotlar',
+
+    // Topbar / Sidebar / Common
+    topbar_your_stores: 'Sizning doʻkonlaringiz',
+    topbar_create_another_store: '+ Yangi doʻkon qoʻshish',
+    topbar_store_settings: 'Doʻkon va profil sozlamalari',
+    topbar_store_builder: 'Konstruktor / Doʻkon dizayni',
+    topbar_admin_portal: 'Bosh admin portali',
+    topbar_sign_out: 'Tizimdan chiqish',
+    trial_expired_title: 'Obunangiz muddati tugadi.',
+    trial_expired_desc: 'Mahsulotlar qoʻshish va doʻkonni boshqarish uchun tarifingizni yangilang.',
+    trial_btn_upgrade: 'Tarifni oshirish',
+    trial_active_title: 'Bepul sinov muddati:',
+    trial_products_count: 'mahsulot',
+    sidebar_preview: 'Koʻrish',
+    sidebar_copy_link: 'Havolani olish',
+    sidebar_switch_to_store: '🛍️ Doʻkon Rejimiga oʻtish',
+    sidebar_switch_to_cafe: '🍽️ Restoran Rejimiga oʻtish',
+    sidebar_change_mode: 'Oʻzgartirish',
+    sidebar_admin_panel: 'Bosh Admin Panel',
+    mobile_tab_home: 'Bosh sahifa',
+    mobile_tab_products: 'Mahsulotlar',
+    mobile_tab_orders: 'Buyurtmalar',
+    mobile_tab_store: 'Doʻkon',
+    mobile_tab_more: 'Yana',
+    mobile_drawer_title: 'Sellnex Menyusi',
+    mobile_drawer_subtitle: 'Barcha boʻlimlar va sozlamalar',
+    mobile_view_store: 'Doʻkonni koʻrish',
+
+    // Additional Common / Topbar / Sidebar / Search / Device / Pricing
+    topbar_back: 'Orqaga',
+    topbar_search_placeholder: 'Mahsulotlar, buyurtmalar, mijozlarni qidirish...',
+    topbar_device_title: 'Qurilma rejimini tanlash (Telefon / Kompyuter)',
+    topbar_device_label: 'Qurilma',
+    topbar_seller_account: 'Sotuvchi hisobi',
+    topbar_store_singular: 'doʻkon',
+    topbar_store_plural: 'doʻkon',
+    sidebar_limit_used: 'Mahsulot limiti band',
+    sidebar_upgrade: 'Tarifni oshirish →',
+    sidebar_integrations_title: 'Toʻlov va Integratsiyalar',
+    sidebar_live_badge: 'Jonli',
+    sidebar_admin_badge: 'Admin',
+    search_input_placeholder: 'Mahsulotlar, buyurtmalar, mijozlar, SKU yoki telefon raqami... (Esc yopish)',
+    search_stores_heading: 'Doʻkonlar',
+    search_products_heading: 'Mahsulotlar',
+    search_orders_heading: 'Buyurtmalar',
+    search_customers_heading: 'Mijozlar',
+    search_no_results: 'Hech narsa topilmadi',
+    search_cost_label: 'Tannarx',
+    search_price_label: 'Narx',
+    search_profit_label: 'foyda',
+    device_modal_badge: 'QURILMA SOZLAMASI',
+    device_modal_title: 'Qaysi qurilmadan foydalanmoqdasiz?',
+    device_modal_subtitle: 'Bir marta tanlang, tizim ushbu sozlamani profilingizda eslab qoladi',
+    device_phone_title: '📱 Telefon',
+    device_phone_desc: 'Mobil brauzer yoki ilova orqali',
+    device_computer_title: '💻 Kompyuter',
+    device_computer_desc: 'Noutbuk yoki ish stoli kompyuteri',
+    device_selected_badge: 'Tanlandi',
+    device_continue_btn: 'DAVOM ETISH',
+    device_modal_footer: 'Tanlovingiz profilingizda saqlanadi. Istalgan vaqt yuqori paneldagi tugma orqali oʻzgartirishingiz mumkin.',
+    pricing_page_title: 'Obuna Tariflari va Mahsulot Limitlari',
+    pricing_page_subtitle: 'Oʻzbekistondagi onlayn savdo uchun qulay va shaffof obuna rejalari. Paynet orqali bir zumda toʻlov.',
+    pricing_current_plan: 'Joriy Tarif:',
+    pricing_active_sub: 'Faol Obuna',
+    pricing_free_trial: '7 Kunlik Bepul Sinov',
+    pricing_catalog_limit: 'Maksimal katalog hajmi:',
+    pricing_products_unit: 'ta mahsulot',
+    pricing_existing_products: 'Mavjud mahsulotlar:',
+    pricing_status_label: 'Holati:',
+    pricing_login_register: 'Kirish / Roʻyxatdan oʻtish',
+    pricing_starter_quick_btn: 'Starter ($1 / 3 oy) — Paynet',
+    pricing_select_plan_btn: 'Tarifini Tanlash',
+    pricing_current_active_badge: 'Joriy Faol Tarifingiz',
+    pricing_trial_period_badge: 'Bepul Sinov Davri',
+    pricing_auth_required_title: 'Tizimga Kirish Talab Qilinadi',
+    pricing_auth_required_desc: 'Obuna sotib olish va mahsulot limitini kengaytirish uchun avval hisobingizga kiring yoki roʻyxatdan oʻting.',
+    pricing_checkout_success_title: 'Obuna Muvaffaqiyatli Faollashtirildi! 🎉',
+    pricing_checkout_close_btn: 'Yopish va Doʻkonga Qaytish',
+    pricing_checkout_badge: 'Rasmiy Toʻlov & Obuna',
+    pricing_checkout_activate_title: 'Tarifini Faollashtirish',
+    pricing_user_label: 'Foydalanuvchi:',
+    pricing_tab_paynet: '🟢 Paynet (Avtomatik)',
+    pricing_tab_paynet_speed: 'Tezkor',
+    pricing_tab_card: '💳 Karta (P2P Chek)',
+    pricing_paynet_connecting: 'Paynet toʻlov shlyuziga ulanmoqda...',
+    pricing_paynet_official_gateway: 'Paynet Rasmiy Shlyuzi',
+    pricing_paynet_scan_qr: 'Paynet ilovasi orqali skanerlang',
+    pricing_paynet_cashier_code_label: 'Kassa toʻlov kodi (Paynet shoxobchalari uchun):',
+    pricing_paynet_tx_id: 'Tranzaksiya ID:',
+    pricing_paynet_total_amount: 'Jami toʻlov miqdori:',
+    pricing_paynet_status_pending: 'Status: Toʻlov kutilmoqda (har 3 soniyada avto-tekshiruv)',
+    pricing_paynet_status_paid: 'Status: Toʻlov qabul qilindi!',
+    pricing_paynet_status_cancelled: 'Status: Toʻlov bekor qilindi',
+    pricing_paynet_status_failed: 'Status: Toʻlov amalga oshmadi',
+    pricing_paynet_btn_verify: 'Tekshirish',
+    pricing_qa_simulator_title: '🧪 QA & Test Simulyatori (Barcha holatlarni tekshirish):',
+    pricing_qa_btn_success: '✓ Muvaffaqiyatli (Test)',
+    pricing_qa_btn_cancel: 'Bekor qilish',
+    pricing_qa_btn_reject: 'Rad etish',
+    pricing_paynet_load_failed: 'Toʻlov maʻlumotlari yuklanmadi. Iltimos qaytadan urinib koʻring.',
+    pricing_card_recipient_label: 'Qabul qiluvchi karta (Uzcard / Humo):',
+    pricing_card_official_tag: 'Rasmiy',
+    pricing_receipt_upload_label: 'Toʻlov cheki / Skrinshotini yuklash',
+    pricing_receipt_attached_title: 'Chek skrinshoti biriktirildi',
+    pricing_receipt_ready_admin: 'Admin tasdiqlashiga tayyor',
+    pricing_receipt_drop_hint: 'Chek rasmini yuklash uchun bosing',
+    pricing_receipt_formats_hint: 'Click, Payme yoki bank cheki skrinshoti (JPG, PNG)',
+    pricing_sender_phone_label: 'Telefon raqamingiz',
+    pricing_tx_note_label: 'Tranzaksiya / Izoh (ixtiyoriy)',
+    pricing_btn_submit_receipt: 'Chekni Yuborish (Admin Tasdiqlashi)',
   },
 
   ru: {
@@ -429,6 +1025,7 @@ export const translations: Record<Language, Translations> = {
     nav_features: 'Возможности',
     nav_login: 'Войти',
     nav_signup: 'Регистрация',
+    nav_signup_short: 'Регистрация',
     nav_view_store: 'Открыть витрину',
 
     // Common UI
@@ -488,6 +1085,100 @@ export const translations: Record<Language, Translations> = {
     landing_cta_subtitle: '14 дней бесплатного пробного периода. Навыки программирования не требуются.',
     landing_footer_desc: 'Современная экосистема электронной торговли и дропшиппинга в Центральной Азии.',
     landing_footer_rights: 'Все права защищены.',
+
+    // Device selector
+    landing_device_selector_title: 'Вход по типу устройства:',
+    landing_device_ready_badge: 'Telegram и Web готовы',
+    landing_device_mobile_title: '📱 Телефон / Mini App',
+    landing_device_mobile_desc: 'Мобильное приложение и Telegram Mini App',
+    landing_device_desktop_title: '💻 Компьютер / Desktop',
+    landing_device_desktop_desc: 'Полноэкранная панель управления',
+
+    // Value Pills
+    landing_pill_no_inventory: 'Без собственного склада',
+    landing_pill_payments_ready: 'Click и Payme подключены',
+    landing_pill_delivery: 'Доставка по Узбекистану за 24-48ч',
+    landing_pill_profit_calc: 'Авто-калькулятор чистой прибыли',
+
+    // Workflow (6 steps)
+    landing_workflow_badge: 'Полный цикл работы',
+    landing_workflow_title: 'Как работает Sellnex?',
+    landing_workflow_subtitle: 'Запустите свой дропшиппинг-бизнес в Узбекистане за 6 простых автоматизированных шагов.',
+    landing_step_of: 'Шаг {step} из 06',
+    landing_step_1_title: 'Импорт товара',
+    landing_step_1_desc: 'Вставьте ссылку на товар с Amazon, Alibaba, Uzum Market или от местных поставщиков. Фотографии, описания и варианты извлекаются моментально.',
+    landing_step_1_badge: 'Авто-импорт',
+    landing_step_2_title: 'Установите свою прибыль',
+    landing_step_2_desc: 'Используйте умный калькулятор прибыли. Укажите фиксированный доход (напр. 75 000 сум) или процент маржи. Розничная цена рассчитается сама.',
+    landing_step_2_badge: 'Умный расчет',
+    landing_step_3_title: 'Опубликуйте свой магазин',
+    landing_step_3_desc: 'Настройте брендированный магазин за 2 минуты в удобном конструкторе. Подключите свой домен или используйте бесплатный адрес .sellnex.uz.',
+    landing_step_3_badge: 'Мгновенный запуск',
+    landing_step_4_title: 'Делитесь ссылкой на магазин',
+    landing_step_4_desc: 'Продвигайте ссылку на магазин в Instagram, Telegram, TikTok и WhatsApp со встроенными партнерскими и рекламными метками.',
+    landing_step_4_badge: 'Мультиканальность',
+    landing_step_5_title: 'Получайте заказы и оплату',
+    landing_step_5_desc: 'Принимайте платежи через Click, Payme, Uzum Bank и наличными при получении. Средства покупателей поступают напрямую вам.',
+    landing_step_5_badge: 'Платежи Узбекистана',
+    landing_step_6_title: 'Автоматизируйте доставку',
+    landing_step_6_desc: 'Наша система автоматически направляет заказы поставщикам, отслеживает отправку курьерами и уведомляет ваших клиентов.',
+    landing_step_6_badge: 'На автопилоте',
+
+    // Teaser
+    landing_teaser_title: 'Хотите протестировать импорт товара прямо сейчас?',
+    landing_teaser_desc: 'Вставьте ссылку с Amazon, Alibaba или Uzum в наш калькулятор, чтобы мгновенно увидеть маржу.',
+    landing_teaser_btn: 'Открыть импорт товара и калькулятор прибыли',
+
+    // Features
+    landing_feat_badge: 'Возможности платформы',
+    landing_feat_1_title: 'Конструктор витрины',
+    landing_feat_1_desc: 'Кастомизируемые витрины в стиле Shopify, оптимизированные для мобильных продаж и высокой конверсии в Узбекистане.',
+    landing_feat_2_title: 'Импорт товаров в 1 клик',
+    landing_feat_2_desc: 'Извлечение оптовых цен, остатков, фото высокого разрешения и вариантов с любого ведущего маркетплейса.',
+    landing_feat_3_title: 'Динамический калькулятор прибыли',
+    landing_feat_3_desc: 'Расчет себестоимости + логистики + комиссии платежей + вашей чистой прибыли в режиме реального времени.',
+    landing_feat_4_title: 'Платежные шлюзы Click и Payme',
+    landing_feat_4_desc: 'Встроенный национальный платежный шлюз с поддержкой Click, Payme и рассрочки от Uzum Bank.',
+    landing_feat_5_title: 'Экосистема Uzum Market',
+    landing_feat_5_desc: 'Синхронизация остатков, экспорт заказов и удобное управление продажами на маркетплейсах.',
+    landing_feat_6_title: 'Автоматизация заказов',
+    landing_feat_6_desc: 'Автоотправка заказов поставщикам, автосинхронизация остатков и моментальные оповещения в Telegram-бот.',
+    landing_feat_7_title: 'Аналитика в реальном времени',
+    landing_feat_7_desc: 'Контролируйте GMV, чистую маржу, каналы трафика (Telegram, TikTok, IG) и самые продаваемые товары.',
+    landing_feat_8_title: 'Региональная доставка и курьеры',
+    landing_feat_8_desc: 'Автоматическая отправка через UzPost, BTS Cargo, Fargo Express и Яндекс Доставку по всем 12 регионам.',
+
+    // Ecosystem & Integrations
+    landing_eco_badge: 'Связанная экосистема',
+    landing_eco_title: 'Маркетплейсы, Поставщики и Платежные системы',
+    landing_eco_subtitle: 'Подключайте любимые сервисы с помощью готовых автоматических интеграций.',
+    landing_eco_btn: 'Управление интеграциями в панели',
+
+    // Pricing
+    landing_pricing_badge: 'Прозрачные тарифы',
+    landing_pricing_title: 'Тарифные планы для каждого продавца',
+    landing_pricing_subtitle: 'Начните бесплатно и масштабируйте доходы по мере роста продаж.',
+    landing_per_month: '/ месяц',
+    landing_plan_free_desc: 'Идеально для первого знакомства с дропшиппингом',
+    landing_plan_free_btn: 'Начать бесплатно',
+    landing_plan_pro_badge: 'Популярный',
+    landing_plan_pro_desc: 'Для активных онлайн-продавцов и дропшипперов',
+    landing_plan_pro_btn: 'Оформить подписку PRO',
+    landing_plan_biz_desc: 'Для крупных агентств и сетей магазинов',
+    landing_plan_biz_btn: 'Перейти на Business',
+
+    // Mockup & Footer
+    landing_mockup_auto_active: '● Автовыполнение заказов: АКТИВНО',
+    landing_mockup_revenue: 'Общая выручка',
+    landing_mockup_revenue_change: '↑ +24.8% на этой неделе',
+    landing_mockup_profit: 'Чистая прибыль',
+    landing_mockup_margin: 'Средняя маржа: 26.0%',
+    landing_mockup_orders: 'Оформлено заказов',
+    landing_mockup_orders_sub: '100% автоматический дропшип',
+    landing_mockup_products: 'Активные товары',
+    landing_mockup_latest_order: 'Последний заказ',
+    landing_mockup_launch: 'Открыть панель управления →',
+    landing_footer_tagline: 'Продавайте. Автоматизируйте. Растите.',
 
     // Product Import
     import_title: 'Импорт товара и Расчет прибыли',
@@ -605,6 +1296,209 @@ export const translations: Record<Language, Translations> = {
     settings_tab_domain: 'Собственный домен',
     settings_language_label: 'Язык интерфейса',
     settings_save_btn: 'Сохранить изменения',
+
+    // Auth Extended
+    auth_login_headline: 'Вход в Sellnex',
+    auth_signup_headline: 'Создайте аккаунт продавца',
+    auth_forgot_headline: 'Сброс пароля',
+    auth_reset_sent_headline: 'Проверьте почту',
+    auth_login_desc: 'Введите ваш email и пароль для входа в панель управления.',
+    auth_signup_desc: 'Зарегистрируйтесь, чтобы начать продажи по всему Узбекистану.',
+    auth_forgot_desc: 'Введите ваш email для получения ссылки на сброс пароля.',
+    auth_reset_sent_desc: 'Инструкции по восстановлению пароля отправлены на почту.',
+    auth_tab_login: 'Вход',
+    auth_tab_signup: 'Регистрация',
+    auth_tab_telegram: 'Telegram Кафе',
+    auth_email_or_phone: 'Email или номер телефона',
+    auth_email_address: 'Адрес электронной почты',
+    auth_phone_number: 'Номер телефона',
+    auth_full_name: 'Имя и Фамилия',
+    auth_forgot_password_link: 'Забыли пароль?',
+    auth_password_label: 'Пароль',
+    auth_password_requirements: 'Требования к паролю',
+    auth_req_strong: 'Надежный пароль',
+    auth_req_incomplete: 'Не завершено',
+    auth_req_upper: '1 заглавная буква (A-Z)',
+    auth_req_lower: '1 строчная буква (a-z)',
+    auth_req_number: '1 цифра (0-9)',
+    auth_req_dot: '1 точка (.)',
+    auth_req_min_length: 'Минимум 8 символов (например: Sellnex1.)',
+    auth_confirm_password: 'Подтвердите пароль',
+    auth_pw_match: 'Пароли совпадают',
+    auth_pw_mismatch: 'Пароли не совпадают',
+    auth_btn_signin_dashboard: 'Войти в панель управления',
+    auth_btn_register: 'Зарегистрироваться',
+    auth_btn_send_reset: 'Отправить ссылку для сброса',
+    auth_btn_back_to_login: '← Вернуться ко входу',
+    auth_recovery_dispatched: 'Ссылка для восстановления отправлена',
+    auth_btn_return_login: 'Вернуться ко входу',
+    auth_business_type_title: 'Как вы планируете использовать Sellnex?',
+    auth_type_store: 'Интернет-магазин',
+    auth_type_store_desc: 'Продажа товаров, корзина и витрина',
+    auth_type_cafe: 'Ресторан / Кафе',
+    auth_type_cafe_desc: 'Меню, блюда и заказы',
+    auth_tg_isolation_title: 'Изоляция Multi-Tenant Кафе',
+    auth_tg_isolation_desc: 'У каждого аккаунта Telegram свой независимый ownerId и cafeId. Меню и заказы других заведений никогда не смешиваются.',
+    auth_tg_test_accounts: '2 независимых аккаунта Telegram для тестирования:',
+    auth_tg_account_1: 'Аккаунт 1: Фаррух',
+    auth_tg_account_2: 'Аккаунт 2: Дильшод',
+    auth_tg_or_custom_id: 'Или ваш собственный ID',
+    auth_tg_user_id_label: 'Telegram User ID *',
+    auth_tg_name_label: 'Ваше имя или Название кафе (необязательно)',
+    auth_tg_btn_enter: 'Войти в Кафе через Telegram',
+    auth_footer_cloud: 'Sellnex E-Commerce Cloud • Узбекистан и Центральная Азия',
+
+    // Dashboard
+    dash_title: 'Панель продавца',
+    dash_welcome: 'С возвращением, {name}. Управляйте магазином, заказами и ссылками.',
+    dash_open_store: 'Открыть магазин',
+    dash_add_product: 'Добавить / Импорт товара',
+    dash_live_link_title: 'Ссылка на вашу активную витрину',
+    dash_live_badge: 'Онлайн • Вход не требуется',
+    dash_copy_link: 'Скопировать ссылку магазина',
+    dash_share_social: 'Поделиться в соцсетях',
+    dash_welcome_banner_title: 'Добро пожаловать в ваш новый магазин Sellnex!',
+    dash_welcome_banner_desc: 'Ваша витрина активна. Начните продажи со своими товарами или по дропшиппингу (Uzum Market / AliExpress).',
+    dash_add_first_product: 'Добавить первый товар',
+    dash_customize_store: 'Настроить витрину',
+    dash_stat_revenue: 'Общая выручка',
+    dash_stat_orders: 'Всего заказов',
+    dash_stat_profit: 'Ожидаемая чистая прибыль',
+    dash_stat_catalog_usage: 'Использование каталога',
+    dash_stat_margin_avg: 'Средняя маржинальность',
+    dash_pending_processing: 'заказов в обработке',
+    dash_this_week_change: 'на этой неделе',
+    dash_recent_orders_title: 'Последние заказы клиентов',
+    dash_view_all_orders: 'Все заказы',
+    dash_th_order_id: 'ID заказа',
+    dash_th_customer: 'Клиент',
+    dash_th_status: 'Статус',
+    dash_th_amount: 'Сумма',
+    dash_th_profit: 'Прибыль',
+    dash_no_orders_title: 'Заказов пока нет',
+    dash_no_orders_desc: 'Поделитесь ссылкой на магазин в Instagram, TikTok или Telegram. Заказы клиентов появятся здесь мгновенно.',
+    dash_quick_status_title: 'Статус магазина',
+    dash_store_active_badge: 'Витрина активна и доступна',
+    dash_business_modes: 'Режимы бизнеса',
+    dash_mode_personal: 'Собственные',
+    dash_mode_dropship: 'Дропшиппинг',
+    dash_open_customizer: 'Открыть конструктор витрины',
+    dash_chart_title: 'Динамика выручки и прибыли',
+    dash_chart_subtitle: 'Поступления через Click, Payme и Uzum Bank',
+    dash_chart_tab_revenue: 'Выручка (UZS)',
+    dash_chart_tab_profit: 'Чистая прибыль (UZS)',
+    dash_top_products: 'Популярные товары',
+    dash_all_products: 'Все товары',
+
+    // Topbar / Sidebar / Common
+    topbar_your_stores: 'Ваши магазины',
+    topbar_create_another_store: '+ Создать еще магазин',
+    topbar_store_settings: 'Настройки магазина и профиля',
+    topbar_store_builder: 'Конструктор / Дизайн витрины',
+    topbar_admin_portal: 'Панель администратора',
+    topbar_sign_out: 'Выйти из системы',
+    trial_expired_title: 'Срок подписки истек.',
+    trial_expired_desc: 'Обновите тариф, чтобы продолжить управление магазином и товарами.',
+    trial_btn_upgrade: 'Улучшить тариф',
+    trial_active_title: 'Бесплатный период:',
+    trial_products_count: 'товаров',
+    sidebar_preview: 'Просмотр',
+    sidebar_copy_link: 'Копировать',
+    sidebar_switch_to_store: '🛍️ Перейти в режим Магазина',
+    sidebar_switch_to_cafe: '🍽️ Перейти в режим Ресторана',
+    sidebar_change_mode: 'Изменить',
+    sidebar_admin_panel: 'Главная панель Admin',
+    mobile_tab_home: 'Главная',
+    mobile_tab_products: 'Товары',
+    mobile_tab_orders: 'Заказы',
+    mobile_tab_store: 'Магазин',
+    mobile_tab_more: 'Еще',
+    mobile_drawer_title: 'Меню Sellnex',
+    mobile_drawer_subtitle: 'Все разделы и настройки',
+    mobile_view_store: 'Открыть витрину',
+
+    // Additional Common / Topbar / Sidebar / Search / Device / Pricing
+    topbar_back: 'Назад',
+    topbar_search_placeholder: 'Поиск товаров, заказов, клиентов...',
+    topbar_device_title: 'Выбор режима устройства (Телефон / Компьютер)',
+    topbar_device_label: 'Устройство',
+    topbar_seller_account: 'Аккаунт продавца',
+    topbar_store_singular: 'магазин',
+    topbar_store_plural: 'магазинов',
+    sidebar_limit_used: 'Лимит товаров использован',
+    sidebar_upgrade: 'Улучшить тариф →',
+    sidebar_integrations_title: 'Платежи и Интеграции',
+    sidebar_live_badge: 'Активен',
+    sidebar_admin_badge: 'Админ',
+    search_input_placeholder: 'Поиск товаров, заказов, клиентов, SKU или телефонов... (Esc закрыть)',
+    search_stores_heading: 'Магазины',
+    search_products_heading: 'Товары',
+    search_orders_heading: 'Заказы',
+    search_customers_heading: 'Клиенты',
+    search_no_results: 'Ничего не найдено',
+    search_cost_label: 'Себестоимость',
+    search_price_label: 'Цена',
+    search_profit_label: 'прибыль',
+    device_modal_badge: 'НАСТРОЙКА УСТРОЙСТВА',
+    device_modal_title: 'Какое устройство вы используете?',
+    device_modal_subtitle: 'Выберите один раз, система сохранит настройку в вашем профиле',
+    device_phone_title: '📱 Телефон',
+    device_phone_desc: 'Через мобильный браузер или приложение',
+    device_computer_title: '💻 Компьютер',
+    device_computer_desc: 'Ноутбук или настольный ПК',
+    device_selected_badge: 'Выбрано',
+    device_continue_btn: 'ПРОДОЛЖИТЬ',
+    device_modal_footer: 'Ваш выбор сохраняется в профиле. Вы можете изменить его в любое время в верхней панели.',
+    pricing_page_title: 'Тарифные планы и лимиты товаров',
+    pricing_page_subtitle: 'Удобные и прозрачные тарифные планы для торговли в Узбекистане. Мгновенная оплата через Paynet.',
+    pricing_current_plan: 'Текущий тариф:',
+    pricing_active_sub: 'Активная подписка',
+    pricing_free_trial: '7 дней бесплатного теста',
+    pricing_catalog_limit: 'Максимальный лимит каталога:',
+    pricing_products_unit: 'товаров',
+    pricing_existing_products: 'Текущие товары:',
+    pricing_status_label: 'Статус:',
+    pricing_login_register: 'Войти / Регистрация',
+    pricing_starter_quick_btn: 'Starter ($1 / 3 мес) — Paynet',
+    pricing_select_plan_btn: 'Выбрать тариф',
+    pricing_current_active_badge: 'Ваш активный тариф',
+    pricing_trial_period_badge: 'Пробный период',
+    pricing_auth_required_title: 'Требуется авторизация',
+    pricing_auth_required_desc: 'Чтобы оформить подписку и расширить лимит товаров, пожалуйста, войдите в аккаунт или зарегистрируйтесь.',
+    pricing_checkout_success_title: 'Подписка успешно активирована! 🎉',
+    pricing_checkout_close_btn: 'Закрыть и вернуться в магазин',
+    pricing_checkout_badge: 'Официальная оплата и подписка',
+    pricing_checkout_activate_title: 'Активация тарифа',
+    pricing_user_label: 'Пользователь:',
+    pricing_tab_paynet: '🟢 Paynet (Автоматически)',
+    pricing_tab_paynet_speed: 'Быстро',
+    pricing_tab_card: '💳 Карта (Чек P2P)',
+    pricing_paynet_connecting: 'Подключение к шлюзу Paynet...',
+    pricing_paynet_official_gateway: 'Официальный шлюз Paynet',
+    pricing_paynet_scan_qr: 'Сканируйте через приложение Paynet',
+    pricing_paynet_cashier_code_label: 'Код оплаты в кассе (для точек Paynet):',
+    pricing_paynet_tx_id: 'ID транзакции:',
+    pricing_paynet_total_amount: 'Итоговая сумма оплаты:',
+    pricing_paynet_status_pending: 'Статус: Ожидание оплаты (автопроверка каждые 3 сек)',
+    pricing_paynet_status_paid: 'Статус: Оплата принята!',
+    pricing_paynet_status_cancelled: 'Статус: Оплата отменена',
+    pricing_paynet_status_failed: 'Статус: Оплата не прошла',
+    pricing_paynet_btn_verify: 'Проверить',
+    pricing_qa_simulator_title: '🧪 Тестовый QA-симулятор (проверка всех статусов):',
+    pricing_qa_btn_success: '✓ Успешно (Тест)',
+    pricing_qa_btn_cancel: 'Отменить',
+    pricing_qa_btn_reject: 'Отклонить',
+    pricing_paynet_load_failed: 'Данные оплаты не загрузились. Пожалуйста, попробуйте снова.',
+    pricing_card_recipient_label: 'Карта получателя (Uzcard / Humo):',
+    pricing_card_official_tag: 'Официальный',
+    pricing_receipt_upload_label: 'Загрузить чек / скриншот оплаты',
+    pricing_receipt_attached_title: 'Скриншот чека прикреплен',
+    pricing_receipt_ready_admin: 'Готово для подтверждения администратором',
+    pricing_receipt_drop_hint: 'Нажмите для загрузки чека',
+    pricing_receipt_formats_hint: 'Скриншот Click, Payme или банковского приложения (JPG, PNG)',
+    pricing_sender_phone_label: 'Ваш номер телефона',
+    pricing_tx_note_label: 'Транзакция / Примечание (необязательно)',
+    pricing_btn_submit_receipt: 'Отправить чек (на проверку админу)',
   },
 
   en: {
@@ -631,6 +1525,7 @@ export const translations: Record<Language, Translations> = {
     nav_features: 'Features',
     nav_login: 'Log In',
     nav_signup: 'Sign Up',
+    nav_signup_short: 'Sign Up',
     nav_view_store: 'View Public Store',
 
     // Common UI
@@ -690,6 +1585,100 @@ export const translations: Record<Language, Translations> = {
     landing_cta_subtitle: '14-day free trial. No coding or prior experience required.',
     landing_footer_desc: 'Next-generation dropshipping & e-commerce ecosystem in Uzbekistan.',
     landing_footer_rights: 'All rights reserved.',
+
+    // Device selector
+    landing_device_selector_title: 'Access by device type:',
+    landing_device_ready_badge: 'Telegram & Web ready',
+    landing_device_mobile_title: '📱 Phone / Mini App',
+    landing_device_mobile_desc: 'Mobile & Telegram Mini App',
+    landing_device_desktop_title: '💻 Computer / Desktop',
+    landing_device_desktop_desc: 'Wide-screen Merchant Dashboard',
+
+    // Value Pills
+    landing_pill_no_inventory: 'No Inventory Required',
+    landing_pill_payments_ready: 'Click & Payme Ready',
+    landing_pill_delivery: '24-48h Delivery in Uzbekistan',
+    landing_pill_profit_calc: 'Automatic Profit Calculator',
+
+    // Workflow (6 steps)
+    landing_workflow_badge: 'End-to-End Workflow',
+    landing_workflow_title: 'How Sellnex Works',
+    landing_workflow_subtitle: 'Start your dropshipping business in Uzbekistan in 6 simple, automated steps.',
+    landing_step_of: 'Step {step} of 06',
+    landing_step_1_title: 'Import a Product',
+    landing_step_1_desc: 'Paste any product link from Amazon, Alibaba, Uzum Market, or local suppliers. We instantly extract images, descriptions & variants.',
+    landing_step_1_badge: 'Auto-Import',
+    landing_step_2_title: 'Set Your Profit',
+    landing_step_2_desc: 'Use our smart profit calculator. Enter fixed earnings (e.g. 75,000 UZS) or percentage margin. Selling price is calculated automatically.',
+    landing_step_2_badge: 'Smart Math',
+    landing_step_3_title: 'Publish Your Store',
+    landing_step_3_desc: 'Customize your branded storefront in 2 minutes with our drag-and-drop builder. Connect custom domain or use your free .sellnex.uz URL.',
+    landing_step_3_badge: 'Live Instantly',
+    landing_step_4_title: 'Share Your Link',
+    landing_step_4_desc: 'Promote your store link across Instagram, Telegram, TikTok and WhatsApp with built-in affiliate and tracking campaign links.',
+    landing_step_4_badge: 'Multi-Channel',
+    landing_step_5_title: 'Receive Orders & Paid',
+    landing_step_5_desc: 'Accept local payments effortlessly with Click, Payme, Uzum Bank, and Cash on Delivery. Customer funds transfer directly.',
+    landing_step_5_badge: 'Uzbekistan Switch',
+    landing_step_6_title: 'Automate Fulfillment',
+    landing_step_6_desc: 'Sit back as our automation engine automatically routes orders to suppliers, tracks courier dispatch, and updates your customer.',
+    landing_step_6_badge: 'Hands-Free',
+
+    // Teaser
+    landing_teaser_title: 'Want to test importing a product right now?',
+    landing_teaser_desc: 'Try pasting any Amazon, Alibaba or Uzum link into our calculator to see instant profit margins.',
+    landing_teaser_btn: 'Open Product Importer & Profit Calculator',
+
+    // Features
+    landing_feat_badge: 'Platform Capabilities',
+    landing_feat_1_title: 'Storefront Builder',
+    landing_feat_1_desc: 'Shopify-style customizable storefronts optimized for mobile conversion in Uzbekistan.',
+    landing_feat_2_title: '1-Click Product Importer',
+    landing_feat_2_desc: 'Extract supplier costs, stock, high-res photos and variants from any major e-commerce marketplace.',
+    landing_feat_3_title: 'Dynamic Profit Calculator',
+    landing_feat_3_desc: 'Calculate supplier base + logistics + payment commission + your net profit in real-time.',
+    landing_feat_4_title: 'Click & Payme Native Gateways',
+    landing_feat_4_desc: 'Pre-integrated national payment switch with support for Click, Payme, and Uzum Bank installments.',
+    landing_feat_5_title: 'Uzum Market Ecosystem',
+    landing_feat_5_desc: 'Sync inventory, export orders, and manage cross-platform marketplace channels seamlessly.',
+    landing_feat_6_title: 'Dropship Order Automation',
+    landing_feat_6_desc: 'Auto-dispatch orders to suppliers, auto-sync stock, and send Telegram bot alerts instantly.',
+    landing_feat_7_title: 'Real-time Analytics',
+    landing_feat_7_desc: 'Monitor GMV, net margins, traffic channels (Telegram, TikTok, IG), and best-sellers.',
+    landing_feat_8_title: 'Regional Delivery & Couriers',
+    landing_feat_8_desc: 'Automated dispatch with UzPost, BTS Cargo, Fargo Express, and Yandex Delivery across all 12 regions.',
+
+    // Ecosystem & Integrations
+    landing_eco_badge: 'Connected Ecosystem',
+    landing_eco_title: 'Marketplaces, Suppliers & Local Payments',
+    landing_eco_subtitle: 'Connect your favorite platforms with real automated integrations.',
+    landing_eco_btn: 'Manage Integrations in Dashboard',
+
+    // Pricing
+    landing_pricing_badge: 'Simple Pricing',
+    landing_pricing_title: 'Transparent Plans for Every Seller',
+    landing_pricing_subtitle: 'Start for free and scale your commerce revenue as you grow.',
+    landing_per_month: '/ month',
+    landing_plan_free_desc: 'Perfect for trying out dropshipping',
+    landing_plan_free_btn: 'Get Started Free',
+    landing_plan_pro_badge: 'Most Popular',
+    landing_plan_pro_desc: 'For active online sellers & dropshippers',
+    landing_plan_pro_btn: 'Subscribe to PRO',
+    landing_plan_biz_desc: 'For large volume agencies & multi-stores',
+    landing_plan_biz_btn: 'Upgrade to Business',
+
+    // Mockup & Footer
+    landing_mockup_auto_active: '● Order Auto-Fulfillment: ACTIVE',
+    landing_mockup_revenue: 'Total Revenue',
+    landing_mockup_revenue_change: '↑ +24.8% this week',
+    landing_mockup_profit: 'Net Profit',
+    landing_mockup_margin: 'Avg. margin: 26.0%',
+    landing_mockup_orders: 'Orders Placed',
+    landing_mockup_orders_sub: '100% automated dropship',
+    landing_mockup_products: 'Active Products',
+    landing_mockup_latest_order: 'Latest Order',
+    landing_mockup_launch: 'Launch Dashboard →',
+    landing_footer_tagline: 'Sell. Automate. Grow.',
 
     // Product Import
     import_title: 'Import Product & Set Your Profit',
@@ -807,6 +1796,209 @@ export const translations: Record<Language, Translations> = {
     settings_tab_domain: 'Custom Domain',
     settings_language_label: 'Interface Language',
     settings_save_btn: 'Save Changes',
+
+    // Auth Extended
+    auth_login_headline: 'Log In to Sellnex',
+    auth_signup_headline: 'Create Your Seller Account',
+    auth_forgot_headline: 'Reset Your Password',
+    auth_reset_sent_headline: 'Check Your Email',
+    auth_login_desc: 'Enter your registered email and password to access your dashboard.',
+    auth_signup_desc: 'Register your account to start selling across Uzbekistan.',
+    auth_forgot_desc: 'Enter your registered email to receive a password reset link.',
+    auth_reset_sent_desc: 'We have dispatched password recovery instructions to your email.',
+    auth_tab_login: 'Log In',
+    auth_tab_signup: 'Sign Up',
+    auth_tab_telegram: 'Telegram Café',
+    auth_email_or_phone: 'Email or Phone Number',
+    auth_email_address: 'Email Address',
+    auth_phone_number: 'Phone Number',
+    auth_full_name: 'Full Name',
+    auth_forgot_password_link: 'Forgot password?',
+    auth_password_label: 'Password',
+    auth_password_requirements: 'Password Requirements',
+    auth_req_strong: 'Strong Password',
+    auth_req_incomplete: 'Incomplete',
+    auth_req_upper: '1 uppercase letter (A-Z)',
+    auth_req_lower: '1 lowercase letter (a-z)',
+    auth_req_number: '1 number (0-9)',
+    auth_req_dot: '1 dot (.)',
+    auth_req_min_length: 'Minimum 8 characters (e.g. Sellnex1.)',
+    auth_confirm_password: 'Confirm Password',
+    auth_pw_match: 'Passwords match',
+    auth_pw_mismatch: 'Passwords do not match',
+    auth_btn_signin_dashboard: 'Sign In to Dashboard',
+    auth_btn_register: 'Register',
+    auth_btn_send_reset: 'Send Password Reset Link',
+    auth_btn_back_to_login: '← Back to Sign In',
+    auth_recovery_dispatched: 'Recovery Link Dispatched',
+    auth_btn_return_login: 'Return to Login',
+    auth_business_type_title: 'How do you plan to use Sellnex?',
+    auth_type_store: 'Online Store',
+    auth_type_store_desc: 'Product sales, cart and storefront',
+    auth_type_cafe: 'Restaurant / Café',
+    auth_type_cafe_desc: 'Menu, dishes and table orders',
+    auth_tg_isolation_title: 'Multi-Tenant Café Isolation',
+    auth_tg_isolation_desc: 'Each Telegram account has its independent ownerId and cafeId. Menus and orders of other establishments are never mixed.',
+    auth_tg_test_accounts: '2 independent test Telegram accounts:',
+    auth_tg_account_1: 'Account 1: Farrukh',
+    auth_tg_account_2: 'Account 2: Dilshod',
+    auth_tg_or_custom_id: 'Or your own ID',
+    auth_tg_user_id_label: 'Telegram User ID *',
+    auth_tg_name_label: 'Your Name or Café Name (optional)',
+    auth_tg_btn_enter: 'Enter Café via Telegram',
+    auth_footer_cloud: 'Sellnex E-Commerce Cloud • Uzbekistan & Central Asia',
+
+    // Dashboard
+    dash_title: 'Seller Dashboard',
+    dash_welcome: 'Welcome back, {name}. Manage your store operations, orders, and public links.',
+    dash_open_store: 'Open Store',
+    dash_add_product: 'Add / Import Product',
+    dash_live_link_title: 'Your Live Public Store Link',
+    dash_live_badge: 'Online & No-Login Required',
+    dash_copy_link: 'Copy Store Link',
+    dash_share_social: 'Share on Social',
+    dash_welcome_banner_title: 'Welcome to your new Sellnex Store!',
+    dash_welcome_banner_desc: 'Your public storefront is live. Choose between Personal Products (your warehouse) or Dropshipping (Uzum Market / AliExpress) to start selling.',
+    dash_add_first_product: 'Add First Product',
+    dash_customize_store: 'Customize Store',
+    dash_stat_revenue: 'Total Revenue',
+    dash_stat_orders: 'Total Orders',
+    dash_stat_profit: 'Est. Net Profit',
+    dash_stat_catalog_usage: 'Catalog Usage',
+    dash_stat_margin_avg: 'Average margin',
+    dash_pending_processing: 'pending processing',
+    dash_this_week_change: 'this week',
+    dash_recent_orders_title: 'Recent Customer Orders',
+    dash_view_all_orders: 'View All Orders',
+    dash_th_order_id: 'Order ID',
+    dash_th_customer: 'Customer',
+    dash_th_status: 'Status',
+    dash_th_amount: 'Amount',
+    dash_th_profit: 'Profit',
+    dash_no_orders_title: 'No orders received yet',
+    dash_no_orders_desc: 'Share your public store link on Instagram, TikTok, or Telegram. Orders placed by customers will appear here in real-time.',
+    dash_quick_status_title: 'Store Quick Status',
+    dash_store_active_badge: 'Storefront is Active & Public',
+    dash_business_modes: 'Business Modes',
+    dash_mode_personal: 'Personal',
+    dash_mode_dropship: 'Dropship',
+    dash_open_customizer: 'Open Storefront Customizer',
+    dash_chart_title: 'Revenue & Profit Overview',
+    dash_chart_subtitle: 'Performance across Click, Payme, and Uzum Bank',
+    dash_chart_tab_revenue: 'Revenue (UZS)',
+    dash_chart_tab_profit: 'Net Profit (UZS)',
+    dash_top_products: 'Top Products',
+    dash_all_products: 'All Products',
+
+    // Topbar / Sidebar / Common
+    topbar_your_stores: 'Your Stores',
+    topbar_create_another_store: '+ Create Another Store',
+    topbar_store_settings: 'Store & Account Settings',
+    topbar_store_builder: 'Customizer / Store Builder',
+    topbar_admin_portal: 'Platform Admin Portal',
+    topbar_sign_out: 'Sign Out',
+    trial_expired_title: 'Your subscription has expired.',
+    trial_expired_desc: 'Upgrade your plan to continue adding products and managing your store.',
+    trial_btn_upgrade: 'Upgrade Plan',
+    trial_active_title: 'Free Trial:',
+    trial_products_count: 'products',
+    sidebar_preview: 'Preview',
+    sidebar_copy_link: 'Copy Link',
+    sidebar_switch_to_store: '🛍️ Switch to Store Mode',
+    sidebar_switch_to_cafe: '🍽️ Switch to Restaurant Mode',
+    sidebar_change_mode: 'Switch',
+    sidebar_admin_panel: 'Platform Admin Panel',
+    mobile_tab_home: 'Home',
+    mobile_tab_products: 'Products',
+    mobile_tab_orders: 'Orders',
+    mobile_tab_store: 'Store',
+    mobile_tab_more: 'More',
+    mobile_drawer_title: 'Sellnex Navigation',
+    mobile_drawer_subtitle: 'Quick access to all tools & settings',
+    mobile_view_store: 'View Store',
+
+    // Additional Common / Topbar / Sidebar / Search / Device / Pricing
+    topbar_back: 'Back',
+    topbar_search_placeholder: 'Search products, orders, customers...',
+    topbar_device_title: 'Select device mode (Phone / Computer)',
+    topbar_device_label: 'Device',
+    topbar_seller_account: 'Seller Account',
+    topbar_store_singular: 'store',
+    topbar_store_plural: 'stores',
+    sidebar_limit_used: 'Product limit used',
+    sidebar_upgrade: 'Upgrade Plan →',
+    sidebar_integrations_title: 'Payments & Integrations',
+    sidebar_live_badge: 'Live',
+    sidebar_admin_badge: 'Admin',
+    search_input_placeholder: 'Search products, orders, customers, SKUs, or phone numbers... (Esc to close)',
+    search_stores_heading: 'Stores',
+    search_products_heading: 'Products',
+    search_orders_heading: 'Orders',
+    search_customers_heading: 'Customers',
+    search_no_results: 'No results found',
+    search_cost_label: 'Cost',
+    search_price_label: 'Price',
+    search_profit_label: 'profit',
+    device_modal_badge: 'DEVICE SETTING',
+    device_modal_title: 'Which device are you using?',
+    device_modal_subtitle: 'Select once, the system will remember this setting in your profile',
+    device_phone_title: '📱 Phone',
+    device_phone_desc: 'Via mobile browser or app',
+    device_computer_title: '💻 Computer',
+    device_computer_desc: 'Laptop or desktop computer',
+    device_selected_badge: 'Selected',
+    device_continue_btn: 'CONTINUE',
+    device_modal_footer: 'Your choice is saved in your profile. You can change it anytime via the top bar.',
+    pricing_page_title: 'Subscription Plans & Product Limits',
+    pricing_page_subtitle: 'Transparent and flexible subscription plans for commerce in Uzbekistan. Instant payment via Paynet.',
+    pricing_current_plan: 'Current Plan:',
+    pricing_active_sub: 'Active Subscription',
+    pricing_free_trial: '7-Day Free Trial',
+    pricing_catalog_limit: 'Maximum Catalog Limit:',
+    pricing_products_unit: 'products',
+    pricing_existing_products: 'Current Products:',
+    pricing_status_label: 'Status:',
+    pricing_login_register: 'Sign In / Register',
+    pricing_starter_quick_btn: 'Starter ($1 / 3 mos) — Paynet',
+    pricing_select_plan_btn: 'Choose Plan',
+    pricing_current_active_badge: 'Your Active Plan',
+    pricing_trial_period_badge: 'Free Trial Period',
+    pricing_auth_required_title: 'Authentication Required',
+    pricing_auth_required_desc: 'To purchase a subscription and expand your product limit, please log in or create an account.',
+    pricing_checkout_success_title: 'Subscription Successfully Activated! 🎉',
+    pricing_checkout_close_btn: 'Close & Return to Store',
+    pricing_checkout_badge: 'Official Payment & Subscription',
+    pricing_checkout_activate_title: 'Activate Plan',
+    pricing_user_label: 'User:',
+    pricing_tab_paynet: '🟢 Paynet (Automatic)',
+    pricing_tab_paynet_speed: 'Instant',
+    pricing_tab_card: '💳 Card (P2P Receipt)',
+    pricing_paynet_connecting: 'Connecting to Paynet payment gateway...',
+    pricing_paynet_official_gateway: 'Paynet Official Gateway',
+    pricing_paynet_scan_qr: 'Scan via Paynet mobile app',
+    pricing_paynet_cashier_code_label: 'Cashier payment code (for Paynet branches):',
+    pricing_paynet_tx_id: 'Transaction ID:',
+    pricing_paynet_total_amount: 'Total payment amount:',
+    pricing_paynet_status_pending: 'Status: Waiting for payment (auto-checks every 3s)',
+    pricing_paynet_status_paid: 'Status: Payment received!',
+    pricing_paynet_status_cancelled: 'Status: Payment cancelled',
+    pricing_paynet_status_failed: 'Status: Payment failed',
+    pricing_paynet_btn_verify: 'Verify',
+    pricing_qa_simulator_title: '🧪 QA Test Simulator (verify all statuses):',
+    pricing_qa_btn_success: '✓ Success (Test)',
+    pricing_qa_btn_cancel: 'Cancel',
+    pricing_qa_btn_reject: 'Reject',
+    pricing_paynet_load_failed: 'Payment details could not be loaded. Please try again.',
+    pricing_card_recipient_label: 'Recipient Card (Uzcard / Humo):',
+    pricing_card_official_tag: 'Official',
+    pricing_receipt_upload_label: 'Upload payment receipt / screenshot',
+    pricing_receipt_attached_title: 'Receipt screenshot attached',
+    pricing_receipt_ready_admin: 'Ready for admin verification',
+    pricing_receipt_drop_hint: 'Click to upload receipt image',
+    pricing_receipt_formats_hint: 'Click, Payme, or bank app screenshot (JPG, PNG)',
+    pricing_sender_phone_label: 'Your phone number',
+    pricing_tx_note_label: 'Transaction ID / Note (optional)',
+    pricing_btn_submit_receipt: 'Submit Receipt (Admin Review)',
   },
 };
 

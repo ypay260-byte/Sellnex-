@@ -4,7 +4,7 @@ import { Search, Package, ShoppingBag, Users, Store as StoreIcon, X, ArrowRight 
 import { motion, AnimatePresence } from 'motion/react';
 
 export const GlobalSearchModal: React.FC = () => {
-  const { isSearchOpen, setIsSearchOpen, products, orders, customers, store, navigateTo, formatMoney } = useApp();
+  const { isSearchOpen, setIsSearchOpen, products, orders, customers, store, navigateTo, formatMoney, t } = useApp();
   const [query, setQuery] = useState('');
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export const GlobalSearchModal: React.FC = () => {
             id="global-search-input"
             autoFocus
             type="text"
-            placeholder="Search products, orders, customers, SKUs, or phone numbers... (Esc to close)"
+            placeholder={t('search_input_placeholder', 'Search products, orders, customers, SKUs, or phone numbers... (Esc to close)')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 text-base text-slate-800 placeholder-slate-400 bg-transparent border-none outline-hidden"
@@ -67,7 +67,7 @@ export const GlobalSearchModal: React.FC = () => {
             <button
               id="clear-search-query"
               onClick={() => setQuery('')}
-              className="text-slate-400 hover:text-slate-600 p-1"
+              className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -79,11 +79,11 @@ export const GlobalSearchModal: React.FC = () => {
         <div className="overflow-y-auto p-3 space-y-4">
           {/* Quick Stores */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-1.5">Stores</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-1.5">{t('search_stores_heading', 'Stores')}</p>
             <button
               id="search-result-store"
               onClick={() => handleSelect('store-builder')}
-              className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors group"
+              className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors group cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
@@ -101,26 +101,26 @@ export const GlobalSearchModal: React.FC = () => {
           {/* Products */}
           {filteredProducts.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-1.5">Products ({filteredProducts.length})</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-1.5">{t('search_products_heading', 'Products')} ({filteredProducts.length})</p>
               <div className="space-y-1">
                 {filteredProducts.map((p) => (
                   <button
                     key={p.id}
                     id={`search-prod-${p.id}`}
                     onClick={() => handleSelect('products')}
-                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors group"
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors group cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <img src={p.images[0]} alt={p.title} className="w-9 h-9 rounded-lg object-cover border border-slate-200" />
                       <div>
                         <p className="text-sm font-medium text-slate-900 line-clamp-1">{p.title}</p>
                         <p className="text-xs text-slate-500">
-                          SKU: {p.sku} • Cost: {formatMoney(p.supplierCost)} • Price: <span className="font-semibold text-slate-700">{formatMoney(p.sellingPrice)}</span>
+                          SKU: {p.sku} • {t('search_cost_label', 'Cost')}: {formatMoney(p.supplierCost)} • {t('search_price_label', 'Price')}: <span className="font-semibold text-slate-700">{formatMoney(p.sellingPrice)}</span>
                         </p>
                       </div>
                     </div>
                     <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                      +{formatMoney(p.calculatedProfit)} profit
+                      +{formatMoney(p.calculatedProfit)} {t('search_profit_label', 'profit')}
                     </span>
                   </button>
                 ))}
@@ -131,14 +131,14 @@ export const GlobalSearchModal: React.FC = () => {
           {/* Orders */}
           {filteredOrders.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-1.5">Orders ({filteredOrders.length})</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-1.5">{t('search_orders_heading', 'Orders')} ({filteredOrders.length})</p>
               <div className="space-y-1">
                 {filteredOrders.map((o) => (
                   <button
                     key={o.id}
                     id={`search-order-${o.id}`}
                     onClick={() => handleSelect('orders')}
-                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors group"
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors group cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-mono text-xs font-bold">
@@ -161,14 +161,14 @@ export const GlobalSearchModal: React.FC = () => {
           {/* Customers */}
           {filteredCustomers.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-1.5">Customers</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-1.5">{t('search_customers_heading', 'Customers')}</p>
               <div className="space-y-1">
                 {filteredCustomers.map((c) => (
                   <button
                     key={c.id}
                     id={`search-cust-${c.id}`}
                     onClick={() => handleSelect('customers')}
-                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors group"
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors group cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-semibold text-xs">
@@ -179,7 +179,7 @@ export const GlobalSearchModal: React.FC = () => {
                         <p className="text-xs text-slate-500">{c.phone} • {c.city}</p>
                       </div>
                     </div>
-                    <span className="text-xs text-slate-500">{c.ordersCount} orders ({formatMoney(c.totalSpent)})</span>
+                    <span className="text-xs text-slate-500">{c.ordersCount} ({formatMoney(c.totalSpent)})</span>
                   </button>
                 ))}
               </div>
@@ -188,8 +188,7 @@ export const GlobalSearchModal: React.FC = () => {
 
           {filteredProducts.length === 0 && filteredOrders.length === 0 && (
             <div className="py-10 text-center text-slate-500">
-              <p className="text-sm">No results found for "{query}"</p>
-              <p className="text-xs text-slate-400 mt-1">Try searching by product name, SKU, customer name or phone number.</p>
+              <p className="text-sm">{t('search_no_results', 'No results found')} "{query}"</p>
             </div>
           )}
         </div>
@@ -204,9 +203,9 @@ export const GlobalSearchModal: React.FC = () => {
           <button
             id="footer-import-quick"
             onClick={() => handleSelect('import-product')}
-            className="text-blue-600 font-medium hover:underline"
+            className="text-blue-600 font-medium hover:underline cursor-pointer"
           >
-            + Import Product from URL
+            + {t('topbar_import_btn', 'Import Product')}
           </button>
         </div>
       </motion.div>

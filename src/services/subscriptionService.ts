@@ -452,7 +452,7 @@ export const subscriptionService = {
   async upgradePlan(
     user: User,
     newPlan: PlanType,
-    paymentMethod: 'Click' | 'Payme' | 'Uzum Bank' | 'Card',
+    paymentMethod: 'Click' | 'Payme' | 'Uzum Bank' | 'Card' | 'Paynet',
     isRenewalDiscount = false
   ): Promise<{ user: User; receiptNumber: string }> {
     const cleanPlan: PlanType = newPlan === 'free' ? 'trial' : newPlan;
