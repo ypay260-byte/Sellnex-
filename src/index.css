@@ -1,15 +1,36 @@
 @import "tailwindcss";
 
-html,
-body,
-#root {
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  max-width: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
   min-height: 100%;
+  max-width: 100%;
   width: 100%;
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
+  position: relative;
+}
+
+#root,
+#sellnex-app-container {
+  min-height: 100%;
+  max-width: 100%;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 /* Ensure smooth touch scrolling on mobile devices */
 * {
   -webkit-tap-highlight-color: transparent;
 }
+

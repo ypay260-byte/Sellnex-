@@ -466,7 +466,7 @@ export const PricingView: React.FC = () => {
   };
 
   return (
-    <div id="pricing-view-root" className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+    <div id="pricing-view-root" className="p-3.5 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header with Back button */}
       <BackHeader
         title={t('pricing_page_title', 'Obuna Tariflari va Mahsulot Limitlari')}
