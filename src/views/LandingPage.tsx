@@ -24,7 +24,32 @@ import {
 import { motion } from 'motion/react';
 
 export const LandingPage: React.FC = () => {
-  const { navigateTo, store, formatMoney, t, currentUser } = useApp();
+  const {
+    navigateTo,
+    store,
+    formatMoney,
+    t,
+    currentUser,
+    products,
+    orders,
+    automation,
+    getStoreUrl,
+  } = useApp();
+
+  // 100% REAL LIVE STORE STATISTICS - NO FAKE / HARDCODED NUMBERS
+  const realOrders = orders || [];
+  const paidOrders = realOrders.filter(
+    (o) => o.paymentStatus === 'paid' || o.paymentStatus === 'Paid'
+  );
+  const realRevenue = paidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const realProfit = paidOrders.reduce((sum, o) => sum + (o.profit || 0), 0);
+  const realMargin = realRevenue > 0 ? ((realProfit / realRevenue) * 100).toFixed(1) : '0.0';
+  const totalOrdersCount = realOrders.length;
+  const activeProducts = (products || []).filter((p) => p.published !== false);
+  const activeProductsCount = activeProducts.length;
+  const latestRealOrder = realOrders.length > 0 ? realOrders[0] : null;
+  const isAutomationEnabled = automation?.enabled ?? true;
+  const storeDomainDisplay = store?.domain || (store?.slug ? `${store.slug}.sellnex.uz` : 'sellnex.uz/dashboard');
 
   const howItWorksSteps = [
     {
@@ -313,7 +338,7 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Dual Hero Visual Preview: Dashboard & Storefront */}
+        {/* Dual Hero Visual Preview: 100% Real Live Dashboard & Storefront */}
         <div className="mt-10 sm:mt-14 max-w-6xl mx-auto rounded-2xl border border-slate-200/80 bg-slate-900/5 p-1.5 sm:p-4 shadow-2xl backdrop-blur-xs w-full overflow-hidden">
           <div className="bg-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-800 text-left w-full">
             {/* Window bar */}
@@ -322,53 +347,102 @@ export const LandingPage: React.FC = () => {
                 <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-rose-500 shrink-0" />
                 <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-500 shrink-0" />
                 <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 shrink-0" />
-                <span className="ml-1 sm:ml-2 text-[11px] sm:text-xs font-mono text-slate-400 truncate">sellnex.uz/dashboard</span>
+                <span className="ml-1 sm:ml-2 text-[11px] sm:text-xs font-mono text-slate-300 font-semibold truncate">
+                  {store?.name || 'Do‘kon'} • {storeDomainDisplay}
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] sm:text-[11px] bg-emerald-500/20 text-emerald-400 font-semibold px-2 py-0.5 rounded border border-emerald-500/30">
-                  {t('landing_mockup_auto_active', '● Order Auto-Fulfillment: ACTIVE')}
+                <span className="text-[10px] sm:text-[11px] bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>{t('landing_mockup_auto_active', '● Jonli do‘kon statistikasi: REAL VAQT')}</span>
                 </span>
               </div>
             </div>
 
-            {/* Simulated mini dashboard preview */}
+            {/* 100% Real Dashboard Data Grid */}
             <div className="p-3 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-white">
-              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60">
-                <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_revenue', 'Total Revenue')}</p>
-                <p className="text-lg sm:text-2xl font-bold text-white mt-1">12,450,000 UZS</p>
-                <span className="text-xs text-emerald-400 font-semibold mt-1 inline-block">{t('landing_mockup_revenue_change', '↑ +24.8% this week')}</span>
+              {/* Real Revenue */}
+              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60 flex flex-col justify-between">
+                <div>
+                  <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_revenue', 'Haqiqiy tushum')}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-white mt-1">{formatMoney(realRevenue)}</p>
+                </div>
+                <span className="text-xs text-emerald-400 font-semibold mt-2 inline-block">
+                  {paidOrders.length > 0 ? `${paidOrders.length} ta tasdiqlangan to‘lov` : "To'langan buyurtmalar kutilmoqda"}
+                </span>
               </div>
-              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60">
-                <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_profit', 'Net Profit')}</p>
-                <p className="text-lg sm:text-2xl font-bold text-emerald-400 mt-1">3,240,000 UZS</p>
-                <span className="text-xs text-slate-400 mt-1 inline-block">{t('landing_mockup_margin', 'Avg. margin: 26.0%')}</span>
+
+              {/* Real Net Profit */}
+              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60 flex flex-col justify-between">
+                <div>
+                  <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_profit', 'Sof foyda')}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-emerald-400 mt-1">{formatMoney(realProfit)}</p>
+                </div>
+                <span className="text-xs text-slate-400 mt-2 inline-block">
+                  {realRevenue > 0 ? `Haqiqiy marja: ${realMargin}%` : "Haqiqiy foyda: 0 UZS"}
+                </span>
               </div>
-              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60">
-                <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_orders', 'Orders Placed')}</p>
-                <p className="text-lg sm:text-2xl font-bold text-white mt-1">128</p>
-                <span className="text-xs text-blue-400 mt-1 inline-block">{t('landing_mockup_orders_sub', '100% automated dropship')}</span>
+
+              {/* Real Orders Count */}
+              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60 flex flex-col justify-between">
+                <div>
+                  <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_orders', 'Qabul qilingan buyurtmalar')}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-white mt-1">{totalOrdersCount}</p>
+                </div>
+                <span className="text-xs text-blue-400 mt-2 inline-block">
+                  {totalOrdersCount > 0 ? `${paidOrders.length} ta to‘langan, ${totalOrdersCount - paidOrders.length} ta jarayonda` : "Hozircha buyurtma yo‘q"}
+                </span>
               </div>
-              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60">
-                <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_products', 'Active Products')}</p>
-                <p className="text-lg sm:text-2xl font-bold text-white mt-1">42</p>
-                <span className="text-xs text-amber-400 mt-1 inline-block">Amazon • Alibaba • Uzum</span>
+
+              {/* Real Active Products */}
+              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60 flex flex-col justify-between">
+                <div>
+                  <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_products', 'Faol mahsulotlar')}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-white mt-1">{activeProductsCount}</p>
+                </div>
+                <span className="text-xs text-amber-400 mt-2 inline-block">
+                  {activeProductsCount > 0 ? `${activeProductsCount} ta haqiqiy tovar` : "Mahsulotlar qo‘shilmagan"}
+                </span>
               </div>
             </div>
 
-            {/* Interactive Try Button inside mockup */}
-            <div className="bg-slate-950/80 px-4 sm:px-6 py-3 border-t border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs">
+            {/* Real Latest Order Status & Real Actions */}
+            <div className="bg-slate-950/80 px-4 sm:px-6 py-3 border-t border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
               <div className="flex flex-wrap items-center gap-2 text-slate-300">
-                <span className="text-blue-400 font-semibold">{t('landing_mockup_latest_order', 'Latest Order')} #SL-1024:</span>
-                <span className="break-all sm:break-normal">Wireless ANC Headphones • 350,000 UZS</span>
-                <span className="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-mono">+75,000 UZS Profit</span>
+                {latestRealOrder ? (
+                  <>
+                    <span className="text-blue-400 font-semibold">{t('landing_mockup_latest_order', 'Oxirgi buyurtma')} #{latestRealOrder.orderNumber || latestRealOrder.id.slice(0, 6)}:</span>
+                    <span className="break-all sm:break-normal font-medium text-white">
+                      {latestRealOrder.items?.[0]?.title || 'Buyurtma'} • {formatMoney(latestRealOrder.totalAmount)}
+                    </span>
+                    <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono font-bold text-[11px]">
+                      +{formatMoney(latestRealOrder.profit || 0)} sof foyda
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-emerald-400 font-bold">● 100% Haqiqiy Do‘kon Tizimi:</span>
+                    <span className="text-slate-300">
+                      Hech qanday soxta statistika yo‘q. Do‘koningizni ulab, birinchi haqiqiy buyurtmani qabul qiling!
+                    </span>
+                  </>
+                )}
               </div>
-              <button
-                id="mockup-open-dashboard"
-                onClick={() => navigateTo('dashboard')}
-                className="text-blue-400 hover:text-blue-300 font-semibold underline underline-offset-4 self-end sm:self-auto"
-              >
-                {t('landing_mockup_launch', 'Launch Dashboard →')}
-              </button>
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                <button
+                  id="mockup-open-dashboard"
+                  onClick={() => {
+                    if (currentUser) {
+                      navigateTo('dashboard');
+                    } else {
+                      navigateTo('auth', { mode: 'login' });
+                    }
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>{t('landing_mockup_launch', 'Haqiqiy boshqaruv panelini ochish →')}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

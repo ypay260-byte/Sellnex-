@@ -674,16 +674,16 @@ export const translations: Record<Language, Translations> = {
     landing_plan_biz_btn: 'Business tarifiga oʻtish',
 
     // Mockup & Footer
-    landing_mockup_auto_active: '● Buyurtmalarni avtomatlashtirish: FAOL',
-    landing_mockup_revenue: 'Umumiy tushum',
-    landing_mockup_revenue_change: '↑ +24.8% bu hafta',
+    landing_mockup_auto_active: '● Jonli do‘kon statistikasi: REAL VAQT',
+    landing_mockup_revenue: 'Haqiqiy tushum',
+    landing_mockup_revenue_change: 'Tasdiqlangan to‘lovlar',
     landing_mockup_profit: 'Sof foyda',
-    landing_mockup_margin: 'Oʻrtacha marja: 26.0%',
+    landing_mockup_margin: 'Haqiqiy marja',
     landing_mockup_orders: 'Qabul qilingan buyurtmalar',
-    landing_mockup_orders_sub: '100% avtomatik dropshipping',
+    landing_mockup_orders_sub: 'Haqiqiy buyurtmalar',
     landing_mockup_products: 'Faol mahsulotlar',
     landing_mockup_latest_order: 'Oxirgi buyurtma',
-    landing_mockup_launch: 'Boshqaruv panelini ochish →',
+    landing_mockup_launch: 'Haqiqiy boshqaruv panelini ochish →',
     landing_footer_tagline: 'Soting. Avtomatlashtiring. Oʻsing.',
 
     // Product Import
@@ -1180,16 +1180,16 @@ export const translations: Record<Language, Translations> = {
     landing_plan_biz_btn: 'Перейти на Business',
 
     // Mockup & Footer
-    landing_mockup_auto_active: '● Автовыполнение заказов: АКТИВНО',
-    landing_mockup_revenue: 'Общая выручка',
-    landing_mockup_revenue_change: '↑ +24.8% на этой неделе',
+    landing_mockup_auto_active: '● Реальная статистика: LIVE',
+    landing_mockup_revenue: 'Реальная выручка',
+    landing_mockup_revenue_change: 'Подтвержденные платежи',
     landing_mockup_profit: 'Чистая прибыль',
-    landing_mockup_margin: 'Средняя маржа: 26.0%',
-    landing_mockup_orders: 'Оформлено заказов',
-    landing_mockup_orders_sub: '100% автоматический дропшип',
+    landing_mockup_margin: 'Реальная маржа',
+    landing_mockup_orders: 'Принято заказов',
+    landing_mockup_orders_sub: 'Реальные заказы магазина',
     landing_mockup_products: 'Активные товары',
     landing_mockup_latest_order: 'Последний заказ',
-    landing_mockup_launch: 'Открыть панель управления →',
+    landing_mockup_launch: 'Открыть реальную панель управления →',
     landing_footer_tagline: 'Продавайте. Автоматизируйте. Растите.',
 
     // Product Import
@@ -1686,16 +1686,16 @@ export const translations: Record<Language, Translations> = {
     landing_plan_biz_btn: 'Upgrade to Business',
 
     // Mockup & Footer
-    landing_mockup_auto_active: '● Order Auto-Fulfillment: ACTIVE',
-    landing_mockup_revenue: 'Total Revenue',
-    landing_mockup_revenue_change: '↑ +24.8% this week',
+    landing_mockup_auto_active: '● Live Store Statistics: REAL-TIME',
+    landing_mockup_revenue: 'Actual Revenue',
+    landing_mockup_revenue_change: 'Verified payments',
     landing_mockup_profit: 'Net Profit',
-    landing_mockup_margin: 'Avg. margin: 26.0%',
+    landing_mockup_margin: 'Real margin',
     landing_mockup_orders: 'Orders Placed',
-    landing_mockup_orders_sub: '100% automated dropship',
+    landing_mockup_orders_sub: 'Actual store orders',
     landing_mockup_products: 'Active Products',
     landing_mockup_latest_order: 'Latest Order',
-    landing_mockup_launch: 'Launch Dashboard →',
+    landing_mockup_launch: 'Open Real Dashboard →',
     landing_footer_tagline: 'Sell. Automate. Grow.',
 
     // Product Import
