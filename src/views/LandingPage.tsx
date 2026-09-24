@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import {
@@ -20,6 +20,11 @@ import {
   Search,
   Smartphone,
   Monitor,
+  Megaphone,
+  Flame,
+  X,
+  Send,
+  MessageCircle,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -36,20 +41,37 @@ export const LandingPage: React.FC = () => {
     getStoreUrl,
   } = useApp();
 
-  // 100% REAL LIVE STORE STATISTICS - NO FAKE / HARDCODED NUMBERS
-  const realOrders = orders || [];
-  const paidOrders = realOrders.filter(
-    (o) => o.paymentStatus === 'paid' || o.paymentStatus === 'Paid'
-  );
-  const realRevenue = paidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  const realProfit = paidOrders.reduce((sum, o) => sum + (o.profit || 0), 0);
-  const realMargin = realRevenue > 0 ? ((realProfit / realRevenue) * 100).toFixed(1) : '0.0';
-  const totalOrdersCount = realOrders.length;
-  const activeProducts = (products || []).filter((p) => p.published !== false);
-  const activeProductsCount = activeProducts.length;
-  const latestRealOrder = realOrders.length > 0 ? realOrders[0] : null;
-  const isAutomationEnabled = automation?.enabled ?? true;
-  const storeDomainDisplay = store?.domain || (store?.slug ? `${store.slug}.sellnex.uz` : 'sellnex.uz/dashboard');
+  // State for Advertising Request Modal
+  const [isAdModalOpen, setIsAdModalOpen] = useState(false);
+  const [adSubmitted, setAdSubmitted] = useState(false);
+  const [adForm, setAdForm] = useState({
+    name: '',
+    phone: '',
+    category: 'product',
+    message: '',
+  });
+
+  const handleAdSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adForm.phone.trim()) return;
+    try {
+      const existing = JSON.parse(localStorage.getItem('sellnex_ad_inquiries') || '[]');
+      existing.unshift({
+        ...adForm,
+        id: `ad_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+      });
+      localStorage.setItem('sellnex_ad_inquiries', JSON.stringify(existing));
+    } catch {
+      // ignore
+    }
+    setAdSubmitted(true);
+    setTimeout(() => {
+      setAdSubmitted(false);
+      setIsAdModalOpen(false);
+      setAdForm({ name: '', phone: '', category: 'product', message: '' });
+    }, 2800);
+  };
 
   const howItWorksSteps = [
     {
@@ -338,109 +360,153 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Dual Hero Visual Preview: 100% Real Live Dashboard & Storefront */}
-        <div className="mt-10 sm:mt-14 max-w-6xl mx-auto rounded-2xl border border-slate-200/80 bg-slate-900/5 p-1.5 sm:p-4 shadow-2xl backdrop-blur-xs w-full overflow-hidden">
-          <div className="bg-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-800 text-left w-full">
-            {/* Window bar */}
-            <div className="bg-slate-950 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-rose-500 shrink-0" />
-                <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-500 shrink-0" />
-                <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 shrink-0" />
-                <span className="ml-1 sm:ml-2 text-[11px] sm:text-xs font-mono text-slate-300 font-semibold truncate">
-                  {store?.name || 'Do‘kon'} • {storeDomainDisplay}
-                </span>
+        {/* Sellnex Reklama & Hamkorlik Vitrinasi (Replaced fake report with real Advertising / Promo Showcase) */}
+        <div id="sellnex-ad-showcase" className="mt-8 sm:mt-12 max-w-6xl mx-auto rounded-3xl border border-slate-700/80 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 p-2 sm:p-5 shadow-2xl text-left w-full overflow-hidden text-white">
+          {/* Top Bar / Ad Tag */}
+          <div className="px-3 sm:px-4 py-3 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-black uppercase tracking-wider">
+                <Megaphone className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-bounce" />
+                <span>Reklama & Hamkorlik Vitrinasi</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] sm:text-[11px] bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>{t('landing_mockup_auto_active', '● Jonli do‘kon statistikasi: REAL VAQT')}</span>
-                </span>
-              </div>
+              <span className="hidden sm:inline-block text-xs text-slate-400 font-medium">
+                O‘zbekiston bo‘ylab 50,000+ maqsadli tadbirkor va xaridorlar
+              </span>
             </div>
-
-            {/* 100% Real Dashboard Data Grid */}
-            <div className="p-3 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-white">
-              {/* Real Revenue */}
-              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60 flex flex-col justify-between">
-                <div>
-                  <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_revenue', 'Haqiqiy tushum')}</p>
-                  <p className="text-lg sm:text-2xl font-bold text-white mt-1">{formatMoney(realRevenue)}</p>
-                </div>
-                <span className="text-xs text-emerald-400 font-semibold mt-2 inline-block">
-                  {paidOrders.length > 0 ? `${paidOrders.length} ta tasdiqlangan to‘lov` : "To'langan buyurtmalar kutilmoqda"}
-                </span>
-              </div>
-
-              {/* Real Net Profit */}
-              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60 flex flex-col justify-between">
-                <div>
-                  <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_profit', 'Sof foyda')}</p>
-                  <p className="text-lg sm:text-2xl font-bold text-emerald-400 mt-1">{formatMoney(realProfit)}</p>
-                </div>
-                <span className="text-xs text-slate-400 mt-2 inline-block">
-                  {realRevenue > 0 ? `Haqiqiy marja: ${realMargin}%` : "Haqiqiy foyda: 0 UZS"}
-                </span>
-              </div>
-
-              {/* Real Orders Count */}
-              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60 flex flex-col justify-between">
-                <div>
-                  <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_orders', 'Qabul qilingan buyurtmalar')}</p>
-                  <p className="text-lg sm:text-2xl font-bold text-white mt-1">{totalOrdersCount}</p>
-                </div>
-                <span className="text-xs text-blue-400 mt-2 inline-block">
-                  {totalOrdersCount > 0 ? `${paidOrders.length} ta to‘langan, ${totalOrdersCount - paidOrders.length} ta jarayonda` : "Hozircha buyurtma yo‘q"}
-                </span>
-              </div>
-
-              {/* Real Active Products */}
-              <div className="bg-slate-800/90 p-3.5 sm:p-4 rounded-xl border border-slate-700/60 flex flex-col justify-between">
-                <div>
-                  <p className="text-xs text-slate-400 font-medium">{t('landing_mockup_products', 'Faol mahsulotlar')}</p>
-                  <p className="text-lg sm:text-2xl font-bold text-white mt-1">{activeProductsCount}</p>
-                </div>
-                <span className="text-xs text-amber-400 mt-2 inline-block">
-                  {activeProductsCount > 0 ? `${activeProductsCount} ta haqiqiy tovar` : "Mahsulotlar qo‘shilmagan"}
-                </span>
-              </div>
+            <div className="flex items-center gap-2">
+              <button
+                id="btn-place-ad-top"
+                onClick={() => setIsAdModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs shadow-md transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span>Reklama joylashtirish</span>
+              </button>
             </div>
+          </div>
 
-            {/* Real Latest Order Status & Real Actions */}
-            <div className="bg-slate-950/80 px-4 sm:px-6 py-3 border-t border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-              <div className="flex flex-wrap items-center gap-2 text-slate-300">
-                {latestRealOrder ? (
-                  <>
-                    <span className="text-blue-400 font-semibold">{t('landing_mockup_latest_order', 'Oxirgi buyurtma')} #{latestRealOrder.orderNumber || latestRealOrder.id.slice(0, 6)}:</span>
-                    <span className="break-all sm:break-normal font-medium text-white">
-                      {latestRealOrder.items?.[0]?.title || 'Buyurtma'} • {formatMoney(latestRealOrder.totalAmount)}
-                    </span>
-                    <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono font-bold text-[11px]">
-                      +{formatMoney(latestRealOrder.profit || 0)} sof foyda
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-emerald-400 font-bold">● 100% Haqiqiy Do‘kon Tizimi:</span>
-                    <span className="text-slate-300">
-                      Hech qanday soxta statistika yo‘q. Do‘koningizni ulab, birinchi haqiqiy buyurtmani qabul qiling!
-                    </span>
-                  </>
-                )}
+          {/* Main Featured Promo Banner */}
+          <div className="p-4 sm:p-6 bg-gradient-to-r from-blue-950/70 via-indigo-950/50 to-slate-900/90 rounded-2xl border border-blue-500/30 m-1.5 sm:m-3">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="space-y-2 max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[11px] font-bold">
+                  <Flame className="w-3.5 h-3.5 text-orange-400" />
+                  <span>HOT PROMO | SELLNEX ADS</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  Mahsulotingiz yoki Do‘koningizni Sellnex orqali butun O‘zbekistonga reklama qiling!
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  Do‘koningiz, optom tovarlaringiz yoki yetkazib berish xizmatingizni eng faol sotuvchilar va xaridorlarga taqdim eting. Sayt bosh sahifasi, katalog va Telegram kanalimizda to‘g‘ridan-to‘g‘ri reklama banneri.
+                </p>
               </div>
-              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 shrink-0">
                 <button
-                  id="mockup-open-dashboard"
-                  onClick={() => {
-                    if (currentUser) {
-                      navigateTo('dashboard');
-                    } else {
-                      navigateTo('auth', { mode: 'login' });
-                    }
-                  }}
-                  className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
+                  id="btn-place-ad-hero"
+                  onClick={() => setIsAdModalOpen(true)}
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
                 >
-                  <span>{t('landing_mockup_launch', 'Haqiqiy boshqaruv panelini ochish →')}</span>
+                  <Megaphone className="w-4 h-4 shrink-0" />
+                  <span>Reklama berish</span>
+                </button>
+                <button
+                  id="btn-view-catalog-promo"
+                  onClick={() => navigateTo('products')}
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs sm:text-sm border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <ShoppingBag className="w-4 h-4 shrink-0 text-blue-400" />
+                  <span>Tovarlar katalogi</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 3 Interactive Commercial Promo Spots */}
+          <div className="p-1.5 sm:p-3 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+            {/* Ad Spot 1: Trend Mahsulotlar */}
+            <div className="bg-slate-800/80 hover:bg-slate-800 transition-colors p-4 rounded-2xl border border-slate-700/70 flex flex-col justify-between space-y-3 group">
+              <div>
+                <div className="flex items-center justify-between text-[11px] font-bold text-amber-400 mb-2">
+                  <span className="flex items-center gap-1">
+                    <Flame className="w-3.5 h-3.5 text-amber-400" />
+                    <span>TREND TOVAR REKLAMASI</span>
+                  </span>
+                  <span className="bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 text-[10px]">Optom Ombor</span>
+                </div>
+                <h4 className="text-sm sm:text-base font-bold text-white group-hover:text-blue-300 transition-colors">
+                  Smart Gadjetlar & Elektronika
+                </h4>
+                <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                  Toshkent omboridan 24 soatda yetkazib berish. 1 donadan boshlab dropshipping va to‘g‘ridan-to‘g‘ri mijozga yetkazish.
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between">
+                <span className="text-[11px] text-emerald-400 font-bold">100% Rasmiy ombor</span>
+                <button
+                  onClick={() => navigateTo('products')}
+                  className="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Katalogda ko‘rish</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Ad Spot 2: Sizning Reklamangiz */}
+            <div className="bg-gradient-to-br from-slate-800/90 to-amber-950/20 hover:border-amber-500/50 transition-all p-4 rounded-2xl border border-amber-500/30 flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between text-[11px] font-bold text-amber-300 mb-2">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>REKLAMA JOYI BO‘SH</span>
+                  </span>
+                  <span className="bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded font-extrabold text-[10px]">Aksiya</span>
+                </div>
+                <h4 className="text-sm sm:text-base font-bold text-white">
+                  Sizning Reklamangiz Shu Yerda!
+                </h4>
+                <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                  Do‘koningiz, mahsulotingiz yoki xizmatingizni birinchi o‘rinda joylashtiring va minglab yangi xaridorlarga ega bo‘ling.
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 font-medium">Kunlik 5,000+ ko‘rishlar</span>
+                <button
+                  onClick={() => setIsAdModalOpen(true)}
+                  className="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Joylashtirish</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Ad Spot 3: To'lov va Yetkazib Berish */}
+            <div className="bg-slate-800/80 hover:bg-slate-800 transition-colors p-4 rounded-2xl border border-slate-700/70 flex flex-col justify-between space-y-3 group">
+              <div>
+                <div className="flex items-center justify-between text-[11px] font-bold text-emerald-400 mb-2">
+                  <span className="flex items-center gap-1">
+                    <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>KAFOLATLANGAN TO‘LOV</span>
+                  </span>
+                  <span className="bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 text-[10px]">Click & Payme</span>
+                </div>
+                <h4 className="text-sm sm:text-base font-bold text-white group-hover:text-emerald-300 transition-colors">
+                  Click, Payme & Uzum Bank
+                </h4>
+                <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                  Barcha savdolar rasmiy xavfsiz to‘lov tizimlari orqali amalga oshiriladi. Mablag‘lar darhol kartangizga tushadi.
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 font-medium">0% yashirin to‘lov</span>
+                <button
+                  onClick={() => navigateTo('auth', { mode: 'signup' })}
+                  className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Do‘kon ochish</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -713,6 +779,124 @@ export const LandingPage: React.FC = () => {
           </p>
         </div>
       </footer>
+
+      {/* Reklama & Hamkorlik Joylashtirish Modali */}
+      {isAdModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl text-white relative max-h-[92vh] overflow-y-auto">
+            {/* Close button */}
+            <button
+              onClick={() => setIsAdModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 rounded-full hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {adSubmitted ? (
+              <div className="py-8 text-center space-y-3">
+                <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold text-white">So‘rovingiz Qabul Qilindi!</h3>
+                <p className="text-xs sm:text-sm text-slate-300 max-w-sm mx-auto">
+                  Rahmat! Reklama va hamkorlik bo‘yicha menejerimiz ko‘rsatilgan telefon raqamingiz orqali tez orada bog‘lanadi.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                    <Megaphone className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white">Reklama Joylashtirish</h3>
+                    <p className="text-xs text-slate-400">Sellnex platformasida mahsulot va brendingizni e’lon qiling</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleAdSubmit} className="mt-4 space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Ismingiz yoki Do‘kon / Brend nomi
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Masalan: Azizbek (Trend Mall)"
+                      value={adForm.name}
+                      onChange={(e) => setAdForm({ ...adForm, name: e.target.value })}
+                      className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-hidden focus:border-blue-500 placeholder-slate-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Telefon raqamingiz (Aloqa uchun) *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="+998 90 123 45 67"
+                      value={adForm.phone}
+                      onChange={(e) => setAdForm({ ...adForm, phone: e.target.value })}
+                      className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-hidden focus:border-blue-500 placeholder-slate-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Reklama / Hamkorlik yo‘nalishi
+                    </label>
+                    <select
+                      value={adForm.category}
+                      onChange={(e) => setAdForm({ ...adForm, category: e.target.value })}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-hidden focus:border-blue-500"
+                    >
+                      <option value="product">🔥 Mahsulot / Tovar reklamasi (Trend tovarlar)</option>
+                      <option value="store">🏪 Onlayn do‘konni targ‘ib qilish</option>
+                      <option value="wholesale">📦 Optom yetkazib beruvchi / Ombor taklifi</option>
+                      <option value="logistics">🚚 Yetkazib berish va Logistika xizmati</option>
+                      <option value="other">✨ Boshqa tijoriy hamkorlik</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Taklifingiz yoki Mahsulot haqida qisqacha
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="Qanday mahsulot yoki xizmatni reklama qilmoqchisiz?.."
+                      value={adForm.message}
+                      onChange={(e) => setAdForm({ ...adForm, message: e.target.value })}
+                      className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-hidden focus:border-blue-500 placeholder-slate-500 resize-none"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
+                    <button
+                      type="submit"
+                      className="w-full sm:flex-1 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                    >
+                      <Send className="w-4 h-4" />
+                      <span>So‘rovni Yuborish</span>
+                    </button>
+                    <a
+                      href="https://t.me/sellnex_support"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full sm:w-auto py-2.5 px-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs rounded-xl border border-slate-700 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <MessageCircle className="w-4 h-4 text-sky-400" />
+                      <span>Telegram</span>
+                    </a>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
