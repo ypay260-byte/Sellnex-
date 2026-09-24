@@ -19,7 +19,7 @@ export interface PendingRegistration {
   password?: string;
 }
 
-export type PlanType = 'trial' | 'starter' | 'pro' | 'free' | 'full' | 'premium' | 'premium_pro' | 'business' | 'custom';
+export type PlanType = 'trial' | 'starter' | 'pro' | 'free' | 'full' | 'premium' | 'premium_pro' | 'business' | 'golden_vip' | 'custom';
 
 export type BusinessType = 'store' | 'restaurant';
 
@@ -99,6 +99,7 @@ export interface Store {
   status?: 'published' | 'draft' | 'private' | 'suspended';
   isTrustedSeller?: boolean;
   directPayoutApproved?: boolean;
+  directPayoutEnabled?: boolean;
   sellerCardNumber?: string;
   sellerCardHolder?: string;
   sellerBankName?: string;
@@ -250,6 +251,11 @@ export interface Order {
   receiptRejectedReason?: string;
   verifiedBy?: string;
   verifiedAt?: string;
+  paymentRouting?: 'admin_escrow' | 'direct_seller';
+  directSellerPayment?: boolean;
+  directSellerCardNumber?: string;
+  directSellerCardHolder?: string;
+  directSellerBankName?: string;
   escrowStatus?: 'pending_payment' | 'paid_held_in_escrow' | 'delivery_submitted' | 'payout_released' | 'refunded';
   deliveryProofNote?: string;
   deliveryProofPhoto?: string;
@@ -280,16 +286,45 @@ export interface Customer {
   status: 'Active' | 'VIP' | 'Inactive';
 }
 
+export interface SupplierReview {
+  id: string;
+  supplierId: string;
+  userId: string;
+  sellerName: string;
+  storeName?: string;
+  shippingSpeedRating: number; // 1 to 5
+  productQualityRating: number; // 1 to 5
+  overallRating: number; // 1 to 5 (average of speed & quality, or explicit rating)
+  comment: string;
+  recommend: boolean;
+  tags?: string[];
+  orderReference?: string;
+  createdAt: string;
+  likesCount?: number;
+}
+
 export interface Supplier {
   id: string;
   name: string;
   type: 'Amazon' | 'Alibaba' | 'Uzum Market' | 'Custom Supplier';
-  status: 'Connected' | 'Partner API' | 'Available' | 'Disconnected';
+  status: 'Connected' | 'Partner API' | 'Available' | 'Disconnected' | 'Active';
   apiUrl?: string;
   apiKey?: string;
   defaultShippingCost: number;
   averageDeliveryDays: string;
   autoOrderSupported: boolean;
+  logo?: string;
+  country?: string;
+  avgDeliveryDays?: string;
+  reliabilityScore?: number;
+  shippingSpeedScore?: number;
+  productQualityScore?: number;
+  reviewCount?: number;
+  recommendRate?: number;
+  productCount?: number;
+  description?: string;
+  fulfillmentType?: string;
+  badge?: string;
 }
 
 export interface AutomationSettings {
@@ -562,6 +597,7 @@ export interface MenuItem {
   discountPrice?: number;
   category: string;
   image: string;
+  imageUrl?: string;
   isAvailable: boolean;
   stockQuantity?: number;
   extraInfo?: string;
@@ -579,6 +615,8 @@ export interface RestaurantOrderItem {
   price: number;
   discountPrice?: number;
   quantity: number;
+  image?: string;
+  imageUrl?: string;
   selectedAddons?: RestaurantAddon[];
   totalPrice: number;
 }

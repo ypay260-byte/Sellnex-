@@ -6,6 +6,7 @@ import {
   Order,
   Customer,
   Supplier,
+  SupplierReview,
   AutomationSettings,
   PartnerLink,
   IntegrationCredentials,
@@ -19,6 +20,7 @@ import {
 import { authService, SignUpParams } from '../services/authService';
 import { firestoreService } from '../services/firestoreService';
 import { Storage } from '../services/storage';
+import { supplierService } from '../services/supplierService';
 import { telegramService } from '../services/telegramService';
 import { subscriptionService } from '../services/subscriptionService';
 import { translations, Translations } from '../data/translations';
@@ -164,6 +166,9 @@ interface AppContextType {
   suppliers: Supplier[];
   addCustomSupplier: (data: Omit<Supplier, 'id' | 'type'>) => Supplier;
   updateSupplier: (id: string, updates: Partial<Supplier>) => void;
+  supplierReviews: SupplierReview[];
+  addSupplierReview: (reviewData: Omit<SupplierReview, 'id' | 'createdAt'>) => Promise<SupplierReview>;
+  getSupplierReviews: (supplierId?: string) => SupplierReview[];
 
   // Automation
   automation: AutomationSettings;
@@ -467,6 +472,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [orders, setOrdersState] = useState<Order[]>(() => Storage.getOrders());
   const [customers, setCustomersState] = useState<Customer[]>(() => Storage.getCustomers());
   const [suppliers, setSuppliersState] = useState<Supplier[]>(() => Storage.getSuppliers());
+  const [supplierReviews, setSupplierReviewsState] = useState<SupplierReview[]>(() => Storage.getSupplierReviews());
   const [automation, setAutomationState] = useState<AutomationSettings>(() => Storage.getAutomation());
   const [partnerLinks, setPartnerLinksState] = useState<PartnerLink[]>(() => Storage.getPartnerLinks());
   const [integrations, setIntegrationsState] = useState<Record<string, IntegrationCredentials>>(() => Storage.getIntegrations());
@@ -1345,6 +1351,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomersState([]);
     setPartnerLinksState([]);
     setNotificationsState([]);
+    firestoreService.clearCafeCache();
     if (typeof window !== 'undefined') {
       window.location.hash = '';
     }
@@ -1782,24 +1789,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // === SUPPLIER & AUTOMATION ACTIONS ===
   const addCustomSupplier = (data: Omit<Supplier, 'id' | 'type'>) => {
-    const newSup: Supplier = {
-      ...data,
-      id: `sup-${Date.now()}`,
-      type: 'Custom Supplier',
-    };
-    const nextSuppliers = [...suppliers, newSup];
-    setSuppliersState(nextSuppliers);
-    Storage.setSuppliers(nextSuppliers);
+    const newSup = supplierService.addCustomSupplier(data);
+    setSuppliersState(Storage.getSuppliers());
     showToast('Supplier Connected', `"${newSup.name}" integrated successfully`, 'success');
     return newSup;
   };
 
   const updateSupplier = (id: string, updates: Partial<Supplier>) => {
-    const nextSuppliers = suppliers.map((s) => (s.id === id ? { ...s, ...updates } : s));
-    setSuppliersState(nextSuppliers);
-    Storage.setSuppliers(nextSuppliers);
+    supplierService.updateSupplier(id, updates);
+    setSuppliersState(Storage.getSuppliers());
     showToast('Supplier Updated', 'Configuration saved', 'success');
   };
+
+  const addSupplierReview = useCallback(
+    async (reviewData: Omit<SupplierReview, 'id' | 'createdAt'>): Promise<SupplierReview> => {
+      const { review, updatedSupplier } = supplierService.addReview(reviewData);
+      setSupplierReviewsState(Storage.getSupplierReviews());
+      if (updatedSupplier) {
+        setSuppliersState(Storage.getSuppliers());
+      }
+      showToast(
+        'Review Submitted!',
+        `Thank you for rating this dropshipping partner.`,
+        'success'
+      );
+      return review;
+    },
+    [showToast]
+  );
+
+  const getSupplierReviews = useCallback(
+    (supplierId?: string) => {
+      if (!supplierId) return supplierReviews;
+      return supplierReviews.filter((r) => r.supplierId === supplierId);
+    },
+    [supplierReviews]
+  );
 
   const updateAutomation = async (updates: Partial<AutomationSettings>) => {
     const updated = { ...automation, ...updates };
@@ -2014,6 +2039,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         suppliers,
         addCustomSupplier,
         updateSupplier,
+        supplierReviews,
+        addSupplierReview,
+        getSupplierReviews,
         automation,
         updateAutomation,
         partnerLinks,

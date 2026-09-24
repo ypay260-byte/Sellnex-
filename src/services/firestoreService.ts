@@ -28,6 +28,7 @@ import {
   Order,
   Customer,
   Supplier,
+  SupplierReview,
   AutomationSettings,
   PartnerLink,
   IntegrationCredentials,
@@ -51,6 +52,7 @@ import {
 import {
   INITIAL_STORE,
   INITIAL_SUPPLIERS,
+  INITIAL_SUPPLIER_REVIEWS,
   INITIAL_AUTOMATION,
   INITIAL_INTEGRATIONS,
 } from '../data/initialData';
@@ -64,6 +66,7 @@ export const COLLECTIONS = {
   CUSTOMERS: 'customers',
   PARTNER_LINKS: 'partner_links',
   SUPPLIERS: 'suppliers',
+  SUPPLIER_REVIEWS: 'supplier_reviews',
   AUTOMATION: 'automation',
   INTEGRATIONS: 'integrations',
   NOTIFICATIONS: 'notifications',
@@ -902,6 +905,62 @@ export const firestoreService = {
     await setDoc(docRef, { ...link, updatedAt: new Date().toISOString() }, { merge: true });
   },
 
+  // === SUPPLIERS & SUPPLIER RATINGS ===
+  async getSuppliers(): Promise<Supplier[]> {
+    try {
+      const snapshot = await getDocs(collection(db, COLLECTIONS.SUPPLIERS));
+      if (!snapshot.empty) {
+        return snapshot.docs.map((d) => d.data() as Supplier);
+      }
+      return INITIAL_SUPPLIERS;
+    } catch (err) {
+      console.warn('Error fetching suppliers from Firestore, using initial:', err);
+      return INITIAL_SUPPLIERS;
+    }
+  },
+
+  async saveSupplier(supplier: Supplier): Promise<void> {
+    try {
+      const docRef = doc(db, COLLECTIONS.SUPPLIERS, supplier.id);
+      await setDoc(docRef, { ...supplier, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (err) {
+      console.warn('Error saving supplier to Firestore:', err);
+    }
+  },
+
+  async getSupplierReviews(supplierId?: string): Promise<SupplierReview[]> {
+    try {
+      let q = collection(db, COLLECTIONS.SUPPLIER_REVIEWS);
+      let queryRef = supplierId
+        ? query(q, where('supplierId', '==', supplierId))
+        : query(q);
+      const snapshot = await getDocs(queryRef);
+      if (!snapshot.empty) {
+        const reviews = snapshot.docs.map((d) => d.data() as SupplierReview);
+        return reviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      }
+      if (supplierId) {
+        return INITIAL_SUPPLIER_REVIEWS.filter((r) => r.supplierId === supplierId);
+      }
+      return INITIAL_SUPPLIER_REVIEWS;
+    } catch (err) {
+      console.warn('Error fetching supplier reviews from Firestore, using initial:', err);
+      if (supplierId) {
+        return INITIAL_SUPPLIER_REVIEWS.filter((r) => r.supplierId === supplierId);
+      }
+      return INITIAL_SUPPLIER_REVIEWS;
+    }
+  },
+
+  async saveSupplierReview(review: SupplierReview): Promise<void> {
+    try {
+      const docRef = doc(db, COLLECTIONS.SUPPLIER_REVIEWS, review.id);
+      await setDoc(docRef, { ...review, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (err) {
+      console.warn('Error saving supplier review to Firestore:', err);
+    }
+  },
+
   // === AUTOMATION & INTEGRATIONS ===
   async getAutomationSettings(storeId: string): Promise<AutomationSettings> {
     try {
@@ -1591,7 +1650,16 @@ export const firestoreService = {
         where('restaurantId', '==', restaurantId)
       );
       const snap = await getDocs(q);
-      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as MenuItem);
+      const items = snap.docs.map((d) => {
+        const data = d.data();
+        const img = data.imageUrl || data.image || '';
+        return {
+          id: d.id,
+          ...data,
+          image: img,
+          imageUrl: img,
+        } as MenuItem;
+      });
       const sorted = items
         .filter((item) => item.restaurantId === restaurantId)
         .sort((a, b) => (a.category || '').localeCompare(b.category || ''));
@@ -1607,9 +1675,12 @@ export const firestoreService = {
     try {
       const id = item.id || `dish_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       const docRef = doc(db, COLLECTIONS.MENU_ITEMS, id);
+      const finalImage = item.imageUrl || item.image || '';
       const payload: MenuItem = {
         ...item,
         id,
+        image: finalImage,
+        imageUrl: finalImage,
         storeType: 'cafe',
         updatedAt: new Date().toISOString(),
         createdAt: item.createdAt || new Date().toISOString(),
@@ -1774,11 +1845,18 @@ export const firestoreService = {
       throw new Error('Mahsulot identifikatori (productId) ko‘rsatilmadi.');
     }
 
-    // Validate MIME types
+    // Validate MIME types & extensions (JPG, JPEG, PNG, WEBP)
     if (file instanceof File) {
-      const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
       const fileType = (file.type || '').toLowerCase();
-      if (fileType && !allowed.includes(fileType)) {
+      const extFromName = (fileName || file.name || '').split('.').pop()?.toLowerCase() || '';
+
+      const isMimeValid = allowedMimes.includes(fileType);
+      const isExtValid = allowedExts.includes(extFromName);
+      const isImagePrefix = fileType.startsWith('image/');
+
+      if (!isMimeValid && !isExtValid && !isImagePrefix) {
         throw new Error('Faqat JPG, JPEG, PNG yoki WebP formatdagi rasmlar qabul qilinadi.');
       }
     }
@@ -1792,13 +1870,13 @@ export const firestoreService = {
       }
     }
 
-    // 1. Client-side compression & optimization
+    // 1. Client-side compression & optimization (Requirement 9: resize large photos, retain high quality)
     let blobToUpload: Blob;
     let mimeType = 'image/jpeg';
     let dataUrlFallback = '';
 
     try {
-      const compResult = await compressProductImageBlob(file, 1200, 0.85);
+      const compResult = await compressProductImageBlob(file, 1400, 0.88);
       blobToUpload = compResult.blob;
       mimeType = compResult.mimeType;
       dataUrlFallback = compResult.dataUrl;
@@ -1829,22 +1907,20 @@ export const firestoreService = {
       });
 
       const downloadUrl = await getDownloadURL(snapshot.ref);
-      if (!downloadUrl) {
-        throw new Error('Yuklangan rasm manzilini (download URL) olib bo‘lmadi.');
+      if (downloadUrl) {
+        return downloadUrl;
       }
-      return downloadUrl;
+      throw new Error('Yuklangan rasm manzilini olib bo‘lmadi.');
     } catch (storageErr: any) {
-      console.error('Firebase Storage upload error:', storageErr);
-      // If Storage fails due to permissions or network, and we have an optimized dataUrl, provide fallback or report clear error
-      if (storageErr?.code === 'storage/unauthorized' || storageErr?.code === 'storage/unknown') {
-        if (dataUrlFallback) {
-          console.warn('Using optimized dataUrl fallback for offline/preview resilience');
-          return dataUrlFallback;
-        }
+      // Exact technical error logged for developer (Requirement 13)
+      console.error('[Firebase Storage Technical Error in uploadCafeProductImage]:', storageErr);
+
+      // If Firebase Storage encounters permissions, CORS or unprovisioned bucket, return the high-quality optimized Data URL
+      if (dataUrlFallback) {
+        console.warn('Firebase Storage offline or unprovisioned: Using optimized client image fallback for cafe product');
+        return dataUrlFallback;
       }
-      throw new Error(
-        `Rasm yuklashda xatolik yuz berdi: ${storageErr?.message || 'Server javob bermadi'}`
-      );
+      throw storageErr;
     }
   },
 

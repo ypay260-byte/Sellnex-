@@ -170,15 +170,36 @@ export const PricingView: React.FC = () => {
       duration: '1 oy',
       priceFormatted: '$20 / oyiga (260,000 UZS)',
       productLimit: 110,
-      desc: 'Yirik brendlar va distributorlar uchun. 110 tagacha mahsulot va cheksiz savdo oqimi.',
-      badge: 'VIP Maksimal',
+      desc: 'Yirik brendlar va faol distributorlar uchun. 110 tagacha mahsulot va to‘g‘ridan-to‘g‘ri to‘lov.',
+      badge: '260 ming+ To‘g‘ridan-to‘g‘ri To‘lov',
       features: [
         'Maksimum 110 ta mahsulot limiti',
+        '⚡ To‘lovlarni Sellnex adminsiz to‘g‘ridan-to‘g‘ri sotuvchi kartasiga qabul qilish (260 ming+ imkoniyati)',
         'Har oy $20 (260,000 UZS)',
         'Cheksiz mijozlar va buyurtmalar',
         'Shaxsiy VIP menejer koʻmagi',
         'Maksimal server tezligi va 0% komissiya',
-        'Barcha yangi imkoniyatlarga 1-kirish',
+      ],
+    },
+    {
+      id: 'golden_vip',
+      name: 'GOLDEN VIP',
+      priceUSD: 100,
+      priceUZS: 1300000,
+      duration: '1 oy',
+      priceFormatted: '$100 / oyiga (1,300,000 UZS)',
+      productLimit: 5000,
+      desc: '5,000 tagacha mahsulot, to‘g‘ridan-to‘g‘ri sotuvchi kartasiga to‘lov qabul qilish va VIP konsyerj.',
+      badge: '👑 GOLDEN VIP',
+      popular: false,
+      features: [
+        'Maksimum 5,000 ta mahsulot katalogi',
+        '⚡ To‘lovlarni to‘g‘ridan-to‘g‘ri sotuvchi kartasiga qabul qilish (Sellnex administratorsiz!)',
+        'Har oy $100 (1,300,000 UZS)',
+        'Cheksiz aylanma va 0% vositachilik to‘lovi',
+        '24/7 Shaxsiy VIP konsyerj va alohida server tezligi',
+        'Barcha dropshipping integratsiyalari va API',
+        'Shaxsiy domen va individual brending',
       ],
     },
   ];
@@ -511,26 +532,54 @@ export const PricingView: React.FC = () => {
         </div>
       </div>
 
+      {/* 260,000 UZS+ Direct Seller Payment Banner */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-emerald-500/10 border-2 border-amber-300/80 rounded-3xl p-5 sm:p-6 mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-sm">
+        <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0 shadow-inner">
+          <Sparkles className="w-6 h-6 text-amber-600 animate-pulse" />
+        </div>
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-black text-amber-800 uppercase tracking-wider bg-amber-100 px-3 py-0.5 rounded-full border border-amber-300">
+              Yangi Imkoniyat: 260 000 UZS dan boshlab
+            </span>
+            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+              Sellnex administratorsiz
+            </span>
+          </div>
+          <h3 className="text-sm sm:text-base font-black text-slate-900 mt-1">
+            Xaridorlar to‘lovi to‘g‘ridan-to‘g‘ri shaxsiy kartangizga tushadi!
+          </h3>
+          <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+            <strong>Premium (260,000 UZS)</strong> va <strong>Golden VIP ($100 / 1,300,000 UZS - 5,000 ta mahsulot)</strong> tariflariga ulangan do‘konlarda xaridorlar buyurtma berganda to‘lov Sellnex markaziy hisobiga emas, to‘g‘ridan-to‘g‘ri sotuvchining o‘z kartasiga o‘tkaziladi.
+          </p>
+        </div>
+      </div>
+
       {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {plans.map((p) => {
           const isCurrent = (currentUser?.plan || 'trial') === p.id;
+          const isGolden = p.id === 'golden_vip';
           return (
             <div
               key={p.id}
-              className={`bg-white rounded-3xl border-2 transition-all p-6 flex flex-col justify-between relative overflow-hidden ${
+              className={`rounded-3xl border-2 transition-all p-6 flex flex-col justify-between relative overflow-hidden ${
                 isCurrent
-                  ? 'border-emerald-500 shadow-md ring-2 ring-emerald-500/10'
+                  ? 'bg-white border-emerald-500 shadow-md ring-2 ring-emerald-500/10'
+                  : isGolden
+                  ? 'bg-gradient-to-b from-amber-50/60 via-white to-white border-amber-400 shadow-xl shadow-amber-500/10 ring-2 ring-amber-400/20'
                   : p.popular
-                  ? 'border-blue-600 shadow-lg'
-                  : 'border-slate-200 hover:border-blue-400 shadow-xs'
+                  ? 'bg-white border-blue-600 shadow-lg'
+                  : 'bg-white border-slate-200 hover:border-blue-400 shadow-xs'
               }`}
             >
               {p.badge && (
                 <div className="absolute top-4 right-4">
                   <span
                     className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${
-                      p.popular
+                      isGolden
+                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs'
+                        : p.popular
                         ? 'bg-blue-600 text-white'
                         : isCurrent
                         ? 'bg-emerald-100 text-emerald-800'
@@ -589,7 +638,9 @@ export const PricingView: React.FC = () => {
                     type="button"
                     onClick={() => handleOpenUpgradeModal(p.id)}
                     className={`w-full py-3.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md ${
-                      p.popular
+                      isGolden
+                        ? 'bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 hover:from-amber-600 hover:to-amber-800 text-white shadow-amber-500/25 ring-1 ring-amber-400/50'
+                        : p.popular
                         ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/25'
                         : 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20'
                     }`}

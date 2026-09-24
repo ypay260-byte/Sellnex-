@@ -69,6 +69,42 @@
         "timestamp": { "type": "string" }
       },
       "required": ["deviceType", "date", "userId", "storeId"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Dropshipping supplier partner profile with reliability ratings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "country": { "type": "string" },
+        "reliabilityScore": { "type": "number" },
+        "shippingSpeedScore": { "type": "number" },
+        "productQualityScore": { "type": "number" },
+        "reviewCount": { "type": "number" }
+      },
+      "required": ["id", "name"]
+    },
+    "SupplierReview": {
+      "title": "SupplierReview",
+      "description": "Seller rating and review for dropshipping supplier partner",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "supplierId": { "type": "string" },
+        "userId": { "type": "string" },
+        "sellerName": { "type": "string" },
+        "storeName": { "type": "string" },
+        "shippingSpeedRating": { "type": "number" },
+        "productQualityRating": { "type": "number" },
+        "overallRating": { "type": "number" },
+        "comment": { "type": "string" },
+        "recommend": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "supplierId", "userId", "shippingSpeedRating", "productQualityRating", "comment"]
     }
   },
   "firestore": {
@@ -87,6 +123,14 @@
     "/device_logs/{logId}": {
       "schema": "#/entities/DeviceLog",
       "description": "Daily device detection audit logs"
+    },
+    "/suppliers/{supplierId}": {
+      "schema": "#/entities/Supplier",
+      "description": "Supplier partners directory"
+    },
+    "/supplier_reviews/{reviewId}": {
+      "schema": "#/entities/SupplierReview",
+      "description": "Seller ratings and reviews for dropshipping suppliers"
     }
   }
 }

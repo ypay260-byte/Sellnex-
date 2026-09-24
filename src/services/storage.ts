@@ -5,6 +5,7 @@ import {
   Order,
   Customer,
   Supplier,
+  SupplierReview,
   AutomationSettings,
   PartnerLink,
   IntegrationCredentials,
@@ -14,6 +15,7 @@ import {
 } from '../types';
 import {
   INITIAL_SUPPLIERS,
+  INITIAL_SUPPLIER_REVIEWS,
   INITIAL_AUTOMATION,
   INITIAL_INTEGRATIONS,
 } from '../data/initialData';
@@ -29,6 +31,7 @@ const KEYS = {
   ORDERS: 'sellnex_orders',
   CUSTOMERS: 'sellnex_customers',
   SUPPLIERS: 'sellnex_suppliers',
+  SUPPLIER_REVIEWS: 'sellnex_supplier_reviews',
   AUTOMATION: 'sellnex_automation',
   PARTNER_LINKS: 'sellnex_partner_links',
   INTEGRATIONS: 'sellnex_integrations',
@@ -110,6 +113,9 @@ export const Storage = {
 
   getSuppliers: (): Supplier[] => safeGet<Supplier[]>(KEYS.SUPPLIERS, INITIAL_SUPPLIERS),
   setSuppliers: (suppliers: Supplier[]) => safeSet(KEYS.SUPPLIERS, suppliers),
+
+  getSupplierReviews: (): SupplierReview[] => safeGet<SupplierReview[]>(KEYS.SUPPLIER_REVIEWS, INITIAL_SUPPLIER_REVIEWS),
+  setSupplierReviews: (reviews: SupplierReview[]) => safeSet(KEYS.SUPPLIER_REVIEWS, reviews),
 
   getAutomation: (): AutomationSettings => safeGet<AutomationSettings>(KEYS.AUTOMATION, INITIAL_AUTOMATION),
   setAutomation: (settings: AutomationSettings) => safeSet(KEYS.AUTOMATION, settings),

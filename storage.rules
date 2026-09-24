@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Multi-tenant isolated Cafe products: cafes/{cafeId}/products/{productId}/...
+    match /cafes/{cafeId}/products/{productId}/{fileName} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /cafes/{cafeId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    // General fallback
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

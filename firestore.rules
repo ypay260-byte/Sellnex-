@@ -62,6 +62,16 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Wholesale & Dropshipping Suppliers Directory
+    match /suppliers/{supplierId} {
+      allow read, write: if true;
+    }
+
+    // Supplier Ratings and Reviews
+    match /supplier_reviews/{reviewId} {
+      allow read, write: if true;
+    }
+
     // Automation & Integrations
     match /automation/{storeId} {
       allow read, write: if true;

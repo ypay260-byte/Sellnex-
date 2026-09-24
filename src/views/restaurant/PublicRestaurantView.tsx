@@ -172,6 +172,8 @@ export const PublicRestaurantView: React.FC = () => {
             menuItemId: selectedDish.id,
             name: selectedDish.name,
             price: basePrice,
+            image: selectedDish.imageUrl || selectedDish.image,
+            imageUrl: selectedDish.imageUrl || selectedDish.image,
             quantity: dishQuantity,
             selectedAddons: selectedAddons,
             totalPrice,
@@ -437,7 +439,7 @@ export const PublicRestaurantView: React.FC = () => {
                 >
                   <div className="relative aspect-4/3 overflow-hidden bg-slate-100">
                     <img
-                      src={dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'}
+                      src={dish.imageUrl || dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'}
                       alt={dish.name}
                       loading="lazy"
                       onError={(e) => {
@@ -559,7 +561,7 @@ export const PublicRestaurantView: React.FC = () => {
           <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-slate-200 animate-scale-up max-h-[90vh] flex flex-col">
             <div className="relative aspect-16/9 bg-slate-100">
               <img
-                src={selectedDish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'}
+                src={selectedDish.imageUrl || selectedDish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'}
                 alt={selectedDish.name}
                 className="w-full h-full object-cover"
               />

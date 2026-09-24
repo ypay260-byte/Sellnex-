@@ -184,9 +184,64 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
     features: [
       '$20 toʻlov evaziga 1 oy aktiv',
       'Maksimum 110 ta mahsulot katalogi',
+      'Toʻlovlarni Sellnex administratorsiz toʻgʻridan-toʻgʻri sotuvchi kartasiga qabul qilish (260 ming+ imkoniyati)',
       'Cheksiz buyurtmalar va toʻliq funksionallik',
       'Shaxsiy VIP menejer koʻmagi',
       'Maksimal server tezligi va 0% komissiya',
+    ],
+  },
+  golden_vip: {
+    id: 'golden_vip',
+    name: 'GOLDEN VIP',
+    tagline: '$100 / month with up to 5,000 products & direct customer payments',
+    priceUSD: 100,
+    priceUZS: 1300000,
+    billingPeriod: '1 month',
+    badge: '👑 GOLDEN VIP',
+    limits: {
+      maxStores: 25,
+      maxProducts: 5000,
+      transactionFeePercent: 0,
+      autoFulfillment: true,
+      telegramAlerts: true,
+      customDomain: true,
+      prioritySupport: true,
+      advancedAnalytics: true,
+    },
+    features: [
+      '$100 toʻlov evaziga 1 oy VIP aktiv',
+      'Maksimum 5,000 ta mahsulot katalogi',
+      'Toʻgʻridan-toʻgʻri sotuvchi kartasiga toʻlov (Sellnex administratorsiz!)',
+      '24/7 Shaxsiy VIP konsyerj va alohida menejer',
+      '0% savdo komissiyasi va cheksiz buyurtmalar',
+      'Barcha dropshipping integratsiyalari va avtomatlashtirish',
+      'Shaxsiy domen va maxsus VIP brending',
+    ],
+  },
+  golden: {
+    id: 'golden_vip',
+    name: 'GOLDEN VIP',
+    tagline: '$100 / month with up to 5,000 products & direct customer payments',
+    priceUSD: 100,
+    priceUZS: 1300000,
+    billingPeriod: '1 month',
+    badge: '👑 GOLDEN VIP',
+    limits: {
+      maxStores: 25,
+      maxProducts: 5000,
+      transactionFeePercent: 0,
+      autoFulfillment: true,
+      telegramAlerts: true,
+      customDomain: true,
+      prioritySupport: true,
+      advancedAnalytics: true,
+    },
+    features: [
+      '$100 toʻlov evaziga 1 oy VIP aktiv',
+      'Maksimum 5,000 ta mahsulot katalogi',
+      'Toʻgʻridan-toʻgʻri sotuvchi kartasiga toʻlov (Sellnex administratorsiz!)',
+      '24/7 Shaxsiy VIP konsyerj va alohida menejer',
+      '0% savdo komissiyasi va cheksiz buyurtmalar',
     ],
   },
   // Legacy aliases for backward compatibility
@@ -248,6 +303,25 @@ export const subscriptionService = {
     if (!planId || planId === 'trial' || planId === 'free') return PLAN_CONFIGS.trial;
     const clean = planId.toLowerCase();
     return PLAN_CONFIGS[clean] || PLAN_CONFIGS.starter;
+  },
+
+  /**
+   * Plans starting from 260,000 UZS (e.g. Premium at 260,000 UZS or Golden VIP at 1,300,000 UZS)
+   * allow direct customer order payment to the merchant plastic card, bypassing Sellnex administrator escrow.
+   */
+  canUseDirectSellerPayout(planId?: string): boolean {
+    if (!planId) return false;
+    const config = this.getPlanConfig(planId);
+    return (config?.priceUZS ?? 0) >= 260000;
+  },
+
+  isDirectPayoutEligible(userOrPlan?: User | string | null): boolean {
+    if (!userOrPlan) return false;
+    if (typeof userOrPlan === 'string') {
+      return this.canUseDirectSellerPayout(userOrPlan);
+    }
+    if (userOrPlan.role === 'admin') return true;
+    return this.canUseDirectSellerPayout(userOrPlan.plan);
   },
 
   getTrialStatus(user: User | null): TrialStatusInfo {
@@ -429,7 +503,20 @@ export const subscriptionService = {
       if (currentProductCount >= limit) {
         return {
           allowed: false,
-          reason: 'You have reached your 110 product limit on Premium.',
+          reason: 'You have reached your 110 product limit on Premium. Upgrade to Golden VIP for up to 5,000 products.',
+          limit,
+        };
+      }
+      return { allowed: true, limit };
+    }
+
+    // Golden VIP: 5,000 products
+    if (plan === 'golden_vip' || (plan as string) === 'golden') {
+      const limit = 5000;
+      if (currentProductCount >= limit) {
+        return {
+          allowed: false,
+          reason: 'Siz Golden VIP tarifidagi 5,000 ta mahsulot limitiga yetdingiz.',
           limit,
         };
       }
@@ -477,6 +564,10 @@ export const subscriptionService = {
       durationDays = 30; // 1 month
       productLimit = 110;
       paymentAmount = 20;
+    } else if (cleanPlan === 'golden_vip' || (cleanPlan as string) === 'golden') {
+      durationDays = 30; // 1 month
+      productLimit = 5000;
+      paymentAmount = 100;
     } else if (cleanPlan === 'trial') {
       durationDays = 7; // 7 days
       productLimit = 5;

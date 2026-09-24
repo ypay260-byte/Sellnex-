@@ -33,6 +33,7 @@ const PLAN_LIMITS: Record<string, { days: number; maxProducts: number; name: str
   business: { days: 30, maxProducts: 50, name: 'Business' },
   premium: { days: 30, maxProducts: 110, name: 'Premium' },
   premium_pro: { days: 365, maxProducts: 500, name: 'Premium Pro' },
+  golden_vip: { days: 30, maxProducts: 5000, name: 'Golden VIP' },
 };
 
 async function startServer() {

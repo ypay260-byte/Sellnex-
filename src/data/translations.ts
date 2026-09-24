@@ -386,6 +386,12 @@ export interface Translations {
   dash_chart_subtitle: string;
   dash_chart_tab_revenue: string;
   dash_chart_tab_profit: string;
+  dash_chart_tab_both: string;
+  dash_chart_30d_badge: string;
+  dash_chart_30d_total: string;
+  dash_chart_daily_avg: string;
+  dash_chart_peak_day: string;
+  dash_chart_footnote: string;
   dash_top_products: string;
   dash_all_products: string;
 
@@ -884,9 +890,15 @@ export const translations: Record<Language, Translations> = {
     dash_mode_dropship: 'Dropship',
     dash_open_customizer: 'Doʻkon konstruktorini ochish',
     dash_chart_title: 'Daromad va Foyda dinamikasi',
-    dash_chart_subtitle: 'Click, Payme va Uzum Bank orqali tushumlar',
+    dash_chart_subtitle: 'Oxirgi 30 kunlik buyurtmalar tushumi va toʻlovlar trendi',
     dash_chart_tab_revenue: 'Tushum (UZS)',
     dash_chart_tab_profit: 'Sof foyda (UZS)',
+    dash_chart_tab_both: 'Ikkalasi',
+    dash_chart_30d_badge: 'Oxirgi 30 kun',
+    dash_chart_30d_total: '30 kunlik jami tushum',
+    dash_chart_daily_avg: 'Kunlik oʻrtacha',
+    dash_chart_peak_day: 'Eng yuqori tushumli kun',
+    dash_chart_footnote: 'Doʻkoningizdagi toʻlangan va qabul qilingan buyurtmalar asosida shakllangan',
     dash_top_products: 'Ommabop mahsulotlar',
     dash_all_products: 'Barcha mahsulotlar',
 
@@ -1384,9 +1396,15 @@ export const translations: Record<Language, Translations> = {
     dash_mode_dropship: 'Дропшиппинг',
     dash_open_customizer: 'Открыть конструктор витрины',
     dash_chart_title: 'Динамика выручки и прибыли',
-    dash_chart_subtitle: 'Поступления через Click, Payme и Uzum Bank',
+    dash_chart_subtitle: 'Тренды выручки от заказов и поступлений за последние 30 дней',
     dash_chart_tab_revenue: 'Выручка (UZS)',
     dash_chart_tab_profit: 'Чистая прибыль (UZS)',
+    dash_chart_tab_both: 'Оба показателя',
+    dash_chart_30d_badge: 'Последние 30 дней',
+    dash_chart_30d_total: 'Общая выручка за 30 дней',
+    dash_chart_daily_avg: 'В среднем за день',
+    dash_chart_peak_day: 'Пиковый день продаж',
+    dash_chart_footnote: 'Рассчитано на основе оплаченных и выполненных заказов магазина',
     dash_top_products: 'Популярные товары',
     dash_all_products: 'Все товары',
 
@@ -1884,9 +1902,15 @@ export const translations: Record<Language, Translations> = {
     dash_mode_dropship: 'Dropship',
     dash_open_customizer: 'Open Storefront Customizer',
     dash_chart_title: 'Revenue & Profit Overview',
-    dash_chart_subtitle: 'Performance across Click, Payme, and Uzum Bank',
+    dash_chart_subtitle: 'Daily order revenue and payment trends over the last 30 days',
     dash_chart_tab_revenue: 'Revenue (UZS)',
     dash_chart_tab_profit: 'Net Profit (UZS)',
+    dash_chart_tab_both: 'Both',
+    dash_chart_30d_badge: 'Last 30 Days',
+    dash_chart_30d_total: '30-Day Total Revenue',
+    dash_chart_daily_avg: 'Daily Average',
+    dash_chart_peak_day: 'Peak Sales Day',
+    dash_chart_footnote: 'Based on verified and paid orders across your storefront',
     dash_top_products: 'Top Products',
     dash_all_products: 'All Products',
 

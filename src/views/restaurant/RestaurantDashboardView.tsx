@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { firestoreService } from '../../services/firestoreService';
-import { RestaurantProfile, RestaurantOrder, RestaurantOrderStatus } from '../../types';
+import { RestaurantProfile, RestaurantOrder, RestaurantOrderStatus, MenuItem } from '../../types';
 import { CafeReceiptModal } from '../../components/cafe/CafeReceiptModal';
 import {
   Clock,
@@ -24,12 +24,15 @@ import {
   Check,
   RotateCcw,
   Bike,
+  Utensils,
+  Plus,
 } from 'lucide-react';
 
 export const RestaurantDashboardView: React.FC = () => {
   const { currentUser, showToast, navigateTo } = useApp();
   const [restaurant, setRestaurant] = useState<RestaurantProfile | null>(null);
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<
     'all' | 'new' | 'accepted' | 'preparing' | 'on_the_way' | 'delivered' | 'cancelled'
@@ -96,6 +99,12 @@ export const RestaurantDashboardView: React.FC = () => {
 
         if (isMounted && profile) {
           setRestaurant(profile);
+          try {
+            const items = await firestoreService.getMenuItems(profile.id);
+            if (isMounted) setMenuItems(items);
+          } catch (menuErr) {
+            console.warn('Dashboard menu items load note:', menuErr);
+          }
         }
       } catch (err) {
         console.error('Restaurant init error', err);
@@ -109,6 +118,16 @@ export const RestaurantDashboardView: React.FC = () => {
       isMounted = false;
     };
   }, [currentUser?.id]);
+
+  // Map for instant item image lookup
+  const itemImageMap = useMemo(() => {
+    const map = new Map<string, string>();
+    menuItems.forEach((m) => {
+      const img = m.imageUrl || m.image;
+      if (img) map.set(m.id, img);
+    });
+    return map;
+  }, [menuItems]);
 
   // Real-time Firestore subscription to orders (unsubscribed cleanly on unmount/route change)
   useEffect(() => {
@@ -413,6 +432,70 @@ export const RestaurantDashboardView: React.FC = () => {
         </div>
       </div>
 
+      {/* Quick Cafe Menu & Products Showcase (Requirement 5: Cafe dashboard'da rasmlar ko'rinsin) */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Utensils className="w-4 h-4 text-amber-600" />
+              <span>Café Mahsulotlari va Menyu ({menuItems.length})</span>
+            </h3>
+            <p className="text-xs text-slate-500">
+              Menyudagi mahsulotlar va ularning rasmlari
+            </p>
+          </div>
+          <button
+            onClick={() => navigateTo('restaurant_menu')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Mahsulot qo‘shish / tahrirlash</span>
+          </button>
+        </div>
+
+        {menuItems.length === 0 ? (
+          <div className="p-6 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
+            <p className="text-xs text-slate-500">Hozircha menyuda mahsulot yo‘q.</p>
+            <button
+              onClick={() => navigateTo('restaurant_menu')}
+              className="mt-2 text-xs font-bold text-amber-700 hover:underline"
+            >
+              + Birinchi mahsulotni qo‘shish
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-1">
+            {menuItems.slice(0, 6).map((item) => (
+              <div
+                key={item.id}
+                onClick={() => navigateTo('restaurant_menu')}
+                className="group cursor-pointer rounded-xl border border-slate-200 overflow-hidden bg-slate-50/50 hover:border-amber-400 hover:shadow-xs transition"
+              >
+                <div className="aspect-square bg-slate-100 relative overflow-hidden">
+                  <img
+                    src={item.imageUrl || item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'}
+                    alt={item.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    loading="lazy"
+                  />
+                  {!item.isAvailable && (
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-white uppercase">Tugagan</span>
+                    </div>
+                  )}
+                </div>
+                <div className="p-2">
+                  <p className="text-xs font-bold text-slate-800 truncate">{item.name}</p>
+                  <p className="text-[11px] font-semibold text-amber-700">
+                    {item.price.toLocaleString()} so‘m
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Orders Section */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         {/* Orders Header & Filter Tabs */}
@@ -531,19 +614,40 @@ export const RestaurantDashboardView: React.FC = () => {
                         <div className="space-y-1.5 divide-y divide-slate-100">
                           {order.items.map((item, idx) => {
                             const itemLineTotal = item.totalPrice || item.price * item.quantity;
+                            const itemImage =
+                              item.imageUrl ||
+                              item.image ||
+                              itemImageMap.get(item.menuItemId) ||
+                              '';
                             return (
-                              <div key={idx} className="pt-1.5 first:pt-0 flex justify-between items-start">
-                                <div>
-                                  <span className="font-semibold text-slate-900">{item.name}</span>{' '}
-                                  <span className="text-amber-800 font-extrabold">× {item.quantity}</span>
-                                  <span className="text-slate-400 ml-1.5 text-[11px]">
-                                    ({item.price.toLocaleString()} so‘m/dona)
-                                  </span>
-                                  {item.selectedAddons && item.selectedAddons.length > 0 && (
-                                    <div className="text-[11px] text-slate-500 pl-2">
-                                      + {item.selectedAddons.map((a) => `${a.name} (${a.price.toLocaleString()} so‘m)`).join(', ')}
+                              <div key={idx} className="pt-2 first:pt-0 flex justify-between items-center gap-3">
+                                <div className="flex items-center gap-2.5">
+                                  {itemImage ? (
+                                    <img
+                                      src={itemImage}
+                                      alt={item.name}
+                                      className="w-10 h-10 rounded-xl object-cover shrink-0 border border-slate-200/80 bg-slate-100"
+                                      onError={(e) => {
+                                        (e.target as HTMLElement).style.display = 'none';
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 border border-amber-100">
+                                      <Utensils className="w-4 h-4" />
                                     </div>
                                   )}
+                                  <div>
+                                    <span className="font-semibold text-slate-900">{item.name}</span>{' '}
+                                    <span className="text-amber-800 font-extrabold">× {item.quantity}</span>
+                                    <span className="text-slate-400 ml-1.5 text-[11px]">
+                                      ({item.price.toLocaleString()} so‘m/dona)
+                                    </span>
+                                    {item.selectedAddons && item.selectedAddons.length > 0 && (
+                                      <div className="text-[11px] text-slate-500 pl-1">
+                                        + {item.selectedAddons.map((a) => `${a.name} (${a.price.toLocaleString()} so‘m)`).join(', ')}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                                 <span className="font-bold text-slate-900 shrink-0 pl-2">
                                   {itemLineTotal.toLocaleString()} so‘m

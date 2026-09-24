@@ -189,21 +189,30 @@ export const RestaurantMenuView: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 1. Format validation: JPG, JPEG, PNG, WebP
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    // 1. Format validation: JPG, JPEG, PNG, WebP (Requirement 8)
+    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
     const fileType = (file.type || '').toLowerCase();
-    if (fileType && !allowedTypes.includes(fileType)) {
+    const ext = (file.name || '').split('.').pop()?.toLowerCase() || '';
+
+    const isValid =
+      allowedMimes.includes(fileType) ||
+      allowedExts.includes(ext) ||
+      (fileType.startsWith('image/') && allowedExts.includes(ext));
+
+    if (!isValid) {
       showToast(
         'Format noto‘g‘ri',
         'Faqat JPG, JPEG, PNG yoki WebP formatdagi rasmlar qabul qilinadi',
         'warning'
       );
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    // 2. Size limit check (< 15MB)
-    if (file.size > 15 * 1024 * 1024) {
-      showToast('Fayl hajmi katta', 'Iltimos, 15 MB dan kichikroq rasm tanlang', 'warning');
+    // 2. Size limit check (< 20MB)
+    if (file.size > 20 * 1024 * 1024) {
+      showToast('Fayl hajmi katta', 'Iltimos, 20 MB dan kichikroq rasm tanlang', 'warning');
       return;
     }
 
@@ -231,13 +240,18 @@ export const RestaurantMenuView: React.FC = () => {
         file,
         file.name
       );
+      // Requirement 11: Upload muvaffaqiyatli bo‘lgach loading yo‘qolsin va rasm preview’da ko‘rinsin
       setDishImage(downloadUrl);
+      setImagePreview(downloadUrl);
+      setImageUploadError(null);
       showToast('Rasm yuklandi', 'Mahsulot rasmi saqlandi', 'success');
     } catch (err: any) {
-      console.error('Product image upload error:', err);
-      const errMsg = err?.message || 'Rasmni yuklab bo‘lmadi';
-      setImageUploadError(errMsg);
-      showToast('Rasm yuklanmadi', errMsg, 'error');
+      // Requirement 13: Developer uchun esa console'da aniq texnik error saqlansin
+      console.error('[Firebase Storage Technical Error in RestaurantMenuView]:', err);
+      // Requirement 12: Foydalanuvchiga faqat tushunarli xabar ko‘rsat
+      const friendlyMessage = 'Rasm yuklanmadi. Qayta urinib ko‘ring.';
+      setImageUploadError(friendlyMessage);
+      showToast('Xatolik', friendlyMessage, 'error');
     } finally {
       setUploadingImage(false);
       if (fileInputRef.current) {
@@ -338,7 +352,7 @@ export const RestaurantMenuView: React.FC = () => {
     try {
       const finalImage =
         dishImage.trim() ||
-        (imagePreview.startsWith('http') ? imagePreview : '') ||
+        (imagePreview.startsWith('http') || imagePreview.startsWith('data:') ? imagePreview.trim() : '') ||
         'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500';
 
       const payload: MenuItem = {
@@ -351,6 +365,7 @@ export const RestaurantMenuView: React.FC = () => {
         discountPrice: dishDiscountPrice ? Number(dishDiscountPrice) : undefined,
         category: dishCategory.trim() || (categories[0]?.name ?? 'Boshqalar'),
         image: finalImage,
+        imageUrl: finalImage,
         isAvailable: dishAvailable,
         stockQuantity: dishStockQuantity ? Number(dishStockQuantity) : undefined,
         extraInfo: dishExtraInfo.trim() || undefined,
@@ -558,7 +573,7 @@ export const RestaurantMenuView: React.FC = () => {
               <div>
                 <div className="relative aspect-16/10 bg-slate-100 overflow-hidden">
                   <img
-                    src={dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'}
+                    src={dish.imageUrl || dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500'}
                     alt={dish.name}
                     loading="lazy"
                     onError={(e) => {
@@ -829,9 +844,10 @@ export const RestaurantMenuView: React.FC = () => {
 
                 {/* Hidden file input */}
                 <input
+                  id="cafe-product-gallery-input"
                   type="file"
                   ref={fileInputRef}
-                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/*"
                   onChange={handleGalleryFileSelect}
                   className="hidden"
                 />
@@ -846,12 +862,11 @@ export const RestaurantMenuView: React.FC = () => {
                         className="w-full h-full object-cover"
                       />
 
-                      {/* Uploading progress overlay */}
+                      {/* Uploading progress overlay (Requirement 10: "Uploading…") */}
                       {uploadingImage && (
                         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex flex-col items-center justify-center gap-2 text-white p-4">
                           <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
-                          <p className="text-xs font-bold">Rasm yuklanmoqda va siqilmoqda...</p>
-                          <p className="text-[11px] text-slate-200">Iltimos kuting</p>
+                          <p className="text-xs font-bold tracking-wide">Uploading…</p>
                         </div>
                       )}
 
@@ -903,12 +918,27 @@ export const RestaurantMenuView: React.FC = () => {
                 ) : (
                   <div
                     onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const droppedFile = e.dataTransfer.files?.[0];
+                      if (droppedFile) {
+                        const fakeEvent = {
+                          target: { files: [droppedFile] },
+                        } as unknown as React.ChangeEvent<HTMLInputElement>;
+                        handleGalleryFileSelect(fakeEvent);
+                      }
+                    }}
                     className="border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/50 hover:bg-amber-50 rounded-2xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2"
                   >
                     {uploadingImage ? (
                       <>
                         <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
-                        <span className="text-xs font-semibold text-amber-900">Rasm yuklanmoqda...</span>
+                        <span className="text-xs font-bold text-amber-900 tracking-wide">Uploading…</span>
                       </>
                     ) : (
                       <>
@@ -920,7 +950,7 @@ export const RestaurantMenuView: React.FC = () => {
                             📱 Galereyadan tanlash
                           </p>
                           <p className="text-[11px] text-slate-500">
-                            JPG, PNG yoki WebP rasm tanlang (avtomatik optimallashtiriladi)
+                            JPG, JPEG, PNG yoki WebP rasm tanlang (avtomatik optimallashtiriladi)
                           </p>
                         </div>
                       </>

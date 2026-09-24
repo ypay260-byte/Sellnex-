@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { firestoreService } from '../services/firestoreService';
+import { subscriptionService } from '../services/subscriptionService';
 import { AdminSettings, Order, StoreDeliveryOption } from '../types';
 import {
   ShoppingBag,
@@ -30,6 +31,7 @@ import {
   ExternalLink,
   RefreshCw,
   XCircle,
+  Crown,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -288,13 +290,45 @@ export const CheckoutView: React.FC = () => {
   const sellnexCardHolder = adminSettings?.p2pCardHolder || 'Sellnex Bosh Administratsiyasi';
   const sellnexBankName = adminSettings?.p2pBankName || 'Milliy Bank / Uzcard Humo';
 
+  // Direct Seller Card resolution: for plans >= 260,000 UZS (Premium, Golden VIP)
+  const activeStoreForCard = publicStore || store;
+  const isDirectOrder =
+    activeOrder?.paymentRouting === 'direct_seller' ||
+    Boolean(activeOrder?.directSellerPayment) ||
+    Boolean(
+      activeStoreForCard?.sellerCardNumber &&
+      activeStoreForCard.sellerCardNumber.replace(/\s+/g, '').length >= 16 &&
+      activeStoreForCard.directPayoutEnabled !== false &&
+      (activeStoreForCard.directPayoutApproved || subscriptionService.isDirectPayoutEligible(currentUser))
+    );
+
+  const effectiveCardNumber =
+    activeOrder?.directSellerCardNumber ||
+    (isDirectOrder && activeStoreForCard?.sellerCardNumber ? activeStoreForCard.sellerCardNumber : sellnexCardNumber);
+
+  const effectiveCardHolder =
+    activeOrder?.directSellerCardHolder ||
+    (isDirectOrder && activeStoreForCard?.sellerCardHolder
+      ? activeStoreForCard.sellerCardHolder
+      : isDirectOrder && activeStoreForCard?.name
+      ? activeStoreForCard.name
+      : sellnexCardHolder);
+
+  const effectiveBankName =
+    activeOrder?.directSellerBankName ||
+    (isDirectOrder && activeStoreForCard?.sellerBankName
+      ? activeStoreForCard.sellerBankName
+      : isDirectOrder
+      ? 'Uzcard / Humo (Sotuvchi)'
+      : sellnexBankName);
+
   const handleCopyCard = () => {
-    const rawCard = sellnexCardNumber.replace(/\s+/g, '');
+    const rawCard = effectiveCardNumber.replace(/\s+/g, '');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(rawCard);
     }
     setCopiedCard(true);
-    showToast('Karta nusxalandi', `${sellnexCardNumber} buferga nusxalandi`, 'success');
+    showToast('Karta nusxalandi', `${effectiveCardNumber} buferga nusxalandi`, 'success');
     setTimeout(() => setCopiedCard(false), 3000);
   };
 
@@ -404,24 +438,68 @@ export const CheckoutView: React.FC = () => {
         const allocatedShippingFee = i === 0 ? currentDeliveryCost : 0;
         const orderTotal = orderSubtotal + allocatedShippingFee;
 
-        // Resolve store owner
+        // Resolve store owner & store object
         let currentOwnerId = '';
+        let targetStoreObj: any = null;
         if (activeStore && (activeStore.id === currentStoreId || activeStore.slug === currentStoreId)) {
           currentOwnerId = activeStore.ownerId || '';
+          targetStoreObj = activeStore;
         } else if (publicStore && (publicStore.id === currentStoreId || publicStore.slug === currentStoreId)) {
           currentOwnerId = publicStore.ownerId || '';
+          targetStoreObj = publicStore;
         } else if (store && (store.id === currentStoreId || store.slug === currentStoreId)) {
           currentOwnerId = store.ownerId || '';
+          targetStoreObj = store;
         }
 
-        if (!currentOwnerId) {
+        if (!targetStoreObj || !currentOwnerId) {
           try {
             const fetchedStore = await firestoreService.getStoreByIdOrSlug(currentStoreId);
-            if (fetchedStore?.ownerId) {
-              currentOwnerId = fetchedStore.ownerId;
+            if (fetchedStore) {
+              targetStoreObj = fetchedStore;
+              if (fetchedStore.ownerId) {
+                currentOwnerId = fetchedStore.ownerId;
+              }
             }
           } catch {
             // fallback inside createOrder
+          }
+        }
+
+        // Direct seller payment check:
+        // For plans >= 260,000 UZS (Premium at 260,000 UZS or Golden VIP at $100 / 1,300,000 UZS)
+        // payment is made directly to the merchant card, bypassing Sellnex admin escrow
+        let isDirectSellerPayment = false;
+        let directCardNumber = '';
+        let directCardHolder = '';
+        let directBankName = '';
+
+        if (
+          targetStoreObj?.sellerCardNumber &&
+          targetStoreObj.sellerCardNumber.replace(/\s+/g, '').length >= 16 &&
+          targetStoreObj.directPayoutEnabled !== false
+        ) {
+          let ownerPlan = '';
+          if (currentOwnerId) {
+            try {
+              const ownerUser = await firestoreService.getUser(currentOwnerId);
+              ownerPlan = ownerUser?.plan || '';
+            } catch {
+              // fallback
+            }
+          }
+          if (
+            subscriptionService.canUseDirectSellerPayout(ownerPlan) ||
+            targetStoreObj.directPayoutApproved ||
+            ownerPlan === 'premium' ||
+            ownerPlan === 'premium_pro' ||
+            ownerPlan === 'golden_vip' ||
+            ownerPlan === 'golden'
+          ) {
+            isDirectSellerPayment = true;
+            directCardNumber = targetStoreObj.sellerCardNumber;
+            directCardHolder = targetStoreObj.sellerCardHolder || targetStoreObj.name || 'Do‘kon Sotuvchisi';
+            directBankName = targetStoreObj.sellerBankName || 'Uzcard / Humo (Sotuvchi)';
           }
         }
 
@@ -446,9 +524,24 @@ export const CheckoutView: React.FC = () => {
           totalAmount: orderTotal,
           totalSupplierCost: orderItems.reduce((acc, it) => acc + it.supplierCost * it.quantity, 0),
           totalProfit: orderItems.reduce((acc, it) => acc + it.profit * it.quantity, 0),
-          paymentMethod: 'Sellnex Card',
+          paymentMethod: isDirectSellerPayment ? 'Direct Seller Card' : 'Sellnex Card',
+          paymentRouting: isDirectSellerPayment ? 'direct_seller' : 'admin_escrow',
+          directSellerPayment: isDirectSellerPayment,
+          directSellerCardNumber: directCardNumber || undefined,
+          directSellerCardHolder: directCardHolder || undefined,
+          directSellerBankName: directBankName || undefined,
           paymentStatus: 'pending',
           orderStatus: 'Pending',
+          timeline: [
+            {
+              status: 'Pending',
+              timestamp: new Date().toISOString(),
+              title: 'Buyurtma yaratildi',
+              description: isDirectSellerPayment
+                ? `Buyurtma yaratildi. To‘lov to‘g‘ridan-to‘g‘ri sotuvchi kartasiga (${directCardNumber}) yo‘naltirildi.`
+                : "Xaridor va yetkazib berish ma'lumotlari muvaffaqiyatli saqlandi. To'lov kutilmoqda.",
+            },
+          ],
         });
 
         if (!primaryCreatedOrder) {
@@ -624,7 +717,9 @@ export const CheckoutView: React.FC = () => {
 
       showToast(
         'Buyurtmangiz qabul qilindi!',
-        'To‘lov chekingiz bosh administrator tomonidan tekshiriladi.',
+        activeOrder.paymentRouting === 'direct_seller' || activeOrder.directSellerPayment
+          ? 'To‘lov cheki to‘g‘ridan-to‘g‘ri do‘kon sotuvchisiga yuborildi. Sotuvchi o‘z kartasiga pul tushganini tekshirib buyurtmani tasdiqlaydi.'
+          : 'To‘lov chekingiz bosh administrator tomonidan tekshiriladi.',
         'success'
       );
 
@@ -805,16 +900,25 @@ export const CheckoutView: React.FC = () => {
                     2
                   </span>
                   <h3 className="text-base sm:text-lg font-black text-slate-900">
-                    Sellnex Plastik Karta To‘lovi
+                    {isDirectOrder ? 'Sotuvchining Shaxsiy Plastik Karta To‘lovi' : 'Sellnex Plastik Karta To‘lovi'}
                   </h3>
                 </div>
-                <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Kafolatlangan To‘lov</span>
-                </span>
+                {isDirectOrder ? (
+                  <span className="text-xs bg-amber-50 text-amber-800 font-black px-3 py-1 rounded-full border border-amber-300 flex items-center gap-1 shadow-xs">
+                    <Crown className="w-3.5 h-3.5 text-amber-600" />
+                    <span>VIP To‘g‘ridan-to‘g‘ri Sotuvchiga</span>
+                  </span>
+                ) : (
+                  <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Kafolatlangan To‘lov</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Quyidagi Sellnex hisob kartasiga to‘lovni amalga oshiring va to‘lov chekini yuklang.
+                {isDirectOrder
+                  ? 'Ushbu do‘kon VIP tarifida joylashgan. To‘lov Sellnex administratorsiz, to‘g‘ridan-to‘g‘ri sotuvchining o‘z kartasiga o‘tkaziladi.'
+                  : 'Quyidagi Sellnex hisob kartasiga to‘lovni amalga oshiring va to‘lov chekini yuklang.'}
               </p>
             </div>
 
@@ -850,28 +954,42 @@ export const CheckoutView: React.FC = () => {
               </div>
             </div>
 
-            {/* Sellnex Payment Card Box */}
-            <div className="p-5 sm:p-6 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white rounded-2xl shadow-xl space-y-4">
+            {/* Payment Card Box (Direct Seller vs Sellnex Central) */}
+            <div
+              className={`p-5 sm:p-6 text-white rounded-2xl shadow-xl space-y-4 ${
+                isDirectOrder
+                  ? 'bg-gradient-to-br from-slate-950 via-amber-950 to-slate-900 border-2 border-amber-400/50'
+                  : 'bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 border border-slate-800'
+              }`}
+            >
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-amber-400" />
-                  <span className="font-extrabold text-xs sm:text-sm text-white">Sellnex Markaziy To‘lov Kartasi</span>
+                  {isDirectOrder ? (
+                    <Crown className="w-5 h-5 text-amber-400" />
+                  ) : (
+                    <CreditCard className="w-5 h-5 text-amber-400" />
+                  )}
+                  <span className="font-extrabold text-xs sm:text-sm text-white">
+                    {isDirectOrder
+                      ? 'Sotuvchining Shaxsiy Plastik Kartasi (Sellnex Adminsiz)'
+                      : 'Sellnex Markaziy To‘lov Kartasi'}
+                  </span>
                 </div>
                 <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-white/15 text-amber-300 border border-white/10">
-                  {sellnexBankName}
+                  {effectiveBankName}
                 </span>
               </div>
 
               <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <span className="text-[10px] text-slate-300 uppercase tracking-wider font-semibold">
-                    Karta Raqami
+                    {isDirectOrder ? 'Sotuvchi Karta Raqami' : 'Karta Raqami'}
                   </span>
                   <div className="font-mono text-lg sm:text-2xl font-black text-amber-300 tracking-wider">
-                    {sellnexCardNumber}
+                    {effectiveCardNumber}
                   </div>
                   <p className="text-xs text-slate-300 mt-1">
-                    Qabul qiluvchi: <strong className="text-white">{sellnexCardHolder}</strong>
+                    Qabul qiluvchi: <strong className="text-white">{effectiveCardHolder}</strong>
                   </p>
                 </div>
 
@@ -895,11 +1013,21 @@ export const CheckoutView: React.FC = () => {
               </div>
 
               <div className="text-[11px] text-slate-300 flex items-start gap-2 bg-white/5 p-3 rounded-xl border border-white/10">
-                <Lock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Sellnex Kafolati:</strong> To‘lovingiz buyurtma to‘liq yetkazilguncha xavfsiz saqlanadi.
-                  Iltimos, kartaga to‘lov qilib, chekni quyida yuklang.
-                </span>
+                {isDirectOrder ? (
+                  <>
+                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>VIP To‘g‘ridan-to‘g‘ri to‘lov:</strong> Mablag‘ to‘g‘ridan-to‘g‘ri do‘kon egasining kartasiga o‘tkaziladi (Sellnex administrator vositachiligisiz). Iltimos, kartaga to‘lov qilib, chekni quyida yuklang.
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Sellnex Kafolati:</strong> To‘lovingiz buyurtma to‘liq yetkazilguncha xavfsiz saqlanadi. Iltimos, kartaga to‘lov qilib, chekni quyida yuklang.
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 

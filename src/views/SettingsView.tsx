@@ -20,6 +20,8 @@ import {
   KeyRound,
   Sparkles,
   ArrowRight,
+  Crown,
+  Check,
 } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
@@ -47,6 +49,12 @@ export const SettingsView: React.FC = () => {
   const [telegram, setTelegram] = useState(store.telegram || '');
   const [instagram, setInstagram] = useState(store.instagram || '');
   const [currency, setCurrency] = useState(store.currency || 'UZS');
+
+  // Direct Merchant Card Payout (for 260K+ UZS / VIP tiers)
+  const [sellerCardNumber, setSellerCardNumber] = useState(store.sellerCardNumber || '');
+  const [sellerCardHolder, setSellerCardHolder] = useState(store.sellerCardHolder || currentUser?.name || '');
+  const [sellerBankName, setSellerBankName] = useState(store.sellerBankName || 'Uzcard / Humo (O‘zbekiston)');
+  const [directPayoutEnabled, setDirectPayoutEnabled] = useState(store.directPayoutEnabled !== false);
 
   // Payment test credentials
   const [clickServiceId, setClickServiceId] = useState('14920');
@@ -494,66 +502,237 @@ export const SettingsView: React.FC = () => {
         </form>
       )}
 
-      {/* Tab 2: Payment Gateway Keys */}
+      {/* Tab 2: Payment Gateway & Direct Merchant Payout */}
       {activeTab === 'payments' && (
-        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 text-xs">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-emerald-600" />
-              <span>Payment Gateway API Credentials (Uzbekistan)</span>
-            </h3>
-            <span className="text-[11px] bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
-              Production Gateway
-            </span>
+        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-8 text-xs">
+          {/* Section 1: Direct Seller Payment (260K+ UZS / Golden VIP) */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-amber-500" />
+                  <span>To‘g‘ridan-to‘g‘ri Sotuvchi Kartasiga To‘lov Qabul Qilish</span>
+                </h3>
+                <p className="text-slate-500 text-xs mt-0.5">
+                  Xaridorlar buyurtma berganda to‘lov Sellnex administratoriga emas, to‘g‘ridan-to‘g‘ri sizning shaxsiy kartangizga o‘tkaziladi.
+                </p>
+              </div>
+
+              {subscriptionService.isDirectPayoutEligible(currentUser) ? (
+                <span className="text-[11px] bg-gradient-to-r from-amber-500/10 to-emerald-500/10 text-amber-800 font-extrabold px-3 py-1 rounded-full border border-amber-300 flex items-center gap-1.5 shrink-0 self-start sm:self-auto">
+                  <Crown className="w-3.5 h-3.5 text-amber-500" />
+                  <span>260 000+ VIP / Faol</span>
+                </span>
+              ) : (
+                <span className="text-[11px] bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-full border border-slate-200 flex items-center gap-1 shrink-0 self-start sm:self-auto">
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>260 000 UZS dan boshlab</span>
+                </span>
+              )}
+            </div>
+
+            {subscriptionService.isDirectPayoutEligible(currentUser) ? (
+              <div className="bg-gradient-to-br from-amber-50/60 via-slate-50 to-white rounded-2xl p-5 border-2 border-amber-300/80 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                    <span className="font-extrabold text-slate-900 text-xs">
+                      Sizning Shaxsiy Plastik Karta Rekvizitlaringiz
+                    </span>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <span className="text-[11px] font-bold text-slate-700">To‘g‘ridan-to‘g‘ri to‘lov:</span>
+                    <input
+                      type="checkbox"
+                      checked={directPayoutEnabled}
+                      onChange={(e) => setDirectPayoutEnabled(e.target.checked)}
+                      className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
+                    />
+                    <span className={`text-[11px] font-black ${directPayoutEnabled ? 'text-emerald-700' : 'text-slate-400'}`}>
+                      {directPayoutEnabled ? 'YOQILGAN' : 'O‘CHIRILGAN'}
+                    </span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Karta Raqami (16 xonali Uzcard / Humo)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={19}
+                      value={sellerCardNumber}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+                        setSellerCardNumber(val);
+                      }}
+                      placeholder="8600 0000 0000 0000"
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Karta Egasi (Ism Familiya)
+                    </label>
+                    <input
+                      type="text"
+                      value={sellerCardHolder}
+                      onChange={(e) => setSellerCardHolder(e.target.value.toUpperCase())}
+                      placeholder="ALISHER USMONOV"
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Bank Nomi
+                    </label>
+                    <input
+                      type="text"
+                      value={sellerBankName}
+                      onChange={(e) => setSellerBankName(e.target.value)}
+                      placeholder="Kapitalbank / Ipak Yo‘li"
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-900 outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-white/80 p-3 rounded-xl border border-amber-200/80 flex items-start gap-2.5">
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check className="w-3 h-3 stroke-[3]" />
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Xaridorlar buyurtma berish sahifasida (Checkout) ushbu karta raqami ko‘rsatiladi. Mijoz chek yuklaganida to‘lov to‘g‘ridan-to‘g‘ri sizning kartangizga tushadi va buyurtmalar ro‘yxatida <strong>"To‘lovni tasdiqlash"</strong> tugmasi orqali qabul qilasiz.
+                  </p>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateStore({
+                        sellerCardNumber: sellerCardNumber.trim(),
+                        sellerCardHolder: sellerCardHolder.trim(),
+                        sellerBankName: sellerBankName.trim(),
+                        directPayoutEnabled,
+                        directPayoutApproved: true,
+                      });
+                      showToast(
+                        'Karta Ma’lumotlari Saqlandi!',
+                        'Xaridorlar to‘lovi to‘g‘ridan-to‘g‘ri kartangizga yo‘naltirildi (Sellnex administratorsiz).',
+                        'success'
+                      );
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Sotuvchi Kartasini Saqlash</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-5 bg-gradient-to-r from-amber-50/50 via-slate-50 to-blue-50/50 rounded-2xl border-2 border-dashed border-amber-300/80 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-black text-slate-900 text-xs sm:text-sm">
+                      To‘g‘ridan-to‘g‘ri sotuvchi kartasiga to‘lov — 260 000 UZS (Premium) va $100 (Golden VIP) tariflarda!
+                    </h4>
+                    <p className="text-slate-600 text-xs mt-1 leading-relaxed">
+                      Hozirgi tarifingizda barcha xaridor to‘lovlari Sellnex markaziy ma’muriyati orqali kafolatlangan holda qabul qilinadi.
+                      Xaridorlar buyurtma berganida to‘lovni Sellnex administratorsiz, to‘g‘ridan-to‘g‘ri shaxsiy kartangizga qabul qilish uchun tarifingizni yangilang.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-slate-200/60">
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Joriy tarifingiz: <strong className="text-slate-800 uppercase">{currentUser?.plan || 'TRIAL'}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => navigateTo('pricing')}
+                    className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer transition-all"
+                  >
+                    <Crown className="w-3.5 h-3.5" />
+                    <span>Tarifni Yangilash (260 000 so‘mdan boshlab)</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-4">
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-              <p className="font-bold text-slate-900">Click Merchant Switch</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Section 2: Payment Gateway API Credentials */}
+          <div className="pt-6 border-t border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-emerald-600" />
+                  <span>Click & Payme API Kalitlari (Opsional)</span>
+                </h3>
+                <p className="text-slate-500 text-xs mt-0.5">
+                  Avtomatlashtirilgan Click Merchant va Payme Business integratsiyasi uchun API ma’lumotlari.
+                </p>
+              </div>
+              <span className="text-[11px] bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
+                Production Gateway
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                <p className="font-bold text-slate-900">Click Merchant Switch</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-1">Click Service ID</label>
+                    <input
+                      type="text"
+                      value={clickServiceId}
+                      onChange={(e) => setClickServiceId(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-1">Click Secret Key</label>
+                    <input
+                      type="password"
+                      value={clickSecretKey}
+                      onChange={(e) => setClickSecretKey(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                <p className="font-bold text-slate-900">Payme Business Gateway</p>
                 <div>
-                  <label className="block text-[11px] text-slate-500 mb-1">Click Service ID</label>
+                  <label className="block text-[11px] text-slate-500 mb-1">Payme Merchant ID</label>
                   <input
                     type="text"
-                    value={clickServiceId}
-                    onChange={(e) => setClickServiceId(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] text-slate-500 mb-1">Click Secret Key</label>
-                  <input
-                    type="password"
-                    value={clickSecretKey}
-                    onChange={(e) => setClickSecretKey(e.target.value)}
+                    value={paymeMerchantId}
+                    onChange={(e) => setPaymeMerchantId(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg font-mono"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-              <p className="font-bold text-slate-900">Payme Business Gateway</p>
-              <div>
-                <label className="block text-[11px] text-slate-500 mb-1">Payme Merchant ID</label>
-                <input
-                  type="text"
-                  value={paymeMerchantId}
-                  onChange={(e) => setPaymeMerchantId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg font-mono"
-                />
-              </div>
+            <div className="pt-4 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => showToast('Kalitlar Saqlandi!', 'To‘lov tizimi API kalitlari xavfsiz saqlandi.', 'success')}
+                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Save className="w-4 h-4" />
+                <span>API Kalitlarini Saqlash</span>
+              </button>
             </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 flex justify-end">
-            <button
-              onClick={() => showToast('Keys Saved!', 'Payment gateway API keys securely saved.', 'success')}
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm flex items-center gap-1.5 transition-all"
-            >
-              <Save className="w-4 h-4" />
-              <span>Save Payment Keys</span>
-            </button>
           </div>
         </div>
       )}
