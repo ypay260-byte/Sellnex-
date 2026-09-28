@@ -360,46 +360,33 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Sellnex Reklama & Hamkorlik - Compact Banner */}
-        <div id="sellnex-ad-showcase" className="mt-8 max-w-5xl mx-auto w-full px-2 sm:px-4">
-          <div className="relative rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-700/80 p-4 sm:p-5 shadow-xl text-white overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="space-y-1.5 max-w-2xl text-left">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-bold uppercase tracking-wider">
-                    <Megaphone className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Reklama & Hamkorlik</span>
-                  </span>
-                  <span className="text-xs text-slate-400 hidden sm:inline">
-                    • 50,000+ maqsadli auditoriya
-                  </span>
+        {/* Sellnex Reklama & Hamkorlik - Ultra Compact Strip */}
+        <div id="sellnex-ad-showcase" className="mt-6 max-w-3xl mx-auto w-full px-3">
+          <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3 sm:py-2.5 sm:px-4 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 text-white">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto text-left">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+                <Megaphone className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-bold text-white">Sellnex Ads & Hamkorlik</span>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-semibold border border-amber-500/30">50k+</span>
                 </div>
-                <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                  Mahsulotingiz yoki Do‘koningizni Sellnex’da reklama qiling
-                </h3>
-                <p className="text-xs text-slate-300">
-                  Bosh sahifa, katalog va Telegram kanalimizda mahsulotlaringizni e’lon qilib yangi xaridorlarga ega bo‘ling.
+                <p className="text-[11px] text-slate-400 truncate max-w-xs sm:max-w-sm">
+                  Tovar yoki do‘koningizni platformada reklama qiling
                 </p>
               </div>
+            </div>
 
-              <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
-                <button
-                  id="btn-place-ad"
-                  onClick={() => setIsAdModalOpen(true)}
-                  className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer whitespace-nowrap"
-                >
-                  <Megaphone className="w-3.5 h-3.5 shrink-0" />
-                  <span>Reklama berish</span>
-                </button>
-                <button
-                  id="btn-ad-catalog"
-                  onClick={() => navigateTo('products')}
-                  className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs sm:text-sm border border-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
-                >
-                  <ShoppingBag className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Tovarlar</span>
-                </button>
-              </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+              <button
+                id="btn-place-ad"
+                onClick={() => setIsAdModalOpen(true)}
+                className="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer whitespace-nowrap"
+              >
+                <Megaphone className="w-3.5 h-3.5 shrink-0" />
+                <span>Reklama berish</span>
+              </button>
             </div>
           </div>
         </div>
