@@ -360,153 +360,44 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Sellnex Reklama & Hamkorlik Vitrinasi (Replaced fake report with real Advertising / Promo Showcase) */}
-        <div id="sellnex-ad-showcase" className="mt-8 sm:mt-12 max-w-6xl mx-auto rounded-3xl border border-slate-700/80 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 p-2 sm:p-5 shadow-2xl text-left w-full overflow-hidden text-white">
-          {/* Top Bar / Ad Tag */}
-          <div className="px-3 sm:px-4 py-3 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-black uppercase tracking-wider">
-                <Megaphone className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-bounce" />
-                <span>Reklama & Hamkorlik Vitrinasi</span>
-              </div>
-              <span className="hidden sm:inline-block text-xs text-slate-400 font-medium">
-                O‘zbekiston bo‘ylab 50,000+ maqsadli tadbirkor va xaridorlar
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                id="btn-place-ad-top"
-                onClick={() => setIsAdModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs shadow-md transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                <span>Reklama joylashtirish</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Main Featured Promo Banner */}
-          <div className="p-4 sm:p-6 bg-gradient-to-r from-blue-950/70 via-indigo-950/50 to-slate-900/90 rounded-2xl border border-blue-500/30 m-1.5 sm:m-3">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="space-y-2 max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[11px] font-bold">
-                  <Flame className="w-3.5 h-3.5 text-orange-400" />
-                  <span>HOT PROMO | SELLNEX ADS</span>
+        {/* Sellnex Reklama & Hamkorlik - Compact Banner */}
+        <div id="sellnex-ad-showcase" className="mt-8 max-w-5xl mx-auto w-full px-2 sm:px-4">
+          <div className="relative rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-700/80 p-4 sm:p-5 shadow-xl text-white overflow-hidden">
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-1.5 max-w-2xl text-left">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-bold uppercase tracking-wider">
+                    <Megaphone className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Reklama & Hamkorlik</span>
+                  </span>
+                  <span className="text-xs text-slate-400 hidden sm:inline">
+                    • 50,000+ maqsadli auditoriya
+                  </span>
                 </div>
-                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  Mahsulotingiz yoki Do‘koningizni Sellnex orqali butun O‘zbekistonga reklama qiling!
+                <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                  Mahsulotingiz yoki Do‘koningizni Sellnex’da reklama qiling
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  Do‘koningiz, optom tovarlaringiz yoki yetkazib berish xizmatingizni eng faol sotuvchilar va xaridorlarga taqdim eting. Sayt bosh sahifasi, katalog va Telegram kanalimizda to‘g‘ridan-to‘g‘ri reklama banneri.
+                <p className="text-xs text-slate-300">
+                  Bosh sahifa, katalog va Telegram kanalimizda mahsulotlaringizni e’lon qilib yangi xaridorlarga ega bo‘ling.
                 </p>
               </div>
 
-              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 shrink-0">
+              <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
                 <button
-                  id="btn-place-ad-hero"
+                  id="btn-place-ad"
                   onClick={() => setIsAdModalOpen(true)}
-                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                  className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer whitespace-nowrap"
                 >
-                  <Megaphone className="w-4 h-4 shrink-0" />
+                  <Megaphone className="w-3.5 h-3.5 shrink-0" />
                   <span>Reklama berish</span>
                 </button>
                 <button
-                  id="btn-view-catalog-promo"
+                  id="btn-ad-catalog"
                   onClick={() => navigateTo('products')}
-                  className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs sm:text-sm border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs sm:text-sm border border-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
-                  <ShoppingBag className="w-4 h-4 shrink-0 text-blue-400" />
-                  <span>Tovarlar katalogi</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 3 Interactive Commercial Promo Spots */}
-          <div className="p-1.5 sm:p-3 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-            {/* Ad Spot 1: Trend Mahsulotlar */}
-            <div className="bg-slate-800/80 hover:bg-slate-800 transition-colors p-4 rounded-2xl border border-slate-700/70 flex flex-col justify-between space-y-3 group">
-              <div>
-                <div className="flex items-center justify-between text-[11px] font-bold text-amber-400 mb-2">
-                  <span className="flex items-center gap-1">
-                    <Flame className="w-3.5 h-3.5 text-amber-400" />
-                    <span>TREND TOVAR REKLAMASI</span>
-                  </span>
-                  <span className="bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 text-[10px]">Optom Ombor</span>
-                </div>
-                <h4 className="text-sm sm:text-base font-bold text-white group-hover:text-blue-300 transition-colors">
-                  Smart Gadjetlar & Elektronika
-                </h4>
-                <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                  Toshkent omboridan 24 soatda yetkazib berish. 1 donadan boshlab dropshipping va to‘g‘ridan-to‘g‘ri mijozga yetkazish.
-                </p>
-              </div>
-              <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between">
-                <span className="text-[11px] text-emerald-400 font-bold">100% Rasmiy ombor</span>
-                <button
-                  onClick={() => navigateTo('products')}
-                  className="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Katalogda ko‘rish</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Ad Spot 2: Sizning Reklamangiz */}
-            <div className="bg-gradient-to-br from-slate-800/90 to-amber-950/20 hover:border-amber-500/50 transition-all p-4 rounded-2xl border border-amber-500/30 flex flex-col justify-between space-y-3">
-              <div>
-                <div className="flex items-center justify-between text-[11px] font-bold text-amber-300 mb-2">
-                  <span className="flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                    <span>REKLAMA JOYI BO‘SH</span>
-                  </span>
-                  <span className="bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded font-extrabold text-[10px]">Aksiya</span>
-                </div>
-                <h4 className="text-sm sm:text-base font-bold text-white">
-                  Sizning Reklamangiz Shu Yerda!
-                </h4>
-                <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                  Do‘koningiz, mahsulotingiz yoki xizmatingizni birinchi o‘rinda joylashtiring va minglab yangi xaridorlarga ega bo‘ling.
-                </p>
-              </div>
-              <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between">
-                <span className="text-[11px] text-slate-400 font-medium">Kunlik 5,000+ ko‘rishlar</span>
-                <button
-                  onClick={() => setIsAdModalOpen(true)}
-                  className="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Joylashtirish</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Ad Spot 3: To'lov va Yetkazib Berish */}
-            <div className="bg-slate-800/80 hover:bg-slate-800 transition-colors p-4 rounded-2xl border border-slate-700/70 flex flex-col justify-between space-y-3 group">
-              <div>
-                <div className="flex items-center justify-between text-[11px] font-bold text-emerald-400 mb-2">
-                  <span className="flex items-center gap-1">
-                    <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>KAFOLATLANGAN TO‘LOV</span>
-                  </span>
-                  <span className="bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 text-[10px]">Click & Payme</span>
-                </div>
-                <h4 className="text-sm sm:text-base font-bold text-white group-hover:text-emerald-300 transition-colors">
-                  Click, Payme & Uzum Bank
-                </h4>
-                <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                  Barcha savdolar rasmiy xavfsiz to‘lov tizimlari orqali amalga oshiriladi. Mablag‘lar darhol kartangizga tushadi.
-                </p>
-              </div>
-              <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between">
-                <span className="text-[11px] text-slate-400 font-medium">0% yashirin to‘lov</span>
-                <button
-                  onClick={() => navigateTo('auth', { mode: 'signup' })}
-                  className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Do‘kon ochish</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ShoppingBag className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Tovarlar</span>
                 </button>
               </div>
             </div>
