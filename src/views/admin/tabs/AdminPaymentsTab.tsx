@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { P2PPayment, AdminSettings, DynamicPlan, User, PlanType, Order, Store } from '../../../types';
 import { firestoreService } from '../../../services/firestoreService';
 import {
@@ -24,7 +24,12 @@ import {
   FileCheck,
   ShoppingBag,
   ArrowLeft,
+  QrCode,
+  Upload,
+  Trash2,
+  Download,
 } from 'lucide-react';
+import { downloadPaynetQrImage } from '../../../utils/qrDownload';
 
 interface AdminPaymentsTabProps {
   p2pPayments: P2PPayment[];
@@ -105,9 +110,41 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
   const [cardNumber, setCardNumber] = useState(settings?.p2pCardNumber || '8600 3141 7549 7736');
   const [cardHolder, setCardHolder] = useState(settings?.p2pCardHolder || 'Sellnex Bosh Administratsiyasi');
   const [bankName, setBankName] = useState(settings?.p2pBankName || 'Milliy Bank / Uzcard Humo');
+  const [paynetQrCodeUrl, setPaynetQrCodeUrl] = useState(settings?.paynetQrCodeUrl || '');
   const [instructions, setInstructions] = useState(
     settings?.p2pInstructions || 'Iltimos, kartaga toʻlov qiling va chek skrinshotini yuklang. Admin 15 daqiqada tasdiqlaydi.'
   );
+
+  // Sync settings when loaded from Firestore
+  useEffect(() => {
+    if (settings) {
+      if (settings.p2pCardNumber) setCardNumber(settings.p2pCardNumber);
+      if (settings.p2pCardHolder) setCardHolder(settings.p2pCardHolder);
+      if (settings.p2pBankName) setBankName(settings.p2pBankName);
+      if (settings.paynetQrCodeUrl !== undefined) setPaynetQrCodeUrl(settings.paynetQrCodeUrl);
+      if (settings.p2pInstructions) setInstructions(settings.p2pInstructions);
+    }
+  }, [settings]);
+
+  const qrFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleQrImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      showToast('Fayl juda katta', 'Iltimos, 8MB dan kichik rasm tanlang', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (dataUrl) {
+        setPaynetQrCodeUrl(dataUrl);
+        showToast('QR rasm yuklandi', 'Skrinshot muvaffaqiyatli tanlandi. Saqlash tugmasini bosing.', 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const pendingOrdersCount = localOrders.filter((o) => o.paymentStatus === 'pending_verification').length;
   const pendingSubsCount = p2pPayments.filter((p) => p.status === 'pending').length;
@@ -354,6 +391,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
         p2pCardNumber: cardNumber.trim(),
         p2pCardHolder: cardHolder.trim(),
         p2pBankName: bankName.trim(),
+        paynetQrCodeUrl: paynetQrCodeUrl.trim(),
         p2pInstructions: instructions.trim(),
       });
       await recordAudit(
@@ -367,6 +405,25 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
       showToast('Saqlashda xatolik', err.message, 'error');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // Download Paynet QR code image as PNG
+  const handleDownloadQr = async () => {
+    const rawCard = (cardNumber || '8600314175497736').replace(/\s/g, '');
+    const activeQr = paynetQrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=360x360&data=${encodeURIComponent(`https://paynet.uz/p2p?card=${rawCard}`)}`;
+    showToast('Yuklanmoqda...', 'Paynet QR-kod surati tayyorlanmoqda', 'info');
+    const success = await downloadPaynetQrImage({
+      qrImageUrl: activeQr,
+      cardNumber: cardNumber || '8600 3141 7549 7736',
+      cardHolder: cardHolder || 'Sellnex Bosh Administratsiyasi',
+      bankName: bankName || 'Milliy Bank / Uzcard Humo',
+      fileName: `paynet-qr-${rawCard}.png`,
+    });
+    if (success) {
+      showToast('Muvaffaqiyatli saqlandi', 'QR-kod surati qurilmangizga yuklab olindi (PNG)', 'success');
+    } else {
+      showToast('Xatolik', 'QR-kod suratini yuklab olishda muammo yuz berdi', 'error');
     }
   };
 
@@ -427,6 +484,52 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
         >
           <RefreshCw className="w-4 h-4" />
         </button>
+      </div>
+
+      {/* Current Active Admin Card Status Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center justify-center shrink-0">
+            <CreditCard className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-300">Admin To‘lov Kartasi (Paynet & P2P):</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">Faol</span>
+            </div>
+            <div className="font-mono text-base font-black text-amber-300 tracking-wider">
+              {cardNumber || '8600 3141 7549 7736'}
+            </div>
+            <div className="text-[11px] text-slate-400">
+              {cardHolder || 'Sellnex Bosh Administratsiyasi'} • {bankName || 'Milliy Bank / Uzcard Humo'}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleDownloadQr}
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-md cursor-pointer"
+            title="Paynet QR-kod suratini yuklab olish (PNG)"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-400" />
+            <span>QR Yuklab Olish</span>
+          </button>
+          {activeSubTab !== 'card_setup' ? (
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('card_setup')}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-md cursor-pointer"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Kartani O‘zgartirish</span>
+            </button>
+          ) : (
+            <div className="text-xs text-amber-300/90 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
+              O‘zgartirish rejimida
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ======================================================== */}
@@ -710,69 +813,202 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
             <span className="text-xs text-slate-400">Checkout & Obuna uchun</span>
           </div>
 
-          <p className="text-xs text-slate-300">
-            Ushbu bank karta ma’lumotlari Sellnex xaridori checkout’da “Sellnex Plastik Karta To‘lovi”ni tanlaganda
-            hamda sotuvchilar tarif sotib olayotganda avtomatik ravishda ko‘rsatiladi.
-          </p>
-
-          <div className="space-y-4 text-xs">
-            <div>
-              <label className="block text-slate-300 font-semibold mb-1.5">
-                Karta Raqami (Uzcard / Humo) <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={cardNumber}
-                onChange={(e) => setCardNumber(e.target.value)}
-                placeholder="8600 3141 7549 7736"
-                className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 rounded-xl px-4 py-3 text-white font-mono text-sm outline-hidden"
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-300 font-semibold mb-1.5">
-                Karta Egasi (F.I.Sh. yoki Tashkilot) <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={cardHolder}
-                onChange={(e) => setCardHolder(e.target.value)}
-                placeholder="Sellnex Bosh Administratsiyasi"
-                className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 rounded-xl px-4 py-3 text-white text-sm outline-hidden"
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-300 font-semibold mb-1.5">
-                Bank Nomi <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                placeholder="Milliy Bank / Uzcard Humo"
-                className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 rounded-xl px-4 py-3 text-white text-sm outline-hidden"
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-300 font-semibold mb-1.5">Ko‘rsatma Matni</label>
-              <textarea
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-                rows={3}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 rounded-xl px-4 py-3 text-white text-xs outline-hidden"
-              />
-            </div>
-
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <p className="text-xs text-slate-300">
+              Ushbu bank karta ma’lumotlari Sellnex xaridori checkout’da “Sellnex Plastik Karta To‘lovi”ni tanlaganda,
+              sotuvchilar tarif sotib olayotganda, hamda Paynet QR-kod to‘lovining ostida doimiy ravishda ko‘rsatiladi.
+            </p>
             <button
-              disabled={isProcessing}
-              onClick={handleSaveCardSettings}
-              className="w-full py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-rose-600/25 flex items-center justify-center gap-2 cursor-pointer"
+              type="button"
+              onClick={() => {
+                setCardNumber('8600 3141 7549 7736');
+                setCardHolder('Sellnex Bosh Administratsiyasi');
+                setBankName('Milliy Bank / Uzcard Humo');
+                showToast('Karta kiritildi', '8600 3141 7549 7736 kartasi tanlandi', 'info');
+              }}
+              className="text-[11px] text-amber-300 hover:text-amber-200 underline font-mono flex items-center gap-1 cursor-pointer shrink-0"
             >
-              <Save className="w-4 h-4" />
-              <span>Karta Sozlamalarini Saqlash</span>
+              ⚡ Standart kartani tiklash (8600 3141 7549 7736)
             </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
+            {/* Form Section */}
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1.5">
+                  Karta Raqami (Uzcard / Humo) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(e.target.value)}
+                  placeholder="8600 3141 7549 7736"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 rounded-xl px-4 py-3 text-white font-mono text-sm outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1.5">
+                  Karta Egasi (F.I.Sh. yoki Tashkilot) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={cardHolder}
+                  onChange={(e) => setCardHolder(e.target.value)}
+                  placeholder="Sellnex Bosh Administratsiyasi"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 rounded-xl px-4 py-3 text-white text-sm outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1.5">
+                  Bank Nomi <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="Milliy Bank / Uzcard Humo"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 rounded-xl px-4 py-3 text-white text-sm outline-hidden"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-slate-300 font-semibold">
+                    Paynet QR-Code Surati (Fayl yoki URL)
+                  </label>
+                  {paynetQrCodeUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setPaynetQrCodeUrl('')}
+                      className="text-[10px] text-rose-400 hover:text-rose-300 cursor-pointer flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Standartga qaytarish</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={paynetQrCodeUrl.startsWith('data:') ? '📸 Galereyadan yuklangan skrinshot (Base64)' : paynetQrCodeUrl}
+                      onChange={(e) => setPaynetQrCodeUrl(e.target.value)}
+                      placeholder="https://... yoki fayl tanlang"
+                      className="flex-1 bg-slate-950 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 rounded-xl px-4 py-2.5 text-white font-mono text-xs outline-hidden"
+                    />
+                    <input
+                      type="file"
+                      ref={qrFileInputRef}
+                      accept="image/*"
+                      onChange={handleQrImageUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => qrFileInputRef.current?.click()}
+                      className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border border-slate-700"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Galereyadan tanlash</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDownloadQr}
+                      className="px-3.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                      title="Ushbu QR-kodni rasm qilib yuklab olish"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Yuklab olish</span>
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    Paynet ilovangizdagi rasmiy QR-kod skrinshotini yuklashingiz yoki tayyor QR suratini telefon/kompyuteringizga yuklab olishingiz mumkin.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1.5">Ko‘rsatma Matni</label>
+                <textarea
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  rows={2}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 rounded-xl px-4 py-2.5 text-white text-xs outline-hidden"
+                />
+              </div>
+
+              <button
+                disabled={isProcessing}
+                onClick={handleSaveCardSettings}
+                className="w-full py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-rose-600/25 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Save className="w-4 h-4" />
+                <span>Karta Sozlamalarini Saqlash</span>
+              </button>
+            </div>
+
+            {/* Live Preview Section matching User Screenshot */}
+            <div className="space-y-4">
+              <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block">
+                Mijozlar & Sotuvchilar Ekrandagi Ko‘rinishi (Paynet Rasmiy Ekrani)
+              </span>
+
+              {/* Exact Paynet Screen Preview */}
+              <div className="bg-white border-2 border-slate-200 rounded-3xl p-5 text-center space-y-4 shadow-xl">
+                {/* Paynet Logo */}
+                <div className="flex items-center justify-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[#00C853] inline-block shadow-xs"></span>
+                  <span className="text-2xl font-black text-slate-900 tracking-tight lowercase font-sans">
+                    paynet
+                  </span>
+                </div>
+
+                {/* QR Box */}
+                <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm max-w-xs mx-auto space-y-2">
+                  <img
+                    src={paynetQrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`https://paynet.uz/p2p?card=${(cardNumber || '8600314175497736').replace(/\s/g, '')}`)}`}
+                    alt="Paynet QR"
+                    className="w-36 h-36 mx-auto object-contain rounded-lg"
+                  />
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-extrabold text-slate-900">
+                      Kartaga pul o'tkazish uchun
+                    </p>
+                    <p className="text-[11px] font-medium text-slate-600">
+                      QR-ni skanerlang
+                    </p>
+                  </div>
+                </div>
+
+                {/* Card Underneath QR Box */}
+                <div className="max-w-xs mx-auto bg-slate-950 text-white rounded-xl p-3 space-y-1.5 text-left">
+                  <div className="flex items-center justify-between text-[10px] text-slate-300">
+                    <span className="text-amber-300 font-bold uppercase tracking-wider">💳 To‘lov kartasi</span>
+                    <span className="text-emerald-300 font-mono">Uzcard / Humo</span>
+                  </div>
+                  <div className="font-mono text-sm font-black text-amber-300 tracking-wider">
+                    {cardNumber || '8600 3141 7549 7736'}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {cardHolder || 'Sellnex Bosh Administratsiyasi'} • {bankName || 'Milliy Bank / Uzcard Humo'}
+                  </div>
+                </div>
+
+                {/* Download QR as image button in preview */}
+                <button
+                  type="button"
+                  onClick={handleDownloadQr}
+                  className="w-full max-w-xs mx-auto py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>QR Suratini Yuklab Olish (PNG)</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

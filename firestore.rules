@@ -137,5 +137,14 @@ service cloud.firestore {
     match /restaurant_orders/{orderId} {
       allow read, write: if true;
     }
+
+    // Reklama va Bannerlar hamda Foydalanuvchilar bilan Jonli Chat
+    match /ads_banners/{bannerId} {
+      allow read, write: if true;
+    }
+
+    match /ad_inquiries/{inquiryId} {
+      allow read, write: if true;
+    }
   }
 }

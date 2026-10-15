@@ -1244,48 +1244,75 @@ export const firestoreService = {
 
   // === ADMIN SETTINGS ===
   async getAdminSettings(): Promise<AdminSettings> {
+    const defaultSettings: AdminSettings = {
+      platformName: 'Sellnex Platform',
+      supportEmail: 'support@sellnex.uz',
+      supportPhone: '+998 71 200 00 00',
+      defaultCurrency: 'UZS',
+      trialDurationDays: 4,
+      maintenanceMode: false,
+      registrationEnabled: true,
+      p2pCardNumber: '8600 3141 7549 7736',
+      p2pCardHolder: 'Sellnex Bosh Administratsiyasi',
+      p2pBankName: 'Milliy Bank / Uzcard Humo',
+      p2pPhoneNumber: '+998 90 123 45 67',
+      p2pInstructions: 'To‘lovni ko‘rsatilgan markaziy administratsiya karta raqamiga yuboring. To‘lov chekini skrinshot qilib yoki tranzaksiya raqamini kiritib buyurtmani tasdiqlang.',
+    };
+
+    // 1. Try local storage cache for instant response & offline resilience
+    let cachedSettings: AdminSettings | null = null;
+    try {
+      const cached = localStorage.getItem('sellnex_admin_settings');
+      if (cached) {
+        cachedSettings = { ...defaultSettings, ...JSON.parse(cached) };
+      }
+    } catch {
+      // ignore
+    }
+
     try {
       const docRef = doc(db, COLLECTIONS.ADMIN_SETTINGS, 'general');
       const snapshot = await getDoc(docRef);
       if (snapshot.exists()) {
-        return snapshot.data() as AdminSettings;
+        const remoteSettings = { ...defaultSettings, ...snapshot.data() } as AdminSettings;
+        try {
+          localStorage.setItem('sellnex_admin_settings', JSON.stringify(remoteSettings));
+        } catch {
+          // ignore
+        }
+        return remoteSettings;
       }
-      return {
-        platformName: 'Sellnex Platform',
-        supportEmail: 'support@sellnex.uz',
-        supportPhone: '+998 71 200 00 00',
-        defaultCurrency: 'UZS',
-        trialDurationDays: 4,
-        maintenanceMode: false,
-        registrationEnabled: true,
-        p2pCardNumber: '8600 3141 7549 7736',
-        p2pCardHolder: 'Sellnex Bosh Administratsiyasi',
-        p2pBankName: 'Milliy Bank / Uzcard Humo',
-        p2pPhoneNumber: '+998 90 123 45 67',
-        p2pInstructions: 'To‘lovni ko‘rsatilgan markaziy administratsiya karta raqamiga yuboring. To‘lov chekini skrinshot qilib yoki tranzaksiya raqamini kiritib buyurtmani tasdiqlang.',
-      };
+      return cachedSettings || defaultSettings;
     } catch (err) {
-      console.error('Error fetching admin settings:', err);
-      return {
-        platformName: 'Sellnex Platform',
-        supportEmail: 'support@sellnex.uz',
-        supportPhone: '+998 71 200 00 00',
-        defaultCurrency: 'UZS',
-        trialDurationDays: 4,
-        maintenanceMode: false,
-        registrationEnabled: true,
-        p2pCardNumber: '8600 3141 7549 7736',
-        p2pCardHolder: 'Sellnex Bosh Administratsiyasi',
-        p2pBankName: 'Milliy Bank / Uzcard Humo',
-        p2pPhoneNumber: '+998 90 123 45 67',
-        p2pInstructions: 'To‘lovni ko‘rsatilgan markaziy administratsiya karta raqamiga yuboring. To‘lov chekini skrinshot qilib yoki tranzaksiya raqamini kiritib buyurtmani tasdiqlang.',
-      };
+      console.warn('Error fetching admin settings, using cache/fallback:', err);
+      return cachedSettings || defaultSettings;
     }
   },
 
-  async saveAdminSettings(settings: AdminSettings): Promise<void> {
+  async saveAdminSettings(settings: Partial<AdminSettings>): Promise<void> {
     const docRef = doc(db, COLLECTIONS.ADMIN_SETTINGS, 'general');
-    await setDoc(docRef, { ...settings, updatedAt: new Date().toISOString() }, { merge: true });
+    const existing = await this.getAdminSettings();
+    const updated: AdminSettings = {
+      ...existing,
+      ...settings,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Immediately cache in localStorage and dispatch sync event
+    try {
+      localStorage.setItem('sellnex_admin_settings', JSON.stringify(updated));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('admin-settings-changed', { detail: updated }));
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      await setDoc(docRef, updated, { merge: true });
+    } catch (err) {
+      console.warn('Failed to save admin settings to Firestore backend, saved to local cache:', err);
+    }
   },
 
   // === ADMIN NOTIFICATIONS ===

@@ -563,6 +563,7 @@ export interface AdminSettings {
   p2pBankName?: string;
   p2pPhoneNumber?: string;
   p2pInstructions?: string;
+  paynetQrCodeUrl?: string;
   telegramBotToken?: string;
   telegramAdminChatId?: string;
   notifyOnNewUser?: boolean;
@@ -664,4 +665,46 @@ export interface RestaurantProfile {
   createdAt: string;
   updatedAt?: string;
 }
+
+export interface AdBanner {
+  id: string;
+  title: string;
+  subtitle?: string;
+  badge?: string;
+  imageUrl: string;
+  linkUrl: string; // Target external link (https://...) or internal route (/products, /store/...)
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD (expiry / muddat)
+  isActive: boolean;
+  order: number;
+  clickCount: number;
+  createdAt: string;
+  updatedAt?: string;
+  advertiserName?: string;
+  advertiserContact?: string;
+}
+
+export interface AdChatMessage {
+  id: string;
+  sender: 'user' | 'admin';
+  senderName: string;
+  text: string;
+  timestamp: string;
+}
+
+export interface AdInquiry {
+  id: string;
+  name: string;
+  phone: string;
+  category: string;
+  message?: string;
+  status: 'new' | 'in_progress' | 'approved' | 'rejected' | 'closed';
+  createdAt: string;
+  updatedAt?: string;
+  messages: AdChatMessage[];
+  lastMessage?: string;
+  unreadAdmin?: boolean;
+  unreadUser?: boolean;
+}
+
 

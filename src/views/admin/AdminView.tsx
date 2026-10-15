@@ -35,6 +35,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  Megaphone,
 } from 'lucide-react';
 
 // Tab components
@@ -50,6 +51,7 @@ import { AdminDisputesTab } from './tabs/AdminDisputesTab';
 import { AdminAnalyticsTab } from './tabs/AdminAnalyticsTab';
 import { AdminAuditLogsTab } from './tabs/AdminAuditLogsTab';
 import { AdminSettingsTab } from './tabs/AdminSettingsTab';
+import { AdminAdsTab } from './tabs/AdminAdsTab';
 
 export const AdminView: React.FC = () => {
   const { currentUser, logout, navigateTo } = useApp();
@@ -170,6 +172,7 @@ export const AdminView: React.FC = () => {
     { id: 'payments', label: "P2P To'lovlar", icon: CreditCard, badge: pendingP2PCount },
     { id: 'subscriptions', label: 'Tariflar & Obunalar', icon: Crown },
     { id: 'promos', label: 'Promokodlar & Kuponlar', icon: Sparkles },
+    { id: 'ads', label: 'Reklama & Slayder', icon: Megaphone },
     { id: 'disputes', label: 'Nizolar & Shikoyatlar', icon: AlertTriangle, badge: openDisputesCount },
     { id: 'analytics', label: 'Makro Analitika', icon: BarChart3 },
     { id: 'audit', label: 'Xavfsizlik Jurnali', icon: ShieldCheck },
@@ -439,6 +442,10 @@ export const AdminView: React.FC = () => {
                   showToast={showToast}
                   formatMoney={formatMoney}
                 />
+              )}
+
+              {activeTab === 'ads' && (
+                <AdminAdsTab showToast={showToast} />
               )}
 
               {activeTab === 'disputes' && (

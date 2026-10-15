@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AdminSettings } from '../../../types';
 import { firestoreService } from '../../../services/firestoreService';
 import {
@@ -16,7 +16,11 @@ import {
   Power,
   Globe,
   BellRing,
+  Upload,
+  Download,
+  Trash2,
 } from 'lucide-react';
+import { downloadPaynetQrImage } from '../../../utils/qrDownload';
 
 interface AdminSettingsTabProps {
   settings: AdminSettings | null;
@@ -41,6 +45,7 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
   const [p2pCardHolder, setP2pCardHolder] = useState(settings?.p2pCardHolder || 'Sellnex Bosh Administratsiyasi');
   const [p2pBankName, setP2pBankName] = useState(settings?.p2pBankName || 'Milliy Bank / Uzcard Humo');
   const [p2pPhoneNumber, setP2pPhoneNumber] = useState(settings?.p2pPhoneNumber || '+998 90 123 45 67');
+  const [paynetQrCodeUrl, setPaynetQrCodeUrl] = useState(settings?.paynetQrCodeUrl || '');
   const [p2pInstructions, setP2pInstructions] = useState(
     settings?.p2pInstructions ||
       'To‘lovni ko‘rsatilgan markaziy administratsiya karta raqamiga yuboring. Mahsulot mijozga yetkazilgach sotuvchiga pul o‘tkaziladi.'
@@ -54,6 +59,67 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
   const [notifyOnP2P, setNotifyOnP2P] = useState(settings?.notifyOnP2P !== false);
   const [notifyOnOrder, setNotifyOnOrder] = useState(settings?.notifyOnOrder || false);
 
+  // Sync state if settings prop loads/changes
+  useEffect(() => {
+    if (settings) {
+      if (settings.maintenanceMode !== undefined) setMaintenanceMode(settings.maintenanceMode);
+      if (settings.allowRegistration !== undefined) setAllowRegistration(settings.allowRegistration !== false);
+      if (settings.usdToUzsRate) setUsdToUzsRate(settings.usdToUzsRate);
+      if (settings.p2pCardNumber) setP2pCardNumber(settings.p2pCardNumber);
+      if (settings.p2pCardHolder) setP2pCardHolder(settings.p2pCardHolder);
+      if (settings.p2pBankName) setP2pBankName(settings.p2pBankName);
+      if (settings.p2pPhoneNumber) setP2pPhoneNumber(settings.p2pPhoneNumber);
+      if (settings.paynetQrCodeUrl !== undefined) setPaynetQrCodeUrl(settings.paynetQrCodeUrl);
+      if (settings.p2pInstructions) setP2pInstructions(settings.p2pInstructions);
+      if (settings.telegramBotToken) setTelegramBotToken(settings.telegramBotToken);
+      if (settings.telegramAdminChatId) setTelegramAdminChatId(settings.telegramAdminChatId);
+      if (settings.supportTelegram) setSupportTelegram(settings.supportTelegram);
+      if (settings.supportEmail) setSupportEmail(settings.supportEmail);
+      if (settings.supportPhone) setSupportPhone(settings.supportPhone);
+      if (settings.notifyOnNewUser !== undefined) setNotifyOnNewUser(settings.notifyOnNewUser !== false);
+      if (settings.notifyOnP2P !== undefined) setNotifyOnP2P(settings.notifyOnP2P !== false);
+      if (settings.notifyOnOrder !== undefined) setNotifyOnOrder(settings.notifyOnOrder || false);
+    }
+  }, [settings]);
+
+  const qrFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleQrImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      showToast('Fayl juda katta', 'Iltimos, 8MB dan kichik rasm tanlang', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (dataUrl) {
+        setPaynetQrCodeUrl(dataUrl);
+        showToast('QR rasm yuklandi', 'Skrinshot muvaffaqiyatli tanlandi. Saqlash tugmasini bosing.', 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDownloadQr = async () => {
+    const rawCard = p2pCardNumber.replace(/\s/g, '') || '8600314175497736';
+    const activeQr = paynetQrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=360x360&data=${encodeURIComponent(`https://paynet.uz/p2p?card=${rawCard}`)}`;
+    showToast('Yuklanmoqda...', 'Paynet QR-kod surati tayyorlanmoqda', 'info');
+    const success = await downloadPaynetQrImage({
+      qrImageUrl: activeQr,
+      cardNumber: p2pCardNumber || '8600 3141 7549 7736',
+      cardHolder: p2pCardHolder || 'Sellnex Bosh Administratsiyasi',
+      bankName: p2pBankName || 'Milliy Bank / Uzcard Humo',
+      fileName: `paynet-qr-${rawCard}.png`,
+    });
+    if (success) {
+      showToast('Muvaffaqiyatli saqlandi', 'QR-kod surati qurilmangizga yuklab olindi (PNG)', 'success');
+    } else {
+      showToast('Xatolik', 'QR-kod suratini yuklab olishda muammo yuz berdi', 'error');
+    }
+  };
+
   const handleSavePlatformSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -66,6 +132,7 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
         p2pCardHolder: p2pCardHolder.trim(),
         p2pBankName: p2pBankName.trim(),
         p2pPhoneNumber: p2pPhoneNumber.trim(),
+        paynetQrCodeUrl: paynetQrCodeUrl.trim(),
         p2pInstructions: p2pInstructions.trim(),
         telegramBotToken: telegramBotToken.trim(),
         telegramAdminChatId: telegramAdminChatId.trim(),
@@ -281,6 +348,60 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
                 placeholder="+998 90 123 45 67"
                 className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-white outline-none"
               />
+            </div>
+
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-slate-300 font-semibold text-xs">
+                  Paynet QR-Code Surati (Fayl yoki URL)
+                </label>
+                {paynetQrCodeUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setPaynetQrCodeUrl('')}
+                    className="text-[10px] text-rose-400 hover:text-rose-300 cursor-pointer flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Standartga qaytarish</span>
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={paynetQrCodeUrl.startsWith('data:') ? '📸 Galereyadan yuklangan skrinshot (Base64)' : paynetQrCodeUrl}
+                  onChange={(e) => setPaynetQrCodeUrl(e.target.value)}
+                  placeholder="https://... yoki fayl tanlang"
+                  className="flex-1 bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-white outline-none font-mono text-xs"
+                />
+                <input
+                  type="file"
+                  ref={qrFileInputRef}
+                  accept="image/*"
+                  onChange={handleQrImageUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => qrFileInputRef.current?.click()}
+                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border border-slate-700"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Galereyadan tanlash</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadQr}
+                  className="px-3.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                  title="Ushbu QR-kodni rasm qilib yuklab olish"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Yuklab olish</span>
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">
+                Foydalanuvchilar to‘lov qilganda ekranda ko‘rinadigan rasmiy Paynet QR code surati. Fayl yuklashingiz yoki tayyor QR suratini yuklab olishingiz mumkin.
+              </p>
             </div>
 
             <div className="md:col-span-2">

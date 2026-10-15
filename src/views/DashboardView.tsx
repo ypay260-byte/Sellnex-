@@ -33,8 +33,11 @@ import {
   Activity,
   Calendar,
 } from 'lucide-react';
+import { AdBannerCarousel } from '../components/ads/AdBannerCarousel';
+import { AdChatModal } from '../components/ads/AdChatModal';
 
 export const DashboardView: React.FC = () => {
+  const [isAdModalOpen, setIsAdModalOpen] = useState(false);
   const {
     store,
     products,
@@ -190,6 +193,11 @@ export const DashboardView: React.FC = () => {
             <span>{t('dash_add_product', 'Mahsulot qoʻshish / Import')}</span>
           </button>
         </div>
+      </div>
+
+      {/* Dynamic Ad Slider Banner */}
+      <div className="w-full">
+        <AdBannerCarousel onOpenChatModal={() => setIsAdModalOpen(true)} className="px-0 max-w-full" />
       </div>
 
       {/* Public Store Live Link Bar (Instagram / TikTok / Telegram ready) */}
@@ -728,6 +736,8 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <AdChatModal isOpen={isAdModalOpen} onClose={() => setIsAdModalOpen(false)} />
     </div>
   );
 };

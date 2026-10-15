@@ -32,6 +32,7 @@ import {
   RefreshCw,
   XCircle,
   Crown,
+  QrCode,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -104,7 +105,7 @@ export const CheckoutView: React.FC = () => {
     }
   }, [routeParams.orderId]);
 
-  // Load Admin Central Card settings from Firestore
+  // Load Admin Central Card settings from Firestore with live sync
   useEffect(() => {
     let isMounted = true;
     firestoreService
@@ -117,8 +118,17 @@ export const CheckoutView: React.FC = () => {
       .catch((err) => {
         console.warn('Failed to load admin settings in checkout:', err);
       });
+
+    const handleSettingsUpdate = (e: any) => {
+      if (e.detail && isMounted) {
+        setAdminSettings(e.detail);
+      }
+    };
+    window.addEventListener('admin-settings-changed', handleSettingsUpdate);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('admin-settings-changed', handleSettingsUpdate);
     };
   }, []);
 
@@ -1010,6 +1020,27 @@ export const CheckoutView: React.FC = () => {
                     </>
                   )}
                 </button>
+              </div>
+
+              {/* Paynet QR Code quick scan option on Checkout */}
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/15 flex items-center gap-3">
+                <img
+                  src={
+                    adminSettings?.paynetQrCodeUrl ||
+                    `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`paynet://transfer?card=${effectiveCardNumber.replace(/\s/g, '')}`)}`
+                  }
+                  alt="QR Code"
+                  className="w-16 h-16 object-contain rounded-lg bg-white p-1 shrink-0"
+                />
+                <div className="text-xs space-y-0.5">
+                  <div className="font-bold text-white flex items-center gap-1">
+                    <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Paynet / Banking orqali QR to‘lov</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    QR kodni ilovada skanerlang yoki yuqoridagi <strong className="text-amber-300 font-mono">{effectiveCardNumber}</strong> kartasiga to‘lang.
+                  </p>
+                </div>
               </div>
 
               <div className="text-[11px] text-slate-300 flex items-start gap-2 bg-white/5 p-3 rounded-xl border border-white/10">
