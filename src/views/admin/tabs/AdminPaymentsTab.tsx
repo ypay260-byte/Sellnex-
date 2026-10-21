@@ -815,8 +815,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <p className="text-xs text-slate-300">
-              Ushbu bank karta ma’lumotlari Sellnex xaridori checkout’da “Sellnex Plastik Karta To‘lovi”ni tanlaganda,
-              sotuvchilar tarif sotib olayotganda, hamda Paynet QR-kod to‘lovining ostida doimiy ravishda ko‘rsatiladi.
+              Ushbu bank karta ma’lumotlari Sellnex xaridori checkout’da hamda sotuvchilar tarif sotib olayotganda to‘g‘ridan-to‘g‘ri ko‘rsatiladi. QR-kod har daqiqada yangilanishi va eskirishi tufayli QR to‘lov olib tashlandi, mijozlar to‘g‘ridan-to‘g‘ri ushbu kartaga to‘lab chek yuklashadi.
             </p>
             <button
               type="button"
@@ -951,62 +950,47 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
               </button>
             </div>
 
-            {/* Live Preview Section matching User Screenshot */}
+            {/* Live Preview Section matching User & Customer view */}
             <div className="space-y-4">
               <span className="text-[11px] font-black uppercase text-slate-400 tracking-wider block">
-                Mijozlar & Sotuvchilar Ekrandagi Ko‘rinishi (Paynet Rasmiy Ekrani)
+                Mijozlar & Sotuvchilar Ekrandagi Ko‘rinishi (Plastik Karta To‘lovi)
               </span>
 
-              {/* Exact Paynet Screen Preview */}
-              <div className="bg-white border-2 border-slate-200 rounded-3xl p-5 text-center space-y-4 shadow-xl">
-                {/* Paynet Logo */}
-                <div className="flex items-center justify-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-[#00C853] inline-block shadow-xs"></span>
-                  <span className="text-2xl font-black text-slate-900 tracking-tight lowercase font-sans">
-                    paynet
+              {/* Exact Direct Card Payment Preview */}
+              <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 text-center space-y-4 shadow-xl border border-indigo-500/30">
+                <div className="flex items-center justify-between text-xs text-slate-300">
+                  <span className="text-amber-300 font-bold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-amber-400" />
+                    <span>To‘lov Kartasi (Uzcard / Humo)</span>
+                  </span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-mono font-bold">
+                    Click • Payme • Uzum
                   </span>
                 </div>
 
-                {/* QR Box */}
-                <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm max-w-xs mx-auto space-y-2">
-                  <img
-                    src={paynetQrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`https://paynet.uz/p2p?card=${(cardNumber || '8600314175497736').replace(/\s/g, '')}`)}`}
-                    alt="Paynet QR"
-                    className="w-36 h-36 mx-auto object-contain rounded-lg"
-                  />
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-extrabold text-slate-900">
-                      Kartaga pul o'tkazish uchun
-                    </p>
-                    <p className="text-[11px] font-medium text-slate-600">
-                      QR-ni skanerlang
-                    </p>
-                  </div>
-                </div>
-
-                {/* Card Underneath QR Box */}
-                <div className="max-w-xs mx-auto bg-slate-950 text-white rounded-xl p-3 space-y-1.5 text-left">
-                  <div className="flex items-center justify-between text-[10px] text-slate-300">
-                    <span className="text-amber-300 font-bold uppercase tracking-wider">💳 To‘lov kartasi</span>
-                    <span className="text-emerald-300 font-mono">Uzcard / Humo</span>
-                  </div>
-                  <div className="font-mono text-sm font-black text-amber-300 tracking-wider">
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 text-left space-y-2">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">
+                    Karta Raqami:
+                  </span>
+                  <div className="font-mono text-xl sm:text-2xl font-black text-amber-300 tracking-wider">
                     {cardNumber || '8600 3141 7549 7736'}
                   </div>
-                  <div className="text-[10px] text-slate-400">
-                    {cardHolder || 'Sellnex Bosh Administratsiyasi'} • {bankName || 'Milliy Bank / Uzcard Humo'}
+                  <div className="flex items-center justify-between text-xs text-slate-300 pt-1 border-t border-white/10">
+                    <div>
+                      <span className="text-slate-400">Egasi: </span>
+                      <strong className="text-white">{cardHolder || 'Sellnex Bosh Administratsiyasi'}</strong>
+                    </div>
+                    <div className="text-slate-400 text-[10px]">
+                      {bankName || 'Milliy Bank / Uzcard Humo'}
+                    </div>
                   </div>
                 </div>
 
-                {/* Download QR as image button in preview */}
-                <button
-                  type="button"
-                  onClick={handleDownloadQr}
-                  className="w-full max-w-xs mx-auto py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>QR Suratini Yuklab Olish (PNG)</span>
-                </button>
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-left text-xs text-amber-200">
+                  <p>
+                    ✅ Foydalanuvchi ushbu kartaga Click, Payme yoki Uzum orqali to‘lov qiladi va chek skrinshotini yuklaydi. Eskiruvchi QR-kod muammosi butunlay yo‘q.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

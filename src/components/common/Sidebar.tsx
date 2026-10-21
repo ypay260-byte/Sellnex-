@@ -23,7 +23,10 @@ import {
   LogOut,
   Utensils,
   RefreshCw,
+  HelpCircle,
+  Boxes,
 } from 'lucide-react';
+import { HelpFaqModal } from '../help/HelpFaqModal';
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -31,6 +34,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) => {
+  const [isHelpOpen, setIsHelpOpen] = React.useState(false);
   const {
     currentRoute,
     navigateTo,
@@ -63,7 +67,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
   const storeMenuItems: SidebarMenuItem[] = [
     { id: 'dashboard', label: t('nav_dashboard', 'Dashboard'), icon: LayoutDashboard },
     { id: 'products', label: t('nav_products', 'Products'), icon: Package, badge: publishedProductsCount },
-    { id: 'import-product', label: t('nav_import_product', 'Import Product'), icon: PlusCircle, highlight: true },
+    { id: 'dropshipping', label: t('nav_dropshipping', 'Dropshipping'), icon: Boxes, badge: 'Katalog', badgeColor: 'bg-indigo-600 text-white', highlight: true },
+    { id: 'import-product', label: t('nav_import_product', 'Import Product'), icon: PlusCircle },
     { id: 'orders', label: t('nav_orders', 'Orders'), icon: ShoppingBag, badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined, badgeColor: 'bg-emerald-500 text-white' },
     { id: 'store-builder', label: t('nav_store_builder', 'Store Builder'), icon: StoreIcon },
     { id: 'customers', label: t('nav_customers', 'Customers'), icon: Users },
@@ -326,6 +331,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
             </button>
           </div>
         )}
+
+        {/* Help & FAQ trigger button (Section 10: Yordam va FAQ) */}
+        <div className="pt-3 mt-3 border-t border-slate-100">
+          <button
+            id="sidebar-help-faq-btn"
+            type="button"
+            onClick={() => setIsHelpOpen(true)}
+            className="w-full flex items-center justify-between p-2.5 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100 text-blue-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+          >
+            <div className="flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-blue-600" />
+              <span>Qo‘llanma & FAQ</span>
+            </div>
+            <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold">10 ta javob</span>
+          </button>
+        </div>
       </div>
 
       {/* User Footer Profile */}
@@ -341,6 +362,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
         </div>
       </div>
     </aside>
+
+    <HelpFaqModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
   </>
   );
 };

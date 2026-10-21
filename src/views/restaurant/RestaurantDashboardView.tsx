@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { firestoreService } from '../../services/firestoreService';
-import { RestaurantProfile, RestaurantOrder, RestaurantOrderStatus, MenuItem } from '../../types';
+import { RestaurantProfile, RestaurantOrder, RestaurantOrderStatus, MenuItem, CafeCategory } from '../../types';
 import { CafeReceiptModal } from '../../components/cafe/CafeReceiptModal';
+import { CafeKitchenTab } from './tabs/CafeKitchenTab';
+import { CafeWaiterTerminalTab } from './tabs/CafeWaiterTerminalTab';
+import { CafeTablesTab } from './tabs/CafeTablesTab';
 import {
   Clock,
   MapPin,
@@ -26,6 +29,7 @@ import {
   Bike,
   Utensils,
   Plus,
+  Coffee,
 } from 'lucide-react';
 
 export const RestaurantDashboardView: React.FC = () => {
@@ -33,6 +37,9 @@ export const RestaurantDashboardView: React.FC = () => {
   const [restaurant, setRestaurant] = useState<RestaurantProfile | null>(null);
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<CafeCategory[]>([]);
+  const [cafeActiveTab, setCafeActiveTab] = useState<'orders' | 'kitchen' | 'waiter' | 'tables'>('orders');
+  const [preselectedTable, setPreselectedTable] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<
     'all' | 'new' | 'accepted' | 'preparing' | 'on_the_way' | 'delivered' | 'cancelled'
@@ -374,7 +381,122 @@ export const RestaurantDashboardView: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Stats Grid */}
+      {/* Main Cafe Navigation Tabs */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-200/80 rounded-2xl">
+        <button
+          type="button"
+          onClick={() => setCafeActiveTab('orders')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+            cafeActiveTab === 'orders'
+              ? 'bg-white text-amber-700 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4 text-amber-600" />
+          <span>Buyurtmalar & Boshqaruv</span>
+          {newOrdersCount > 0 && (
+            <span className="bg-amber-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+              {newOrdersCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCafeActiveTab('waiter')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+            cafeActiveTab === 'waiter'
+              ? 'bg-white text-blue-700 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+          }`}
+        >
+          <Utensils className="w-4 h-4 text-blue-600" />
+          <span>Ofitsiant Terminali (Buyurtma olish)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCafeActiveTab('kitchen')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+            cafeActiveTab === 'kitchen'
+              ? 'bg-white text-indigo-700 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+          }`}
+        >
+          <ChefHat className="w-4 h-4 text-indigo-600" />
+          <span>Oshxona Monitori (KDS)</span>
+          {preparingOrdersCount > 0 && (
+            <span className="bg-indigo-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+              {preparingOrdersCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCafeActiveTab('tables')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+            cafeActiveTab === 'tables'
+              ? 'bg-white text-emerald-700 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+          }`}
+        >
+          <Coffee className="w-4 h-4 text-emerald-600" />
+          <span>Stollar & QR Menyular</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigateTo('restaurant_menu')}
+          className="ml-auto hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-white/60 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Menyuni tahrirlash</span>
+        </button>
+      </div>
+
+      {cafeActiveTab === 'waiter' && restaurant && (
+        <CafeWaiterTerminalTab
+          restaurant={restaurant}
+          menuItems={menuItems}
+          categories={categories}
+          showToast={showToast}
+          preselectedTable={preselectedTable}
+          onOrderCreated={(newOrd) => {
+            setOrders((prev) => [newOrd, ...prev]);
+            showToast('Buyurtma oshxonaga yuborildi', `#${newOrd.orderNumber} qabul qilindi`, 'success');
+            setCafeActiveTab('orders');
+          }}
+        />
+      )}
+
+      {cafeActiveTab === 'kitchen' && restaurant && (
+        <CafeKitchenTab
+          restaurant={restaurant}
+          orders={orders}
+          showToast={showToast}
+          onStatusUpdate={(order, nextStatus) => {
+            setOrders((prev) =>
+              prev.map((o) => (o.id === order.id ? { ...o, status: nextStatus } : o))
+            );
+          }}
+        />
+      )}
+
+      {cafeActiveTab === 'tables' && restaurant && (
+        <CafeTablesTab
+          restaurant={restaurant}
+          showToast={showToast}
+          onSelectTableForOrder={(tableNum) => {
+            setPreselectedTable(tableNum);
+            setCafeActiveTab('waiter');
+          }}
+        />
+      )}
+
+      {cafeActiveTab === 'orders' && (
+        <>
+          {/* KPI Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
@@ -805,6 +927,8 @@ export const RestaurantDashboardView: React.FC = () => {
           )}
         </div>
       </div>
+        </>
+      )}
 
       {/* Chek / Receipt Modal */}
       <CafeReceiptModal

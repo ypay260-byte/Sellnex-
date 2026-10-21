@@ -25,6 +25,7 @@ import {
   X,
   Send,
   MessageCircle,
+  Boxes,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AdBannerCarousel } from '../components/ads/AdBannerCarousel';
@@ -180,6 +181,15 @@ export const LandingPage: React.FC = () => {
             {t('nav_home', 'Home')}
           </button>
           <a href="#how-it-works" className="hover:text-blue-600 transition-colors">{t('nav_how_it_works', 'How it Works')}</a>
+          <button
+            id="nav-dropshipping-btn"
+            onClick={() => navigateTo('dropshipping')}
+            className="hover:text-blue-600 transition-colors flex items-center gap-1.5 cursor-pointer font-bold text-slate-700"
+          >
+            <Boxes className="w-4 h-4 text-blue-600" />
+            <span>Dropshipping</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-bold">Katalog</span>
+          </button>
           <a href="#features" className="hover:text-blue-600 transition-colors">{t('nav_features', 'Features')}</a>
           <a href="#pricing" className="hover:text-blue-600 transition-colors">{t('nav_pricing', 'Pricing')}</a>
         </div>
@@ -212,45 +222,69 @@ export const LandingPage: React.FC = () => {
 
         <div className="inline-flex max-w-full items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-[11px] sm:text-xs font-semibold mb-4 sm:mb-6 shadow-2xs">
           <Sparkles className="w-3.5 h-3.5 shrink-0" />
-          <span className="break-words text-center">{t('landing_badge', "Central Asia's First All-in-One E-Commerce & Dropshipping Platform")}</span>
+          <span className="break-words text-center">O‘zbekiston uchun zamonaviy elektron tijorat va internet-do‘kon platformasi</span>
         </div>
 
         <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight max-w-4xl mx-auto leading-[1.2] sm:leading-[1.15] break-words px-1">
-          {t('landing_hero_title', 'Build Your Store.')}{' '}
+          O‘z internet-do‘koningni yarat va{' '}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 inline-block">
-            {t('landing_hero_title_highlight', 'Sell Anywhere.')}
+            onlayn savdoni boshlagin!
           </span>
         </h1>
 
         <p className="mt-3.5 sm:mt-5 text-xs sm:text-base lg:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed px-1 break-words">
-          {t('landing_hero_subtitle', 'Create your online store, import products, set your profit, accept local payments and automate your orders — all from one platform.')}
+          Mahsulotlaringni joyla, do‘kon havolangni ol va uni mijozlaring bilan ulash. Do‘koningni bitta platformada boshqar.
         </p>
 
-        {/* CTA Buttons */}
+        {/* CTA Buttons (Section 3: Do‘kon yaratish & Qanday ishlaydi?) */}
         <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-4 max-w-sm sm:max-w-none mx-auto w-full px-2 sm:px-0">
           <button
-            id="hero-start-selling"
-            onClick={() => navigateTo('auth', { mode: 'signup' })}
-            className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 min-h-[46px] sm:min-h-[48px]"
+            id="hero-create-store-btn"
+            onClick={() => {
+              if (currentUser) {
+                if (store && store.slug) {
+                  navigateTo('dashboard');
+                } else {
+                  navigateTo('onboarding');
+                }
+              } else {
+                navigateTo('auth', { mode: 'signup' });
+              }
+            }}
+            className="w-full sm:w-auto px-7 sm:px-9 py-3.5 sm:py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm sm:text-base shadow-xl shadow-blue-500/25 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 min-h-[48px] cursor-pointer"
           >
-            <span>{t('btn_start_selling', 'Start Selling')}</span>
+            <span>Do‘kon yaratish</span>
             <ArrowRight className="w-4 h-4 shrink-0" />
           </button>
 
           <button
-            id="hero-login-btn"
-            onClick={() => navigateTo('auth', { mode: 'login' })}
-            className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm sm:text-base shadow-md transition-all hover:scale-[1.02] flex items-center justify-center gap-2 min-h-[46px] sm:min-h-[48px]"
+            id="hero-dropshipping-btn"
+            onClick={() => navigateTo('dropshipping')}
+            className="w-full sm:w-auto px-6 sm:px-7 py-3.5 sm:py-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-extrabold text-sm sm:text-base transition-all hover:scale-[1.02] flex items-center justify-center gap-2 min-h-[48px] cursor-pointer"
           >
-            <span>{t('nav_login', 'Log In')}</span>
+            <Boxes className="w-4 h-4 text-indigo-600" />
+            <span>Dropshipping Katalog</span>
+          </button>
+
+          <button
+            id="hero-how-it-works-btn"
+            onClick={() => {
+              const el = document.getElementById('how-it-works');
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm sm:text-base border border-slate-200 shadow-sm transition-all hover:scale-[1.02] flex items-center justify-center gap-2 min-h-[48px] cursor-pointer"
+          >
+            <span>Qanday ishlaydi?</span>
           </button>
 
           <button
             id="hero-view-pricing"
             onClick={() => navigateTo('pricing')}
-            className="w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-sm sm:text-base transition-colors flex items-center justify-center gap-2 min-h-[46px] sm:min-h-[48px]"
+            className="w-full sm:w-auto px-5 sm:px-6 py-3.5 sm:py-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm sm:text-base transition-colors flex items-center justify-center gap-2 min-h-[48px]"
           >
-            <span>{t('nav_pricing', 'Pricing & Plans')}</span>
+            <span>Tariflar</span>
           </button>
         </div>
 
@@ -330,6 +364,47 @@ export const LandingPage: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{t('landing_pill_profit_calc', 'Automatic Profit Calculator')}</span>
+          </div>
+        </div>
+
+        {/* Business Models Comparison (Section 9: Dropshipping vs O‘z mahsulotlarini sotish) */}
+        <div className="mt-8 sm:mt-10 max-w-4xl mx-auto text-left">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl p-5 sm:p-6 border-2 border-purple-200/80 shadow-xs flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                  <Boxes className="w-5 h-5" />
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-slate-900">
+                  O‘z mahsulotlarimni sotish
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Ishlab chiqargan yoki sotib olgan mahsulotlaringizni o‘z do‘koningizda soting. O‘z omboringizdan tez yetkazib berish va to‘liq mustaqillik.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-xs font-bold text-purple-700">
+                <span>Shaxsiy tovarlar bilan savdo</span>
+                <span className="text-[10px] bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">Klassik model</span>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 sm:p-6 border-2 border-blue-200/80 shadow-xs flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-slate-900">
+                  Dropshipping
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Yetkazib beruvchi bilan hamkorlik qilib, mahsulotlarni o‘z do‘koningiz orqali sotish modeli. Tovarni oldindan sotib olmaysiz — faqat o‘z ustama foydangizni olasiz.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between text-xs font-bold text-blue-700">
+                <span>Tovarsiz biznes boshlash</span>
+                <span className="text-[10px] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">0 zaxira xatari</span>
+              </div>
+            </div>
           </div>
         </div>
 

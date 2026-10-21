@@ -27,10 +27,13 @@ import {
   AlertCircle,
   Crown,
   Sparkles,
+  Link2,
+  Share2,
+  Boxes,
 } from 'lucide-react';
 
 export const OrdersView: React.FC = () => {
-  const { orders, store, updateOrderStatus, formatMoney, showToast, navigateTo, refreshOrders } = useApp();
+  const { orders, store, updateOrderStatus, formatMoney, showToast, navigateTo, refreshOrders, copyStoreLink } = useApp();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -272,9 +275,57 @@ export const OrdersView: React.FC = () => {
       {/* Orders Table & Mobile Cards */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         {filteredOrders.length === 0 ? (
-          <div className="p-12 text-center text-slate-500">
-            <ShoppingBag className="w-12 h-12 mx-auto text-slate-300 mb-2" />
-            <p className="text-sm font-bold text-slate-800">No orders matching this filter</p>
+          <div className="p-10 sm:p-14 text-center text-slate-500 max-w-lg mx-auto space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto shadow-2xs">
+              <ShoppingBag className="w-7 h-7" />
+            </div>
+
+            {sellerVisibleOrders.length === 0 ? (
+              <>
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-900">
+                  Hozircha buyurtmalar yo‘q.
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Mahsulotlaringizni do‘koningizga joylang va do‘kon havolasini mijozlaringiz bilan ulashing. Mijozlar buyurtma berganida, ularni shu yerda ko‘rishingiz mumkin.
+                </p>
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    id="orders-empty-view-store-btn"
+                    onClick={() => navigateTo('public-store', { storeSlug: store.slug })}
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Do‘konimni ko‘rish</span>
+                  </button>
+                  <button
+                    id="orders-empty-copy-link-btn"
+                    onClick={() => copyStoreLink(store.slug)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Link2 className="w-4 h-4" />
+                    <span>Do‘kon havolasini nusxalash</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-base font-bold text-slate-800">
+                  Ushbu filtr bo‘yicha buyurtmalar topilmadi
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Qidiruv so‘zini o‘zgartiring yoki status filtrini "All" ga qo‘ying.
+                </p>
+                <button
+                  onClick={() => {
+                    setSearch('');
+                    setStatusFilter('All');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs hover:bg-blue-100 transition-colors"
+                >
+                  Filtrni tozalash
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -299,6 +350,11 @@ export const OrdersView: React.FC = () => {
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="font-mono font-bold text-slate-900">{order.orderNumber}</p>
+                          {(order.businessMode === 'dropshipping' || order.items?.some((i) => i.businessMode === 'dropshipping')) && (
+                            <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
+                              Dropshipping
+                            </span>
+                          )}
                           {(order.orderStatus === 'confirmed' || order.orderStatus === 'Pending') && (
                             <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">
                               New Order
@@ -386,8 +442,13 @@ export const OrdersView: React.FC = () => {
               {filteredOrders.map((order) => (
                 <div key={order.id} className="p-4 space-y-3 hover:bg-slate-50/60 transition-colors">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-mono font-black text-xs text-slate-900">{order.orderNumber}</span>
+                      {(order.businessMode === 'dropshipping' || order.items?.some((i) => i.businessMode === 'dropshipping')) && (
+                        <span className="px-1.5 py-0.2 text-[9px] font-extrabold uppercase bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
+                          Dropship
+                        </span>
+                      )}
                       <span className="text-[10px] text-slate-400 font-medium">{order.createdAt.split('T')[0]}</span>
                     </div>
                     <select
@@ -548,11 +609,38 @@ export const OrdersView: React.FC = () => {
                           </p>
                         </div>
                       </div>
-                      <span className="font-bold text-slate-900">{formatMoney(item.price * item.quantity)}</span>
+                      <span className="font-bold text-slate-900">
+                        {formatMoney((item.sellingPrice || (item as any).price || 0) * item.quantity)}
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
+
+              {/* Dropshipping Fulfillment Status Card */}
+              {(selectedOrder.businessMode === 'dropshipping' || selectedOrder.supplierOrder) && (
+                <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200/90 rounded-2xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-indigo-950 flex items-center gap-1.5 text-xs">
+                      <Boxes className="w-4 h-4 text-indigo-600" />
+                      <span>Dropshipping Yetkazib Berish</span>
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                      {selectedOrder.supplierOrder?.status === 'delivered_to_customer'
+                        ? 'Mijozga yetkazildi'
+                        : selectedOrder.supplierOrder?.status === 'in_transit'
+                        ? 'Yo‘lda (Kuryerda)'
+                        : selectedOrder.supplierOrder?.status === 'ordered'
+                        ? 'Yetkazib beruvchiga uzatildi'
+                        : 'Yetkazib beruvchi kutmoqda'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-indigo-900 leading-relaxed">
+                    Yetkazib beruvchi: <strong>{selectedOrder.supplierOrder?.supplierName || selectedOrder.items[0]?.supplier || 'Sahiy Distribyutsiya'}</strong>.
+                    Mahsulot ombordan to‘g‘ridan-to‘g‘ri xaridorga yetkaziladi. Mahsulotni xarid qilish va yetkazish xarajatlari buyurtma summasidan qoplanadi.
+                  </p>
+                </div>
+              )}
 
               {/* Financial Summary */}
               <div className="p-4 bg-slate-100 rounded-2xl space-y-2">

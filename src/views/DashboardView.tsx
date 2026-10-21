@@ -32,12 +32,19 @@ import {
   Boxes,
   Activity,
   Calendar,
+  FileSpreadsheet,
+  HelpCircle,
 } from 'lucide-react';
 import { AdBannerCarousel } from '../components/ads/AdBannerCarousel';
 import { AdChatModal } from '../components/ads/AdChatModal';
+import { SellerAiAssistantModal } from '../components/ai/SellerAiAssistantModal';
+import { OnboardingChecklistCard } from '../components/common/OnboardingChecklistCard';
+import { HelpFaqModal } from '../components/help/HelpFaqModal';
 
 export const DashboardView: React.FC = () => {
   const [isAdModalOpen, setIsAdModalOpen] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isHelpFaqOpen, setIsHelpFaqOpen] = useState(false);
   const {
     store,
     products,
@@ -177,11 +184,29 @@ export const DashboardView: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           <button
+            id="dash-btn-help-faq"
+            onClick={() => setIsHelpFaqOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs min-h-[40px]"
+            title="Qo‘llanma va savol-javoblar"
+          >
+            <HelpCircle className="w-4 h-4 text-blue-600" />
+            <span>Qo‘llanma / FAQ</span>
+          </button>
+          <button
+            id="dash-btn-dropshipping"
+            onClick={() => navigateTo('dropshipping')}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 border border-indigo-200 text-indigo-700 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs min-h-[40px]"
+            title="Dropshipping mahsulotlar katalogi"
+          >
+            <Boxes className="w-4 h-4 text-indigo-600" />
+            <span>Dropshipping</span>
+          </button>
+          <button
             id="dash-btn-view-storefront"
             onClick={() => navigateTo('public-store', { storeSlug: store.slug })}
             className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs min-h-[40px]"
           >
-            <span>{t('dash_open_store', 'Doʻkonni ochish')}</span>
+            <span>{t('dash_open_store', 'Doʻkonni ko‘rish')}</span>
             <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
           </button>
           <button
@@ -200,86 +225,84 @@ export const DashboardView: React.FC = () => {
         <AdBannerCarousel onOpenChatModal={() => setIsAdModalOpen(true)} className="px-0 max-w-full" />
       </div>
 
-      {/* Public Store Live Link Bar (Instagram / TikTok / Telegram ready) */}
-      <div className="bg-white border-2 border-blue-600/30 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Public Store Live Link Bar (Feature 7: Do‘kon havolasini topish va ulashish) */}
+      <div className="bg-white border-2 border-blue-600/30 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0 shadow-md">
+          <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0 shadow-md">
             <StoreIcon className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-xs font-extrabold text-slate-900">
-                {t('dash_live_link_title', 'Faol ommaviy doʻkoningiz havolasi')}
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs sm:text-sm font-extrabold text-slate-900">
+                Do‘koningiz tayyor! Endi uni mijozlaringiz bilan ulashing.
               </p>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.2 rounded-full">
-                {t('dash_live_badge', 'Online • Kirish talab etilmaydi')}
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Online • Kirish talab etilmaydi
               </span>
             </div>
             <p className="text-xs text-blue-700 font-mono font-bold mt-0.5 select-all truncate">
               {getStoreUrl(store.slug)}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Mijozlar ushbu havola orqali istalgan telefondan ilova yuklamasdan buyurtma bera olishadi.
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
+            id="dash-view-storefront-btn"
+            onClick={() => navigateTo('public-store', { storeSlug: store.slug })}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl border border-slate-200 transition-colors flex items-center gap-1.5 shadow-2xs min-h-[38px]"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+            <span>Do‘konni ko‘rish</span>
+          </button>
+          <button
             id="dash-copy-store-link"
             onClick={() => copyStoreLink(store.slug)}
-            className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl border border-blue-200 transition-colors flex items-center gap-1.5 min-h-[38px]"
+            className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl border border-blue-200 transition-colors flex items-center gap-1.5 min-h-[38px]"
           >
             <Link2 className="w-3.5 h-3.5" />
-            <span>{t('dash_copy_link', 'Doʻkon havolasini nusxalash')}</span>
+            <span>Havolani nusxalash</span>
           </button>
           <button
             id="dash-share-store-link"
             onClick={() =>
               openShareModal({
-                title: t('dash_share_social', 'Ijtimoiy tarmoqlarda ulashish'),
-                subtitle: 'Add this link to your Instagram bio, TikTok, or Telegram channel.',
+                title: `Do‘konni ulashish — ${store.name}`,
+                subtitle: 'Do‘kon havolasini Instagram bio, TikTok yoki Telegram kanal/guruhingizga qo‘ying.',
                 url: getStoreUrl(store.slug),
+                storeSlug: store.slug,
               })
             }
             className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-xs min-h-[38px]"
           >
             <Share2 className="w-3.5 h-3.5" />
-            <span>{t('dash_share_social', 'Ijtimoiy tarmoqlarda ulashish')}</span>
+            <span>Do‘konni ulashish</span>
+          </button>
+          <button
+            id="dash-import-products-btn"
+            onClick={() => navigateTo('import-product')}
+            className="px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 border border-slate-200 min-h-[38px]"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
+            <span>Import Products</span>
+          </button>
+          <button
+            id="dash-ai-assistant-btn"
+            onClick={() => setIsAiModalOpen(true)}
+            className="px-3 py-2 bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 border border-purple-200 min-h-[38px]"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <span>AI Yordamchi</span>
           </button>
         </div>
       </div>
 
-      {/* Welcome Banner for fresh store / 0 products */}
-      {products.length === 0 && (
-        <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-xs">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{t('dash_store_active_badge', 'Doʻkoningiz tayyor')}</span>
-            </div>
-            <h2 className="text-xl font-extrabold tracking-tight">
-              {t('dash_welcome_banner_title', 'Yangi Sellnex doʻkoningizga xush kelibsiz!')}
-            </h2>
-            <p className="text-xs text-blue-100 max-w-xl">
-              {t('dash_welcome_banner_desc', 'Ommaviy doʻkoningiz faol. Shaxsiy mahsulotlar (oʻz omboringiz) yoki dropshipping (Uzum Market / AliExpress) orqali savdoni boshlang.')}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <button
-              onClick={() => navigateTo('products')}
-              className="px-4 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>{t('dash_add_first_product', 'Birinchi mahsulotni qoʻshish')}</span>
-            </button>
-            <button
-              onClick={() => navigateTo('store-builder')}
-              className="px-4 py-2.5 rounded-xl bg-blue-700/80 hover:bg-blue-700 text-white font-semibold text-xs border border-white/20 transition-all flex items-center gap-1.5"
-            >
-              <StoreIcon className="w-4 h-4" />
-              <span>{t('dash_customize_store', 'Doʻkonni sozlash')}</span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* FEATURE 4: ONBOARDING CHECKLIST GUIDE */}
+      <OnboardingChecklistCard onOpenHelpFaq={() => setIsHelpFaqOpen(true)} />
 
       {/* Primary KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -506,6 +529,93 @@ export const DashboardView: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* FEATURE 3: DEDICATED AI ASSISTANT SECTION FOR SELLERS */}
+      <div id="seller-ai-assistant-section" className="bg-gradient-to-br from-purple-950 via-slate-900 to-indigo-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-purple-800/40 relative overflow-hidden">
+        {/* Subtle decorative glow */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-purple-800/40">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold border border-purple-500/30">
+              <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+              <span>Sellnex AI Assistant • Gemini 3.8 Flash</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+              Sotuvchilar uchun AI Yordamchi (AI Assistant)
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+              Mahsulotlaringiz uchun jozibali tavsiflar, SEO kalit so‘zlari, Telegram va Instagram postlari yarating hamda mahsulot kontentini 3 ta tilga avtomatlashtiring.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <button
+              id="dash-open-ai-assistant-modal-btn"
+              type="button"
+              onClick={() => setIsAiModalOpen(true)}
+              className="px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs transition-all shadow-lg shadow-purple-600/30 flex items-center gap-2 hover:scale-[1.02]"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>AI Yordamchini Ochish</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 6 Quick Action Cards */}
+        <div className="relative z-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-6">
+          {[
+            {
+              title: 'Tavsif Yaratish',
+              desc: 'Nomi va ma‘lumotlardan to‘liq tavsif',
+              icon: '📝',
+            },
+            {
+              title: 'Tavsifni Yaxshilash',
+              desc: 'Matnni boyitish va sotuvchan qilish',
+              icon: '✨',
+            },
+            {
+              title: 'Sarlavha (Title)',
+              desc: 'Top 5 ta qidiruv sarlavhasi',
+              icon: '🏷️',
+            },
+            {
+              title: 'Telegram & Insta',
+              desc: 'Ijtimoiy tarmoqlar uchun tayyor post',
+              icon: '🚀',
+            },
+            {
+              title: 'SEO & Kalit So‘zlar',
+              desc: 'Meta ma‘lumotlar va qidiruv teglari',
+              icon: '🔍',
+            },
+            {
+              title: 'Tarjima (UZ/RU/EN)',
+              desc: 'Mahsulotni 3 tilda sotish',
+              icon: '🌐',
+            },
+          ].map((card, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setIsAiModalOpen(true)}
+              className="text-left p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/40 transition-all group flex flex-col justify-between"
+            >
+              <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">{card.icon}</div>
+              <div>
+                <h4 className="font-bold text-xs text-white group-hover:text-purple-300 transition-colors leading-snug">
+                  {card.title}
+                </h4>
+                <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                  {card.desc}
+                </p>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -738,6 +848,17 @@ export const DashboardView: React.FC = () => {
       </div>
 
       <AdChatModal isOpen={isAdModalOpen} onClose={() => setIsAdModalOpen(false)} />
+
+      <SellerAiAssistantModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        showToast={useApp().showToast}
+      />
+
+      <HelpFaqModal
+        isOpen={isHelpFaqOpen}
+        onClose={() => setIsHelpFaqOpen(false)}
+      />
     </div>
   );
 };

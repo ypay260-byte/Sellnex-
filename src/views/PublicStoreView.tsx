@@ -397,9 +397,12 @@ export const PublicStoreView: React.FC = () => {
                     <div className="p-2.5 sm:p-4 space-y-1 sm:space-y-2">
                       <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400">
                         <span className="truncate">{p.category}</span>
-                        <div className="flex items-center gap-0.5 sm:gap-1 text-amber-500 font-bold shrink-0">
+                        <div className="flex items-center gap-1 text-amber-500 font-bold shrink-0">
                           <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          <span>{p.rating || '4.9'}</span>
+                          <span>{p.rating ? p.rating.toFixed(1) : (p.reviewCount ? '5.0' : '5.0')}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            ({p.reviewCount || 0})
+                          </span>
                         </div>
                       </div>
 

@@ -421,11 +421,16 @@ export const CheckoutView: React.FC = () => {
         const currentStoreId = storeIds[i];
         const currentItems = storeMap[currentStoreId];
 
+        const hasDropshippingItems = currentItems.some(
+          (item) => item.product?.businessMode === 'dropshipping' || !!item.product?.dropshippingCatalogId
+        );
+
         const orderItems = currentItems.map((item) => {
           const sellingPrice = Number(item.product?.sellingPrice) || 0;
           const quantity = Number(item.quantity) || 1;
           const supplierCost = Number(item.product?.supplierCost) || Math.round(sellingPrice * 0.7);
           const profit = sellingPrice - supplierCost;
+          const isItemDropship = item.product?.businessMode === 'dropshipping' || !!item.product?.dropshippingCatalogId;
 
           return {
             productId: item.product.id,
@@ -439,6 +444,8 @@ export const CheckoutView: React.FC = () => {
             supplierCost,
             profit,
             supplier: item.product.supplier || 'Sellnex Warehouse',
+            catalogProductId: item.product.dropshippingCatalogId,
+            businessMode: isItemDropship ? ('dropshipping' as const) : ('personal' as const),
           };
         });
 
@@ -534,6 +541,17 @@ export const CheckoutView: React.FC = () => {
           totalAmount: orderTotal,
           totalSupplierCost: orderItems.reduce((acc, it) => acc + it.supplierCost * it.quantity, 0),
           totalProfit: orderItems.reduce((acc, it) => acc + it.profit * it.quantity, 0),
+          businessMode: hasDropshippingItems ? 'dropshipping' : 'personal',
+          supplierOrder: hasDropshippingItems
+            ? {
+                supplierName: orderItems.find((it) => it.businessMode === 'dropshipping')?.supplier || 'Sahiy',
+                supplierCost: orderItems.reduce((acc, it) => acc + it.supplierCost * it.quantity, 0),
+                shippingCost: allocatedShippingFee,
+                orderDate: new Date().toISOString().split('T')[0],
+                status: 'not_ordered',
+                adminNotes: `Dropshipping buyurtmasi. Do‘kon: ${targetStoreObj?.name || currentStoreId}`,
+              }
+            : undefined,
           paymentMethod: isDirectSellerPayment ? 'Direct Seller Card' : 'Sellnex Card',
           paymentRouting: isDirectSellerPayment ? 'direct_seller' : 'admin_escrow',
           directSellerPayment: isDirectSellerPayment,
@@ -1022,26 +1040,7 @@ export const CheckoutView: React.FC = () => {
                 </button>
               </div>
 
-              {/* Paynet QR Code quick scan option on Checkout */}
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/15 flex items-center gap-3">
-                <img
-                  src={
-                    adminSettings?.paynetQrCodeUrl ||
-                    `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`paynet://transfer?card=${effectiveCardNumber.replace(/\s/g, '')}`)}`
-                  }
-                  alt="QR Code"
-                  className="w-16 h-16 object-contain rounded-lg bg-white p-1 shrink-0"
-                />
-                <div className="text-xs space-y-0.5">
-                  <div className="font-bold text-white flex items-center gap-1">
-                    <QrCode className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Paynet / Banking orqali QR to‘lov</span>
-                  </div>
-                  <p className="text-[11px] text-slate-300">
-                    QR kodni ilovada skanerlang yoki yuqoridagi <strong className="text-amber-300 font-mono">{effectiveCardNumber}</strong> kartasiga to‘lang.
-                  </p>
-                </div>
-              </div>
+
 
               <div className="text-[11px] text-slate-300 flex items-start gap-2 bg-white/5 p-3 rounded-xl border border-white/10">
                 {isDirectOrder ? (

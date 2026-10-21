@@ -20,6 +20,7 @@ import {
   X,
   ExternalLink,
   PlusCircle,
+  Boxes,
 } from 'lucide-react';
 
 export const MobileBottomNav: React.FC = () => {
@@ -37,7 +38,8 @@ export const MobileBottomNav: React.FC = () => {
   ];
 
   const moreItems = [
-    { id: 'import-product', label: 'Import Product', icon: PlusCircle, highlight: true },
+    { id: 'dropshipping', label: 'Dropshipping Katalog', icon: Boxes, highlight: true },
+    { id: 'import-product', label: 'Import Product', icon: PlusCircle },
     { id: 'customers', label: 'Customers', icon: Users },
     { id: 'suppliers', label: 'Suppliers', icon: Layers },
     { id: 'integrations', label: 'Payments & Click/Payme', icon: CreditCard },

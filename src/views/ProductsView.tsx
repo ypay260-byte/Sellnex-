@@ -22,7 +22,9 @@ import {
   UploadCloud,
   Image as ImageIcon,
   DollarSign,
+  FileSpreadsheet,
 } from 'lucide-react';
+import { SellerAiAssistantModal } from '../components/ai/SellerAiAssistantModal';
 
 export const ProductsView: React.FC = () => {
   const {
@@ -52,6 +54,7 @@ export const ProductsView: React.FC = () => {
 
   // Edit / Add modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -239,14 +242,23 @@ export const ProductsView: React.FC = () => {
         subtitle="Manage personal inventory or dropshipping items, generate public social links, and track profits."
         fallbackRoute="dashboard"
         rightElement={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               id="btn-products-import"
               onClick={() => navigateTo('import-product')}
-              className="px-3.5 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-xs border border-blue-200/80 transition-colors flex items-center gap-1.5 min-h-[40px]"
+              className="px-3.5 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs border border-blue-200 transition-colors flex items-center gap-1.5 min-h-[40px]"
             >
-              <Zap className="w-4 h-4" />
-              <span>1-Click Importer</span>
+              <FileSpreadsheet className="w-4 h-4 text-blue-600" />
+              <span>Excel / CSV Import</span>
+            </button>
+
+            <button
+              id="btn-products-ai-assistant"
+              onClick={() => setIsAiModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold text-xs border border-purple-200 transition-colors flex items-center gap-1.5 min-h-[40px]"
+            >
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              <span>AI Yordamchi</span>
             </button>
 
             <button
@@ -781,9 +793,19 @@ export const ProductsView: React.FC = () => {
 
             <form onSubmit={handleSaveModal} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Product Title <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">
+                    Product Title <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsAiModalOpen(true)}
+                    className="text-[11px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-colors flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3 text-purple-600" />
+                    <span>AI Yordamchi bilan to‘ldirish</span>
+                  </button>
+                </div>
                 <input
                   id="modal-input-title"
                   type="text"
@@ -839,18 +861,18 @@ export const ProductsView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Category</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Kategoriya / Category</label>
                   <input
                     id="modal-input-category"
                     type="text"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    placeholder="e.g. Clothes, Shoes, Accessories"
+                    placeholder="Masalan: Kiyimlar, Poyabzallar, Aksessuarlar"
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-hidden"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Available Stock (dona)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Mavjud zaxira (dona)</label>
                   <input
                     id="modal-input-stock"
                     type="number"
@@ -860,6 +882,32 @@ export const ProductsView: React.FC = () => {
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-hidden"
                   />
                 </div>
+              </div>
+
+              {/* Product Description with Direct AI Assistant Button */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">
+                    Tavsif / Description
+                    <span className="text-[11px] font-normal text-slate-400 ml-1.5">(Mahsulotning xususiyatlarini qisqacha yozing)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsAiModalOpen(true)}
+                    className="text-[11px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-colors flex items-center gap-1 shadow-2xs"
+                  >
+                    <Sparkles className="w-3 h-3 text-purple-600" />
+                    <span>AI Tavsif yaratish</span>
+                  </button>
+                </div>
+                <textarea
+                  id="modal-input-description"
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Mahsulotning xususiyatlari, afzalliklari, o‘lchamlari va materialini yozing..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-hidden focus:ring-2 focus:ring-purple-500 font-normal leading-relaxed text-xs"
+                />
               </div>
 
               {/* Personal Mode: Only single clean Selling Price */}
@@ -974,6 +1022,26 @@ export const ProductsView: React.FC = () => {
           </div>
         </div>
       )}
+      {/* AI Assistant Modal */}
+      <SellerAiAssistantModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        initialProduct={{
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          sellingPrice: formData.sellingPrice,
+        }}
+        onApplyContent={(applied) => {
+          setFormData((prev) => ({
+            ...prev,
+            title: applied.title || prev.title,
+            description: applied.description || prev.description,
+            category: applied.category || prev.category,
+          }));
+        }}
+        showToast={showToast}
+      />
     </div>
   );
 };

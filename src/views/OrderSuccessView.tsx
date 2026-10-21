@@ -590,18 +590,7 @@ export const OrderSuccessView: React.FC = () => {
                 Qabul qiluvchi: <strong className="text-white">{sellnexCardHolder}</strong>
               </p>
 
-              {/* Paynet QR code under card */}
-              <div className="bg-white/10 rounded-xl p-2.5 flex items-center gap-3">
-                <img
-                  src={adminSettings?.paynetQrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`paynet://transfer?card=${sellnexCardNumber.replace(/\s/g, '')}`)}`}
-                  alt="Paynet QR"
-                  className="w-14 h-14 object-contain rounded-lg bg-white p-0.5 shrink-0"
-                />
-                <div className="text-[11px] text-slate-300">
-                  <p className="font-bold text-white">Paynet QR to‘lov</p>
-                  <p className="text-slate-400 text-[10px]">QR orqali yoki to‘g‘ridan-to‘g‘ri <span className="font-mono text-amber-300">{sellnexCardNumber}</span> kartasiga to‘lang.</p>
-                </div>
-              </div>
+
 
               <div className="text-xs text-emerald-400 font-bold flex justify-between pt-1 border-t border-white/10">
                 <span>To‘lov summasi:</span>

@@ -158,6 +158,11 @@ export interface Product {
   reviewCount: number;
   salesCount: number;
   featured: boolean;
+  dropshippingCatalogId?: string;
+  minSellingPrice?: number;
+  deliveryInfo?: string;
+  estimatedDeliveryDays?: string;
+  supplierProductCode?: string;
   createdAt: string;
 }
 
@@ -196,6 +201,8 @@ export interface OrderItem {
   sellingPrice: number;
   profit: number;
   supplier: string;
+  catalogProductId?: string;
+  businessMode?: BusinessMode;
 }
 
 export interface OrderShippingAddress {
@@ -267,6 +274,26 @@ export interface Order {
   trackingNumber?: string;
   deliveryCourier?: string;
   timeline: OrderTimelineEvent[];
+  businessMode?: BusinessMode;
+  deliveryDirection?: 'direct_to_customer' | 'via_seller';
+  commissionAmount?: number;
+  sellerProfitAmount?: number;
+  storeName?: string;
+  sellerName?: string;
+  sellerPhone?: string;
+  supplierOrder?: {
+    supplierName: string;
+    supplierUrl?: string;
+    supplierProductCode?: string;
+    orderDate?: string;
+    externalOrderId?: string;
+    supplierCost?: number;
+    shippingCost?: number;
+    estimatedArrivalDate?: string;
+    actualArrivalDate?: string;
+    status: 'not_ordered' | 'ordered' | 'in_transit' | 'delivered_to_hub' | 'delivered_to_customer' | 'cancelled';
+    adminNotes?: string;
+  };
   createdAt: string;
   updatedAt?: string;
   partnerLinkId?: string;
@@ -608,7 +635,16 @@ export interface MenuItem {
   updatedAt?: string;
 }
 
-export type RestaurantOrderStatus = 'new' | 'accepted' | 'preparing' | 'on_the_way' | 'delivering' | 'delivered' | 'cancelled';
+export type RestaurantOrderStatus =
+  | 'new'
+  | 'accepted'
+  | 'preparing'
+  | 'ready'
+  | 'served'
+  | 'on_the_way'
+  | 'delivering'
+  | 'delivered'
+  | 'cancelled';
 
 export interface RestaurantOrderItem {
   menuItemId: string;
@@ -619,6 +655,7 @@ export interface RestaurantOrderItem {
   image?: string;
   imageUrl?: string;
   selectedAddons?: RestaurantAddon[];
+  specialInstructions?: string;
   totalPrice: number;
 }
 
@@ -634,6 +671,9 @@ export interface RestaurantOrder {
   notes?: string;
   orderType?: 'dine_in' | 'takeaway' | 'delivery';
   tableNumber?: string;
+  tableId?: string;
+  waiterName?: string;
+  staffId?: string;
   items: RestaurantOrderItem[];
   subtotal: number;
   deliveryFee: number;
@@ -706,5 +746,154 @@ export interface AdInquiry {
   unreadAdmin?: boolean;
   unreadUser?: boolean;
 }
+
+// === FEATURE 1: PRODUCT RATINGS AND REVIEWS ===
+export type ReviewModerationStatus = 'approved' | 'pending' | 'flagged' | 'rejected';
+
+export interface ProductReview {
+  id: string;
+  productId: string;
+  storeId: string;
+  productTitle?: string;
+  customerId?: string;
+  customerName: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  rating: number; // 1 to 5
+  comment: string;
+  verifiedPurchase: boolean;
+  orderId?: string;
+  status: ReviewModerationStatus;
+  moderatedBy?: string;
+  moderatedAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// === FEATURE 2: EXCEL / CSV PRODUCT IMPORT ===
+export interface BulkImportProductRow {
+  rowNumber: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  stock: number;
+  imageUrl?: string;
+  sku?: string;
+  isValid: boolean;
+  errors: string[];
+  isDuplicate?: boolean;
+}
+
+export interface BulkImportSummary {
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  importedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  errorMessages: string[];
+}
+
+// === FEATURE 3: AI ASSISTANT FOR SELLERS ===
+export type AiActionType =
+  | 'generate_description'
+  | 'improve_description'
+  | 'generate_title'
+  | 'suggest_categories'
+  | 'social_promo'
+  | 'seo_metadata'
+  | 'translate'
+  | 'suggest_keywords';
+
+export interface AiAssistantRequest {
+  action: AiActionType;
+  productName?: string;
+  existingDescription?: string;
+  details?: string;
+  category?: string;
+  price?: number;
+  targetLanguage?: 'uz' | 'ru' | 'en';
+  tone?: 'professional' | 'persuasive' | 'friendly' | 'minimalist';
+}
+
+export interface AiAssistantResponse {
+  success: boolean;
+  action: AiActionType;
+  output: string;
+  data?: {
+    titles?: string[];
+    description?: string;
+    categories?: string[];
+    keywords?: string[];
+    socialTelegram?: string;
+    socialInstagram?: string;
+    seoTitle?: string;
+    seoDescription?: string;
+    translatedContent?: {
+      title?: string;
+      description?: string;
+      language?: string;
+    };
+  };
+  error?: string;
+}
+
+// === FEATURE 4: SELLNEX CAFE - TABLE & WAITER MANAGEMENT ===
+export type TableStatus = 'available' | 'occupied' | 'reserved' | 'cleaning';
+
+export interface CafeTable {
+  id: string;
+  restaurantId: string;
+  tableNumber: string; // e.g. "Stol 1", "Stol 5", "VIP 2"
+  capacity: number; // e.g. 4
+  status: TableStatus;
+  qrCodeUrl?: string;
+  currentWaiter?: string;
+  currentOrderId?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// === DROPSHIPPING SYSTEM (CATEGORIES & MASTER CATALOG) ===
+export interface DropshippingCategory {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  order: number;
+  isActive: boolean;
+  productCount?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DropshippingCatalogProduct {
+  id: string;
+  title: string;
+  description: string;
+  images: string[];
+  categoryId: string;
+  categoryName: string;
+  supplierCost: number; // Xarid narxi (katalog narxi)
+  recommendedPrice: number; // Tavsiya etilgan sotish narxi
+  minSellingPrice: number; // Eng kam ruxsat etilgan sotish narxi
+  stock: number; // Mavjudligi
+  isAvailable: boolean; // Mahsulot mavjudligi holati
+  deliveryInfo: string; // Yetkazib berish haqida ma'lumot
+  estimatedDeliveryDays: string; // Taxminiy yetkazib berish muddati (e.g. "1-2 kun")
+  isActive: boolean; // Admin tomonidan faol/nofaol
+  supplierName: string; // Tashqi yetkazib beruvchi nomi (e.g. "Sahiy", "Uzum", "Alibaba")
+  supplierProductCode?: string; // Yetkazib beruvchining mahsulot kodi (SKU)
+  supplierUrl?: string; // Tashqi mahsulot havolasi
+  defaultDeliveryFee: number; // Taxminiy yetkazib berish xarajati
+  commissionPercent?: number; // Sellnex komissiyasi foizda (default 5%)
+  commissionFixed?: number; // Yoki qat'iy komissiya summasi
+  sku: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 
 

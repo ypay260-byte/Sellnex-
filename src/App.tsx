@@ -20,6 +20,7 @@ import { AuthPage } from './views/AuthPage';
 import { OnboardingWizard } from './views/OnboardingWizard';
 import { DashboardView } from './views/DashboardView';
 import { ProductsView } from './views/ProductsView';
+import { DropshippingView } from './views/DropshippingView';
 import { ProductImportView } from './views/ProductImportView';
 import { StoreBuilderView } from './views/StoreBuilderView';
 import { PublicStoreView } from './views/PublicStoreView';
@@ -62,6 +63,7 @@ const PUBLIC_ROUTES = [
   'restaurant',
   'r',
   'restaurant-onboarding',
+  'dropshipping',
 ];
 
 const MainAppContent: React.FC = () => {
@@ -218,6 +220,17 @@ const MainAppContent: React.FC = () => {
     );
   }
 
+  // Public/guest access to Dropshipping Catalog
+  if (currentRoute === 'dropshipping' && !currentUser) {
+    return (
+      <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-slate-50">
+        <DropshippingView />
+        <DeviceSelectorModal />
+        <ToastContainer />
+      </div>
+    );
+  }
+
   // Back-office Merchant Shell Layout (For Authenticated Sellers)
   const renderDashboardRoute = () => {
     const isRestaurantUser = currentUser?.businessType === 'restaurant';
@@ -252,6 +265,8 @@ const MainAppContent: React.FC = () => {
         return <DashboardView />;
       case 'products':
         return <ProductsView />;
+      case 'dropshipping':
+        return <DropshippingView />;
       case 'import-product':
         return <ProductImportView />;
       case 'store-builder':

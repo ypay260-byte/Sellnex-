@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { productService, ImportedProductDraft } from '../services/productService';
 import { BackHeader } from '../components/common/BackHeader';
+import { BulkExcelImportComponent } from '../components/products/BulkExcelImportComponent';
 import {
   Zap,
   Sparkles,
@@ -16,11 +17,14 @@ import {
   Plus,
   Trash2,
   HelpCircle,
+  FileSpreadsheet,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const ProductImportView: React.FC = () => {
   const { store, addProduct, navigateTo, showToast, formatMoney, t } = useApp();
+
+  const [activeTab, setActiveTab] = useState<'excel' | 'url'>('excel');
 
   // Input states
   const [url, setUrl] = useState('https://uzum.uz/product/smartfon-redmi-13c');
@@ -177,18 +181,50 @@ export const ProductImportView: React.FC = () => {
   return (
     <div id="product-import-view" className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
       <BackHeader
-        badge="Core Dropshipping Engine"
-        title={t('import_title', 'Mahsulotni import qilish va Foyda belgilash')}
-        subtitle={t('import_subtitle', 'Uzum Market, AliExpress, Amazon yoki istalgan doʻkon havolasini kiriting. Tizim rasmlar, nom, ulgurji narx va sof foydani avtomatik hisoblab beradi.')}
+        badge="Sellnex Import Engine"
+        title={t('import_title', 'Mahsulotlarni do‘konga import qilish')}
+        subtitle="Excel / CSV fayllar orqali ommaviy yuklash yoki Uzum, AliExpress, Amazon havolasidan 1-click import."
         fallbackRoute="products"
       />
 
-      {/* URL Input Box */}
-      <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-            {t('import_url_label', 'Yetkazib beruvchi / Mahsulot havolasi (URL)')}
-          </label>
+      {/* Import Method Tabs */}
+      <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-200/80 rounded-2xl max-w-md mx-auto text-xs font-bold">
+        <button
+          type="button"
+          onClick={() => setActiveTab('excel')}
+          className={`py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'excel'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          <span>Excel / CSV Ommaviy</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('url')}
+          className={`py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'url'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Zap className="w-4 h-4" />
+          <span>Havoladan 1-Click</span>
+        </button>
+      </div>
+
+      {activeTab === 'excel' ? (
+        <BulkExcelImportComponent onSuccess={() => navigateTo('products')} />
+      ) : (
+        <>
+          {/* URL Input Box */}
+          <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                {t('import_url_label', 'Yetkazib beruvchi / Mahsulot havolasi (URL)')}
+              </label>
           <span className="text-[11px] text-blue-600 font-medium flex items-center gap-1">
             <HelpCircle className="w-3.5 h-3.5" /> Uzum / AliExpress / Amazon / Custom
           </span>
@@ -602,6 +638,8 @@ export const ProductImportView: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

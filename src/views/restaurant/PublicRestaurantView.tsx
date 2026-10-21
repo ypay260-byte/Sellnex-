@@ -51,11 +51,24 @@ export const PublicRestaurantView: React.FC = () => {
   const [selectedAddons, setSelectedAddons] = useState<RestaurantAddon[]>([]);
   const [dishQuantity, setDishQuantity] = useState(1);
 
+  // Table identification from QR code (Feature 4 A.6, A.7)
+  const getInitialTable = () => {
+    if (routeParams?.table) return String(routeParams.table);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('table') || '';
+    }
+    return '';
+  };
+  const [tableNumber, setTableNumber] = useState<string>(getInitialTable());
+
   // Checkout form
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('+998 ');
-  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState(
+    getInitialTable() ? `Stol: ${getInitialTable()}` : ''
+  );
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'click' | 'payme'>('cash');
   const [submittingOrder, setSubmittingOrder] = useState(false);
@@ -209,11 +222,13 @@ export const PublicRestaurantView: React.FC = () => {
 
   const cartItemsCount = cart.reduce((sum, i) => sum + i.quantity, 0);
   const cartSubtotal = cart.reduce((sum, i) => sum + i.totalPrice, 0);
-  const deliveryFee = restaurant?.deliveryFee || 0;
-  const cartGrandTotal = cartSubtotal + (cartSubtotal > 0 ? deliveryFee : 0);
+  const effectiveDeliveryFee = tableNumber ? 0 : (restaurant?.deliveryFee || 0);
+  const cartGrandTotal = cartSubtotal + (cartSubtotal > 0 ? effectiveDeliveryFee : 0);
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingOrder) return; // Prevent duplicate order submissions (Feature 4 C.9)
+
     if (!customerName.trim()) {
       showToast('Ism kiritilmadi', 'Iltimos, ismingizni kiriting', 'warning');
       return;
@@ -222,8 +237,9 @@ export const PublicRestaurantView: React.FC = () => {
       showToast('Telefon raqam xato', 'Iltimos, to\'liq telefon raqamingizni kiriting', 'warning');
       return;
     }
-    if (!deliveryAddress.trim()) {
-      showToast('Manzil kiritilmadi', 'Iltimos, yetkazib berish manzilini kiriting', 'warning');
+    const finalAddress = deliveryAddress.trim() || (tableNumber ? `Stol: ${tableNumber}` : '');
+    if (!finalAddress) {
+      showToast('Manzil kiritilmadi', 'Iltimos, manzil yoki stol raqamini kiriting', 'warning');
       return;
     }
 
@@ -234,11 +250,13 @@ export const PublicRestaurantView: React.FC = () => {
         ownerId: restaurant!.ownerId,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
-        deliveryAddress: deliveryAddress.trim(),
+        tableNumber: tableNumber ? tableNumber : undefined,
+        orderType: tableNumber ? 'dine_in' : 'delivery',
+        deliveryAddress: finalAddress,
         deliveryNotes: deliveryNotes.trim() || undefined,
         items: cart.map(({ itemKey, ...rest }) => rest),
         subtotal: cartSubtotal,
-        deliveryFee: deliveryFee,
+        deliveryFee: effectiveDeliveryFee,
         totalAmount: cartGrandTotal,
         status: 'new',
         paymentMethod: paymentMethod,
@@ -350,6 +368,30 @@ export const PublicRestaurantView: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* Table Identification Banner (Feature 4 A.6, A.7) */}
+      {tableNumber && (
+        <div className="max-w-5xl mx-auto px-4 pt-3">
+          <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl p-3.5 sm:p-4 shadow-md flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center font-black text-lg shrink-0">
+                🍽️
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-sm sm:text-base">Sizning stolingiz: {tableNumber}</span>
+                  <span className="bg-white/25 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                    Stolda buyurtma
+                  </span>
+                </div>
+                <p className="text-xs text-amber-100">
+                  Menyudan tanlab buyurtma bering. Taomlar to‘g‘ridan-to‘g‘ri stolingizga yetkaziladi.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Restaurant Hero Card */}
       <div className="max-w-5xl mx-auto px-4 pt-4">
@@ -751,7 +793,7 @@ export const PublicRestaurantView: React.FC = () => {
                   <div className="flex justify-between">
                     <span>Yetkazib berish narxi:</span>
                     <span className="font-semibold text-slate-800">
-                      {deliveryFee > 0 ? `${deliveryFee.toLocaleString()} so‘m` : 'Bepul'}
+                      {effectiveDeliveryFee > 0 ? `${effectiveDeliveryFee.toLocaleString()} so‘m` : 'Bepul'}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-1 border-t border-slate-200">
@@ -823,19 +865,35 @@ export const PublicRestaurantView: React.FC = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Yetkazib berish manzili <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Toshkent sh., Chilonzor 9-mavze, 12-uy, 45-xonadon"
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
-                  />
-                </div>
+                {tableNumber ? (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                        🍽️ Buyurtma joyi (Stol):
+                      </span>
+                      <span className="px-2.5 py-0.5 bg-amber-600 text-white font-black text-xs rounded-lg">
+                        {tableNumber}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 leading-relaxed">
+                      Stolda o'tirib buyurtma berilmoqda. Yetkazib berish narxi olinmaydi (0 so‘m). Taomlar bevosita stolingizga tortiladi.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Yetkazib berish manzili <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Toshkent sh., Chilonzor 9-mavze, 12-uy, 45-xonadon"
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -883,7 +941,7 @@ export const PublicRestaurantView: React.FC = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Yetkazib berish:</span>
-                    <span>{deliveryFee > 0 ? `${deliveryFee.toLocaleString()} so‘m` : 'Bepul'}</span>
+                    <span>{effectiveDeliveryFee > 0 ? `${effectiveDeliveryFee.toLocaleString()} so‘m` : 'Bepul'}</span>
                   </div>
                   <div className="flex justify-between font-extrabold text-sm text-slate-900 pt-1 border-t border-amber-200">
                     <span>Jami to‘lov:</span>

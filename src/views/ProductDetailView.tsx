@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Product } from '../types';
 import { firestoreService } from '../services/firestoreService';
+import { ProductReviewsSection } from '../components/reviews/ProductReviewsSection';
 import {
   ShoppingBag,
   Star,
@@ -326,11 +327,21 @@ export const ProductDetailView: React.FC = () => {
                 <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
                   {product.category}
                 </span>
-                <div className="flex items-center gap-1.5 text-xs text-amber-500 font-bold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('reviews');
+                    const el = document.getElementById('product-tabs-container');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-amber-500 font-bold hover:opacity-80 transition cursor-pointer"
+                >
                   <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  <span>{product.rating || '4.9'}</span>
-                  <span className="text-slate-400 font-normal">({product.reviewCount || 12} reviews)</span>
-                </div>
+                  <span>{product.rating ? product.rating.toFixed(1) : (product.reviewCount ? '5.0' : '5.0')}</span>
+                  <span className="text-slate-400 font-normal">
+                    ({product.reviewCount || 0} {product.reviewCount === 1 ? 'sharh' : 'sharhlar'})
+                  </span>
+                </button>
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-tight">
@@ -456,7 +467,7 @@ export const ProductDetailView: React.FC = () => {
             </div>
 
             {/* Description Tab Section */}
-            <div className="mt-8 border-t border-slate-200 pt-6 space-y-4">
+            <div id="product-tabs-container" className="mt-8 border-t border-slate-200 pt-6 space-y-4">
               <div className="flex items-center gap-4 border-b border-slate-200 pb-2">
                 <button
                   onClick={() => setActiveTab('desc')}
@@ -499,17 +510,18 @@ export const ProductDetailView: React.FC = () => {
               )}
 
               {activeTab === 'reviews' && (
-                <div className="text-xs text-slate-600 space-y-3">
-                  <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900">Jamshid U. (Tashkent)</span>
-                      <div className="flex text-amber-400">
-                        {'★'.repeat(5)}
-                      </div>
-                    </div>
-                    <p className="text-slate-600">Great quality product, delivered quickly and well packaged!</p>
-                  </div>
-                </div>
+                <ProductReviewsSection
+                  product={product}
+                  formatMoney={formatMoney}
+                  onReviewAdded={async () => {
+                    try {
+                      const updated = await firestoreService.getProductById(product.id);
+                      if (updated) setProduct(updated);
+                    } catch (e) {
+                      console.warn('Could not reload product rating:', e);
+                    }
+                  }}
+                />
               )}
             </div>
           </div>

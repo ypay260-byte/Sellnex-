@@ -131,6 +131,12 @@
     "/supplier_reviews/{reviewId}": {
       "schema": "#/entities/SupplierReview",
       "description": "Seller ratings and reviews for dropshipping suppliers"
+    },
+    "/dropshipping_categories/{catId}": {
+      "description": "Admin managed dropshipping categories"
+    },
+    "/dropshipping_catalog/{productId}": {
+      "description": "Admin managed master dropshipping products"
     }
   }
 }

@@ -11,6 +11,7 @@ import {
   orderBy,
   onSnapshot,
   serverTimestamp,
+  writeBatch,
   Unsubscribe,
 } from 'firebase/firestore';
 import {
@@ -48,6 +49,14 @@ import {
   CafeCategory,
   RestaurantOrder,
   RestaurantOrderStatus,
+  ProductReview,
+  ReviewModerationStatus,
+  BulkImportProductRow,
+  BulkImportSummary,
+  CafeTable,
+  DropshippingCategory,
+  DropshippingCatalogProduct,
+  OrderStatus,
 } from '../types';
 import {
   INITIAL_STORE,
@@ -82,6 +91,10 @@ export const COLLECTIONS = {
   MENU_ITEMS: 'menu_items',
   CAFE_CATEGORIES: 'cafe_categories',
   RESTAURANT_ORDERS: 'restaurant_orders',
+  PRODUCT_REVIEWS: 'product_reviews',
+  CAFE_TABLES: 'cafe_tables',
+  DROPSHIPPING_CATEGORIES: 'dropshipping_categories',
+  DROPSHIPPING_CATALOG: 'dropshipping_catalog',
 } as const;
 
 // === In-Memory Multi-Tenant Isolation Cache for Café ===
@@ -958,6 +971,338 @@ export const firestoreService = {
       await setDoc(docRef, { ...review, updatedAt: new Date().toISOString() }, { merge: true });
     } catch (err) {
       console.warn('Error saving supplier review to Firestore:', err);
+    }
+  },
+
+  // === FEATURE 1: PRODUCT RATINGS AND REVIEWS OPERATIONS ===
+  async getProductReviews(productId: string): Promise<ProductReview[]> {
+    try {
+      if (!productId) return [];
+      const q = query(
+        collection(db, COLLECTIONS.PRODUCT_REVIEWS),
+        where('productId', '==', productId)
+      );
+      const snapshot = await getDocs(q);
+      const reviews = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as ProductReview[];
+
+      return reviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (err) {
+      console.warn('Error fetching product reviews:', err);
+      return [];
+    }
+  },
+
+  async getAllProductReviews(): Promise<ProductReview[]> {
+    try {
+      const snapshot = await getDocs(collection(db, COLLECTIONS.PRODUCT_REVIEWS));
+      const reviews = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as ProductReview[];
+      return reviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (err) {
+      console.warn('Error fetching all product reviews for admin:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Verified purchase check: Searches actual orders in Firestore for matching customer phone/email
+   * and product ID. Never fabricates verified purchase badge (Requirement 7).
+   */
+  async checkVerifiedPurchase(
+    productId: string,
+    customerPhone: string,
+    customerEmail?: string
+  ): Promise<{ isVerified: boolean; orderId?: string }> {
+    try {
+      if (!productId || !customerPhone) return { isVerified: false };
+      const cleanPhone = customerPhone.replace(/\D/g, '');
+
+      const snapshot = await getDocs(collection(db, COLLECTIONS.ORDERS));
+      for (const docSnap of snapshot.docs) {
+        const order = docSnap.data() as Order;
+        const orderPhone = (order.customerPhone || '').replace(/\D/g, '');
+        const orderEmail = (order.customerEmail || '').toLowerCase().trim();
+        const inputEmail = (customerEmail || '').toLowerCase().trim();
+
+        const phoneMatches = orderPhone && cleanPhone && orderPhone.endsWith(cleanPhone.slice(-9));
+        const emailMatches = orderEmail && inputEmail && orderEmail === inputEmail;
+
+        if (phoneMatches || emailMatches) {
+          const hasPurchasedProduct = order.items?.some((item) => item.productId === productId);
+          const isSuccessfulOrder =
+            order.paymentStatus === 'paid' ||
+            order.paymentStatus === 'Paid' ||
+            order.orderStatus === 'confirmed' ||
+            order.orderStatus === 'Paid' ||
+            order.orderStatus === 'Processing' ||
+            order.orderStatus === 'Supplier Ordered' ||
+            order.orderStatus === 'Shipped' ||
+            order.orderStatus === 'Delivered';
+
+          if (hasPurchasedProduct && isSuccessfulOrder) {
+            return { isVerified: true, orderId: order.id };
+          }
+        }
+      }
+      return { isVerified: false };
+    } catch (err) {
+      console.warn('Error checking verified purchase:', err);
+      return { isVerified: false };
+    }
+  },
+
+  async addProductReview(
+    reviewData: Omit<ProductReview, 'id' | 'createdAt'>
+  ): Promise<ProductReview> {
+    const cleanPhone = (reviewData.customerPhone || '').trim();
+    const cleanEmail = (reviewData.customerEmail || '').trim().toLowerCase();
+
+    // Prevent duplicate reviews from same customer for same product (Requirement 6)
+    const existing = await this.getProductReviews(reviewData.productId);
+    const isDuplicate = existing.some((r) => {
+      const matchPhone = cleanPhone && r.customerPhone && r.customerPhone.replace(/\D/g, '') === cleanPhone.replace(/\D/g, '');
+      const matchEmail = cleanEmail && r.customerEmail && r.customerEmail.toLowerCase().trim() === cleanEmail;
+      const matchCustomer = reviewData.customerId && r.customerId === reviewData.customerId;
+      return matchPhone || matchEmail || matchCustomer;
+    });
+
+    if (isDuplicate) {
+      throw new Error('Siz ushbu mahsulotga allaqachon sharh qoldirgansiz. Har bir mijoz bitta sharh yozishi mumkin.');
+    }
+
+    const reviewId = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const nowIso = new Date().toISOString();
+
+    const newReview: ProductReview = {
+      ...reviewData,
+      id: reviewId,
+      status: reviewData.status || 'approved',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    const docRef = doc(db, COLLECTIONS.PRODUCT_REVIEWS, reviewId);
+    await setDoc(docRef, sanitizeData(newReview));
+
+    // Recalculate average rating & review count for the product (Requirement 5)
+    await this.recalculateProductRating(reviewData.productId);
+
+    return newReview;
+  },
+
+  async moderateProductReview(
+    reviewId: string,
+    status: ReviewModerationStatus,
+    productId: string,
+    moderatedBy?: string
+  ): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.PRODUCT_REVIEWS, reviewId);
+    const nowIso = new Date().toISOString();
+    await updateDoc(docRef, {
+      status,
+      moderatedBy: moderatedBy || 'admin',
+      moderatedAt: nowIso,
+      updatedAt: nowIso,
+    });
+
+    // Recalculate product rating after moderation status change
+    if (productId) {
+      await this.recalculateProductRating(productId);
+    }
+  },
+
+  async deleteProductReview(reviewId: string, productId: string): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.PRODUCT_REVIEWS, reviewId);
+    await deleteDoc(docRef);
+
+    if (productId) {
+      await this.recalculateProductRating(productId);
+    }
+  },
+
+  async recalculateProductRating(productId: string): Promise<{ rating: number; reviewCount: number }> {
+    try {
+      const reviews = await this.getProductReviews(productId);
+      const approved = reviews.filter((r) => r.status === 'approved');
+
+      let newRating = 5.0;
+      let reviewCount = approved.length;
+
+      if (approved.length > 0) {
+        const sum = approved.reduce((acc, r) => acc + Number(r.rating || 5), 0);
+        newRating = Math.round((sum / approved.length) * 10) / 10;
+      }
+
+      const productRef = doc(db, COLLECTIONS.PRODUCTS, productId);
+      const productSnap = await getDoc(productRef);
+      if (productSnap.exists()) {
+        await updateDoc(productRef, {
+          rating: newRating,
+          reviewCount: reviewCount,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      return { rating: newRating, reviewCount };
+    } catch (err) {
+      console.warn('Error recalculating product rating:', err);
+      return { rating: 5.0, reviewCount: 0 };
+    }
+  },
+
+  // === FEATURE 2: EXCEL / CSV BULK PRODUCT IMPORT ===
+  async bulkImportProducts(
+    storeId: string,
+    ownerId: string,
+    rows: BulkImportProductRow[],
+    productLimit: number = 50,
+    currentCount: number = 0
+  ): Promise<BulkImportSummary> {
+    if (!storeId || !ownerId) {
+      throw new Error('Autentifikatsiya qilingan do‘kon yoki sotuvchi identifikatori topilmadi.');
+    }
+
+    const validRows = rows.filter((r) => r.isValid);
+    const invalidRows = rows.filter((r) => !r.isValid);
+
+    const summary: BulkImportSummary = {
+      totalRows: rows.length,
+      validRows: validRows.length,
+      invalidRows: invalidRows.length,
+      importedCount: 0,
+      skippedCount: 0,
+      failedCount: invalidRows.length,
+      errorMessages: invalidRows.flatMap((r) => r.errors),
+    };
+
+    if (validRows.length === 0) {
+      return summary;
+    }
+
+    // Enforce subscription and product limits (Requirement 12)
+    const allowedNewCount = Math.max(0, productLimit - currentCount);
+    let rowsToImport = validRows;
+    if (allowedNewCount < validRows.length) {
+      const excess = validRows.length - allowedNewCount;
+      rowsToImport = validRows.slice(0, allowedNewCount);
+      summary.skippedCount += excess;
+      summary.errorMessages.push(
+        `Tarif limiti sababli ${excess} ta mahsulot yuklanmadi. Mavjud limit: ${productLimit}, amaldagi mahsulotlar: ${currentCount}.`
+      );
+    }
+
+    // Process batched writes in chunks of 400 (Firestore max limit is 500 per batch)
+    const CHUNK_SIZE = 400;
+    for (let i = 0; i < rowsToImport.length; i += CHUNK_SIZE) {
+      const chunk = rowsToImport.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
+
+      for (const row of chunk) {
+        const productId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const docRef = doc(db, COLLECTIONS.PRODUCTS, productId);
+
+        const newProduct: Product = {
+          id: productId,
+          storeId, // Guaranteed authenticated store ID (Requirement 11, 15)
+          ownerId, // Guaranteed authenticated seller ID (Requirement 11, 15)
+          title: row.name.trim(),
+          description: row.description?.trim() || 'Sellnex do‘konidagi sifatli mahsulot.',
+          category: row.category?.trim() || 'Umumiy',
+          businessMode: 'personal',
+          supplier: 'Local Warehouse',
+          supplierCost: 0,
+          shippingCost: 0,
+          paymentFeePercent: 1.5,
+          platformFeePercent: 0,
+          profitType: 'fixed',
+          profitValue: row.price,
+          calculatedProfit: row.price,
+          sellingPrice: row.price,
+          stock: row.stock > 0 ? row.stock : 10,
+          status: 'Published',
+          sku: row.sku || `SL-${Math.floor(1000 + Math.random() * 9000)}`,
+          images: row.imageUrl
+            ? [row.imageUrl]
+            : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80'],
+          variants: [{ id: 'v1', name: 'Standart', options: ['Standart'] }],
+          rating: 5.0,
+          reviewCount: 0,
+          salesCount: 0,
+          featured: false,
+          createdAt: new Date().toISOString(),
+        };
+
+        batch.set(docRef, sanitizeData(newProduct));
+        summary.importedCount++;
+      }
+
+      await batch.commit();
+    }
+
+    return summary;
+  },
+
+  // === FEATURE 4: SELLNEX CAFE - TABLE MANAGEMENT OPERATIONS ===
+  async getCafeTables(restaurantId: string): Promise<CafeTable[]> {
+    try {
+      if (!restaurantId) return [];
+      const q = query(
+        collection(db, COLLECTIONS.CAFE_TABLES),
+        where('restaurantId', '==', restaurantId)
+      );
+      const snap = await getDocs(q);
+      const tables = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as CafeTable);
+
+      if (tables.length === 0) {
+        // Initialize default tables for new cafe
+        const defaults = ['Stol 1', 'Stol 2', 'Stol 3', 'Stol 4', 'VIP Stol'];
+        const createdDefaults: CafeTable[] = [];
+        for (const tNum of defaults) {
+          const tId = `tbl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+          const tableObj: CafeTable = {
+            id: tId,
+            restaurantId,
+            tableNumber: tNum,
+            capacity: 4,
+            status: 'available',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          await setDoc(doc(db, COLLECTIONS.CAFE_TABLES, tId), sanitizeData(tableObj));
+          createdDefaults.push(tableObj);
+        }
+        return createdDefaults;
+      }
+
+      return tables.sort((a, b) => a.tableNumber.localeCompare(b.tableNumber, undefined, { numeric: true }));
+    } catch (e) {
+      console.error('Error fetching cafe tables:', e);
+      return [];
+    }
+  },
+
+  async saveCafeTable(table: CafeTable): Promise<void> {
+    try {
+      const docRef = doc(db, COLLECTIONS.CAFE_TABLES, table.id);
+      await setDoc(docRef, sanitizeData({ ...table, updatedAt: new Date().toISOString() }), { merge: true });
+    } catch (e) {
+      console.error('Error saving cafe table:', e);
+      throw e;
+    }
+  },
+
+  async deleteCafeTable(tableId: string): Promise<void> {
+    try {
+      const docRef = doc(db, COLLECTIONS.CAFE_TABLES, tableId);
+      await deleteDoc(docRef);
+    } catch (e) {
+      console.error('Error deleting cafe table:', e);
+      throw e;
     }
   },
 
@@ -2069,6 +2414,430 @@ export const firestoreService = {
       console.error('Failed to get all restaurant orders', e);
       return [];
     }
+  },
+
+  // === DROPSHIPPING SYSTEM (CATEGORIES & MASTER CATALOG) ===
+  async getDropshippingCategories(activeOnly = false): Promise<DropshippingCategory[]> {
+    try {
+      const snap = await getDocs(collection(db, COLLECTIONS.DROPSHIPPING_CATEGORIES));
+      let categories = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as DropshippingCategory);
+
+      // If empty on first initial launch, populate clean default categories
+      if (categories.length === 0) {
+        const defaultCats: Omit<DropshippingCategory, 'id' | 'createdAt'>[] = [
+          {
+            name: 'Elektronika & Gadjetlar',
+            description: 'Aqlli soatlar, quloqchinlar va telefon aksessuarlari',
+            imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&auto=format&fit=crop&q=80',
+            order: 1,
+            isActive: true,
+            productCount: 0,
+          },
+          {
+            name: 'Go‘zallik & Parvarish',
+            description: 'Parvarish vositalari, kosmetika va massaj uskunalari',
+            imageUrl: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=800&auto=format&fit=crop&q=80',
+            order: 2,
+            isActive: true,
+            productCount: 0,
+          },
+          {
+            name: 'Uy & Oshxona Buyumlari',
+            description: 'Oshxona anjomlari, uy tozalash va qulaylik gadjetlari',
+            imageUrl: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
+            order: 3,
+            isActive: true,
+            productCount: 0,
+          },
+          {
+            name: 'Kiyim & Aksessuarlar',
+            description: 'Sumkalar, hamyonlar, kamarlar va zamonaviy aksessuarlar',
+            imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
+            order: 4,
+            isActive: true,
+            productCount: 0,
+          },
+          {
+            name: 'Sport & Salomatlik',
+            description: 'Fitnes anjomlari, termo-idishlar va mashg‘ulot buyumlari',
+            imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80',
+            order: 5,
+            isActive: true,
+            productCount: 0,
+          },
+        ];
+
+        const initialized: DropshippingCategory[] = [];
+        for (const cat of defaultCats) {
+          const catId = `dscat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+          const catObj: DropshippingCategory = {
+            ...cat,
+            id: catId,
+            createdAt: new Date().toISOString(),
+          };
+          await setDoc(doc(db, COLLECTIONS.DROPSHIPPING_CATEGORIES, catId), sanitizeData(catObj));
+          initialized.push(catObj);
+        }
+        return initialized;
+      }
+
+      if (activeOnly) {
+        categories = categories.filter((c) => c.isActive !== false);
+      }
+
+      return categories.sort((a, b) => (a.order || 0) - (b.order || 0));
+    } catch (err) {
+      console.error('Error fetching dropshipping categories:', err);
+      return [];
+    }
+  },
+
+  async saveDropshippingCategory(category: DropshippingCategory): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.DROPSHIPPING_CATEGORIES, category.id);
+    const cleaned = sanitizeData({
+      ...category,
+      updatedAt: new Date().toISOString(),
+    });
+    await setDoc(docRef, cleaned, { merge: true });
+  },
+
+  async deleteDropshippingCategory(categoryId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Check if products exist in this category before deleting (Section 2 Requirement)
+      const q = query(
+        collection(db, COLLECTIONS.DROPSHIPPING_CATALOG),
+        where('categoryId', '==', categoryId)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        return {
+          success: false,
+          error: `Ushbu kategoriyada ${snap.docs.length} ta mahsulot mavjud. Kategoriyani o‘chirishdan oldin mahsulotlarni boshqa kategoriyaga o‘tkazing yoki faolsizlantiring.`,
+        };
+      }
+
+      const docRef = doc(db, COLLECTIONS.DROPSHIPPING_CATEGORIES, categoryId);
+      await deleteDoc(docRef);
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error deleting dropshipping category:', err);
+      return { success: false, error: err?.message || 'Kategoriyani o‘chirishda xatolik yuz berdi.' };
+    }
+  },
+
+  async getDropshippingCatalog(options?: {
+    activeOnly?: boolean;
+    categoryId?: string;
+  }): Promise<DropshippingCatalogProduct[]> {
+    try {
+      let qRef = collection(db, COLLECTIONS.DROPSHIPPING_CATALOG);
+      const snap = await getDocs(qRef);
+      let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as DropshippingCatalogProduct);
+
+      // If empty on first run, create 6 high-quality initial dropshipping products
+      if (items.length === 0) {
+        const categories = await this.getDropshippingCategories();
+        const catElectronics = categories.find((c) => c.name.includes('Elektronika')) || categories[0];
+        const catBeauty = categories.find((c) => c.name.includes('Go‘zallik')) || categories[1] || categories[0];
+        const catHome = categories.find((c) => c.name.includes('Uy')) || categories[2] || categories[0];
+        const catAccessories = categories.find((c) => c.name.includes('Kiyim')) || categories[3] || categories[0];
+
+        const initialProducts: Omit<DropshippingCatalogProduct, 'id' | 'createdAt'>[] = [
+          {
+            title: 'Simsiz Shovqinni Bosuvchi Bluetooth Quloqchin Pro ANC',
+            description: 'Yuqori sifatli faol shovqinni bosish (ANC) funksiyasi, 36 soatlik batareya muddati va quloqqa juda qulay joylashuv. Type-C tez quvvatlash.',
+            images: [
+              'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800&auto=format&fit=crop&q=80',
+              'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=800&auto=format&fit=crop&q=80',
+            ],
+            categoryId: catElectronics.id,
+            categoryName: catElectronics.name,
+            supplierCost: 110000,
+            recommendedPrice: 195000,
+            minSellingPrice: 140000,
+            stock: 85,
+            isAvailable: true,
+            deliveryInfo: 'Toshkent va viloyatlarga 1-2 kunda yetkazib beriladi',
+            estimatedDeliveryDays: '1-2 kun',
+            isActive: true,
+            supplierName: 'Sahiy Distribyutsiya',
+            supplierProductCode: 'SHY-ANC-908',
+            supplierUrl: 'https://sahiy.uz',
+            defaultDeliveryFee: 15000,
+            commissionPercent: 5,
+            sku: 'DP-ANC-908',
+          },
+          {
+            title: 'Aqlli Fitnes Soat Smartwatch Ultra AMOLED Ekran',
+            description: 'Yurak urishi, qon bosimi va uyqu sifatini o‘lchovchi aqlli soat. Suv o‘tkazmaydigan IP68 korpus, 100 dan ortiq sport rejimlari va bildirishnomalar.',
+            images: [
+              'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&auto=format&fit=crop&q=80',
+              'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
+            ],
+            categoryId: catElectronics.id,
+            categoryName: catElectronics.name,
+            supplierCost: 175000,
+            recommendedPrice: 285000,
+            minSellingPrice: 215000,
+            stock: 60,
+            isAvailable: true,
+            deliveryInfo: 'Tezkor kuryer xizmati orqali to‘g‘ridan-to‘g‘ri manzilga',
+            estimatedDeliveryDays: '1-3 kun',
+            isActive: true,
+            supplierName: 'Uzum Ombori',
+            supplierProductCode: 'UZM-WATCH-012',
+            supplierUrl: 'https://uzum.uz',
+            defaultDeliveryFee: 15000,
+            commissionPercent: 5,
+            sku: 'DP-WCH-012',
+          },
+          {
+            title: 'Portativ Mini Blender & Sharbat Siqgich USB Rechargeable',
+            description: 'Har kuni yangi smuzi va meva sharbatlari tayyorlash uchun qulay simsiz mini blender. 6 tig‘li zanglamas po‘lat pichoq va kuchli batareya.',
+            images: [
+              'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
+              'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
+            ],
+            categoryId: catHome.id,
+            categoryName: catHome.name,
+            supplierCost: 85000,
+            recommendedPrice: 155000,
+            minSellingPrice: 110000,
+            stock: 120,
+            isAvailable: true,
+            deliveryInfo: 'Barcha 12 viloyat markazlariga 24 soat ichida',
+            estimatedDeliveryDays: '1-2 kun',
+            isActive: true,
+            supplierName: 'Sahiy Distribyutsiya',
+            supplierProductCode: 'SHY-BLN-441',
+            supplierUrl: 'https://sahiy.uz',
+            defaultDeliveryFee: 15000,
+            commissionPercent: 5,
+            sku: 'DP-BLN-441',
+          },
+          {
+            title: 'Ko‘p Funksiyali Termo Qahva Choy Idishi (Harorat Indikatori Bilan)',
+            description: 'Ichimlik haroratini sensorli ekranda ko‘rsatuvchi 500ml termos. 12 soat davomida issiq yoki muzdek saqlaydi. Oqmaydigan germetik qopqoq.',
+            images: [
+              'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop&q=80',
+              'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80',
+            ],
+            categoryId: catHome.id,
+            categoryName: catHome.name,
+            supplierCost: 65000,
+            recommendedPrice: 120000,
+            minSellingPrice: 85000,
+            stock: 95,
+            isAvailable: true,
+            deliveryInfo: 'Xavfsiz va ehtiyotkor qadoqda yetkaziladi',
+            estimatedDeliveryDays: '1-3 kun',
+            isActive: true,
+            supplierName: 'Mahalliy Distribyutor',
+            supplierProductCode: 'LCL-TRM-305',
+            defaultDeliveryFee: 15000,
+            commissionPercent: 5,
+            sku: 'DP-TRM-305',
+          },
+          {
+            title: 'Yuz Uchun Ultratovushli Skraber & Porlarni Tozalagich',
+            description: 'Yuz terisini chuqur tozalash, qora nuqtalarni ketkazish va yoshartirish uchun salon darajasidagi uy kosmetik uskunasi.',
+            images: [
+              'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=800&auto=format&fit=crop&q=80',
+              'https://images.unsplash.com/photo-1512290900672-1f55b9e0237e?w=800&auto=format&fit=crop&q=80',
+            ],
+            categoryId: catBeauty.id,
+            categoryName: catBeauty.name,
+            supplierCost: 95000,
+            recommendedPrice: 175000,
+            minSellingPrice: 125000,
+            stock: 75,
+            isAvailable: true,
+            deliveryInfo: 'Yetkazib berish butun O‘zbekiston bo‘ylab bepul',
+            estimatedDeliveryDays: '1-2 kun',
+            isActive: true,
+            supplierName: 'Sahiy Distribyutsiya',
+            supplierProductCode: 'SHY-SKN-712',
+            supplierUrl: 'https://sahiy.uz',
+            defaultDeliveryFee: 15000,
+            commissionPercent: 5,
+            sku: 'DP-SKN-712',
+          },
+          {
+            title: 'Haqiqiy Teri Erkaklar Hamyoni (RFID Himoyasi Bilan)',
+            description: '100% tabiiy charmdan tikilgan ixcham va ko‘rkam erkaklar hamyoni. Bank kartalari uchun masofaviy o‘g‘irlikdan himoyalovchi RFID blokeri mavjud.',
+            images: [
+              'https://images.unsplash.com/photo-1627123424574-724758594e93?w=800&auto=format&fit=crop&q=80',
+              'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80',
+            ],
+            categoryId: catAccessories.id,
+            categoryName: catAccessories.name,
+            supplierCost: 75000,
+            recommendedPrice: 145000,
+            minSellingPrice: 100000,
+            stock: 110,
+            isAvailable: true,
+            deliveryInfo: 'Sovg‘abop chiroyli quti bilan yetkaziladi',
+            estimatedDeliveryDays: '1-2 kun',
+            isActive: true,
+            supplierName: 'Charm Distribyutor',
+            supplierProductCode: 'CHM-WLT-501',
+            defaultDeliveryFee: 15000,
+            commissionPercent: 5,
+            sku: 'DP-WLT-501',
+          },
+        ];
+
+        const initializedProducts: DropshippingCatalogProduct[] = [];
+        for (const p of initialProducts) {
+          const pId = `dscatprod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+          const pObj: DropshippingCatalogProduct = {
+            ...p,
+            id: pId,
+            createdAt: new Date().toISOString(),
+          };
+          await setDoc(doc(db, COLLECTIONS.DROPSHIPPING_CATALOG, pId), sanitizeData(pObj));
+          initializedProducts.push(pObj);
+        }
+        items = initializedProducts;
+      }
+
+      if (options?.activeOnly) {
+        items = items.filter((p) => p.isActive !== false && p.isAvailable !== false);
+      }
+      if (options?.categoryId && options.categoryId !== 'all') {
+        items = items.filter((p) => p.categoryId === options.categoryId);
+      }
+
+      return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (err) {
+      console.error('Error fetching dropshipping catalog:', err);
+      return [];
+    }
+  },
+
+  async getDropshippingProductById(productId: string): Promise<DropshippingCatalogProduct | null> {
+    try {
+      const docRef = doc(db, COLLECTIONS.DROPSHIPPING_CATALOG, productId);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        return { id: snap.id, ...snap.data() } as DropshippingCatalogProduct;
+      }
+      return null;
+    } catch (err) {
+      console.error('Error getting dropshipping product by ID:', err);
+      return null;
+    }
+  },
+
+  async saveDropshippingProduct(product: DropshippingCatalogProduct): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.DROPSHIPPING_CATALOG, product.id);
+    const cleaned = sanitizeData({
+      ...product,
+      updatedAt: new Date().toISOString(),
+    });
+    await setDoc(docRef, cleaned, { merge: true });
+  },
+
+  async deleteDropshippingProduct(productId: string): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.DROPSHIPPING_CATALOG, productId);
+    await deleteDoc(docRef);
+  },
+
+  async addDropshippingProductToStore(
+    catalogProduct: DropshippingCatalogProduct,
+    store: Store,
+    user: User,
+    customSellingPrice: number
+  ): Promise<Product> {
+    // Enforce business rule: Price cannot be lower than minimum allowed selling price
+    if (customSellingPrice < catalogProduct.minSellingPrice) {
+      throw new Error(
+        `Sotish narxi admin tomonidan belgilangan eng kam narxdan (${catalogProduct.minSellingPrice.toLocaleString()} so‘m) past bo‘lishi mumkin emas.`
+      );
+    }
+
+    const newId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const platformFee = Math.round(customSellingPrice * ((catalogProduct.commissionPercent || 5) / 100));
+    const calculatedProfit = Math.max(
+      0,
+      customSellingPrice - catalogProduct.supplierCost - catalogProduct.defaultDeliveryFee - platformFee
+    );
+
+    const newProduct: Product = {
+      id: newId,
+      storeId: store.id,
+      ownerId: user.id || store.ownerId,
+      title: catalogProduct.title,
+      description: catalogProduct.description,
+      category: catalogProduct.categoryName,
+      images: catalogProduct.images && catalogProduct.images.length > 0 ? catalogProduct.images : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800'],
+      businessMode: 'dropshipping',
+      dropshippingCatalogId: catalogProduct.id,
+      supplier: (catalogProduct.supplierName as any) || 'Custom Supplier',
+      supplierProductCode: catalogProduct.supplierProductCode,
+      supplierUrl: catalogProduct.supplierUrl,
+      supplierCost: catalogProduct.supplierCost,
+      shippingCost: catalogProduct.defaultDeliveryFee,
+      minSellingPrice: catalogProduct.minSellingPrice,
+      paymentFeePercent: 1.5,
+      platformFeePercent: catalogProduct.commissionPercent || 5,
+      profitType: 'fixed',
+      profitValue: calculatedProfit,
+      calculatedProfit: calculatedProfit,
+      sellingPrice: customSellingPrice,
+      stock: catalogProduct.stock || 50,
+      status: 'Published',
+      sku: `${catalogProduct.sku || 'DP'}-${Math.floor(100 + Math.random() * 900)}`,
+      variants: [{ id: 'v1', name: 'Standart', options: ['Standart'] }],
+      rating: 5.0,
+      reviewCount: 0,
+      salesCount: 0,
+      featured: false,
+      deliveryInfo: catalogProduct.deliveryInfo,
+      estimatedDeliveryDays: catalogProduct.estimatedDeliveryDays,
+      createdAt: new Date().toISOString(),
+    };
+
+    await this.saveProduct(newProduct);
+    return newProduct;
+  },
+
+  async updateSupplierOrder(
+    orderId: string,
+    supplierOrderData: NonNullable<Order['supplierOrder']>,
+    newOrderStatus?: OrderStatus
+  ): Promise<void> {
+    const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
+    const existing = await this.getOrderById(orderId);
+    let timeline = existing?.timeline ? [...existing.timeline] : [];
+
+    const nowIso = new Date().toISOString();
+    let statusDesc = `Yetkazib beruvchi (${supplierOrderData.supplierName}) buyurtmasi yangilandi.`;
+    if (supplierOrderData.status === 'ordered') {
+      statusDesc = `Yetkazib beruvchiga buyurtma berildi (Tashqi ID: ${supplierOrderData.externalOrderId || 'Mavjud emas'}).`;
+    } else if (supplierOrderData.status === 'in_transit') {
+      statusDesc = `Yetkazib beruvchi mahsulotni yo‘lga chiqardi.`;
+    } else if (supplierOrderData.status === 'delivered_to_hub') {
+      statusDesc = `Mahsulot yetkazib berish omboriga yetib keldi.`;
+    }
+
+    timeline.push({
+      status: (newOrderStatus || existing?.orderStatus || 'Processing') as OrderStatus,
+      timestamp: nowIso,
+      title: 'Tashqi yetkazib beruvchi (Sahiy / Supplier) holati',
+      description: statusDesc,
+    });
+
+    const payload: Partial<Order> = {
+      supplierOrder: supplierOrderData,
+      timeline,
+      updatedAt: nowIso,
+    };
+    if (newOrderStatus) {
+      payload.orderStatus = newOrderStatus;
+    }
+
+    await setDoc(docRef, sanitizeData(payload), { merge: true });
   },
 };
 

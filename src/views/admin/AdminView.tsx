@@ -19,6 +19,7 @@ import {
   Store as StoreIcon,
   Package,
   ShoppingBag,
+  MessageSquare,
   CreditCard,
   Crown,
   Sparkles,
@@ -36,6 +37,7 @@ import {
   Menu,
   X,
   Megaphone,
+  Boxes,
 } from 'lucide-react';
 
 // Tab components
@@ -43,6 +45,7 @@ import { AdminDashboardTab } from './tabs/AdminDashboardTab';
 import { AdminUsersTab } from './tabs/AdminUsersTab';
 import { AdminStoresTab } from './tabs/AdminStoresTab';
 import { AdminProductsTab } from './tabs/AdminProductsTab';
+import { AdminDropshippingTab } from './tabs/AdminDropshippingTab';
 import { AdminOrdersTab } from './tabs/AdminOrdersTab';
 import { AdminPaymentsTab } from './tabs/AdminPaymentsTab';
 import { AdminSubscriptionsTab } from './tabs/AdminSubscriptionsTab';
@@ -52,6 +55,7 @@ import { AdminAnalyticsTab } from './tabs/AdminAnalyticsTab';
 import { AdminAuditLogsTab } from './tabs/AdminAuditLogsTab';
 import { AdminSettingsTab } from './tabs/AdminSettingsTab';
 import { AdminAdsTab } from './tabs/AdminAdsTab';
+import { AdminReviewsTab } from './tabs/AdminReviewsTab';
 
 export const AdminView: React.FC = () => {
   const { currentUser, logout, navigateTo } = useApp();
@@ -168,6 +172,8 @@ export const AdminView: React.FC = () => {
     { id: 'users', label: 'Foydalanuvchilar', icon: Users },
     { id: 'stores', label: "Do'konlar & Savdogarlar", icon: StoreIcon },
     { id: 'products', label: 'Mahsulotlar Nazorati', icon: Package },
+    { id: 'dropshipping', label: 'Dropshipping Tizimi', icon: Boxes, badge: 'Katalog' },
+    { id: 'reviews', label: 'Mahsulot Sharhlari', icon: MessageSquare },
     { id: 'orders', label: 'Platforma Buyurtmalari', icon: ShoppingBag },
     { id: 'payments', label: "P2P To'lovlar", icon: CreditCard, badge: pendingP2PCount },
     { id: 'subscriptions', label: 'Tariflar & Obunalar', icon: Crown },
@@ -390,6 +396,26 @@ export const AdminView: React.FC = () => {
                   onRefresh={loadAllAdminData}
                   showToast={showToast}
                   formatMoney={formatMoney}
+                />
+              )}
+
+              {activeTab === 'dropshipping' && (
+                <AdminDropshippingTab
+                  orders={orders}
+                  stores={stores}
+                  users={users}
+                  adminEmail={currentUser.email}
+                  adminUid={currentUser.id || (currentUser as any).uid}
+                  onRefresh={loadAllAdminData}
+                  showToast={showToast}
+                  formatMoney={formatMoney}
+                />
+              )}
+
+              {activeTab === 'reviews' && (
+                <AdminReviewsTab
+                  adminEmail={currentUser.email}
+                  showToast={showToast}
                 />
               )}
 
