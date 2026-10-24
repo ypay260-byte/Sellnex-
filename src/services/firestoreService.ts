@@ -2537,10 +2537,11 @@ export const firestoreService = {
       // If empty on first run, create 6 high-quality initial dropshipping products
       if (items.length === 0) {
         const categories = await this.getDropshippingCategories();
-        const catElectronics = categories.find((c) => c.name.includes('Elektronika')) || categories[0];
-        const catBeauty = categories.find((c) => c.name.includes('Go‘zallik')) || categories[1] || categories[0];
-        const catHome = categories.find((c) => c.name.includes('Uy')) || categories[2] || categories[0];
-        const catAccessories = categories.find((c) => c.name.includes('Kiyim')) || categories[3] || categories[0];
+        const defaultCat = categories[0] || { id: 'dscat_general', name: 'Umumiy' };
+        const catElectronics = categories.find((c) => c.name?.includes('Elektronika')) || defaultCat;
+        const catBeauty = categories.find((c) => c.name?.includes('Go‘zallik')) || defaultCat;
+        const catHome = categories.find((c) => c.name?.includes('Uy')) || defaultCat;
+        const catAccessories = categories.find((c) => c.name?.includes('Kiyim')) || defaultCat;
 
         const initialProducts: Omit<DropshippingCatalogProduct, 'id' | 'createdAt'>[] = [
           {

@@ -41,6 +41,7 @@ import {
   RefreshCw,
   Maximize2,
   RotateCcw,
+  Sparkles,
 } from 'lucide-react';
 
 interface AdminDropshippingTabProps {
@@ -219,6 +220,80 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
     setIsCategoryModalOpen(true);
   };
 
+  const handleCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const { dataUrl } = await compressProductImageBlob(file, 800, 0.85);
+      setCategoryFormData((prev) => ({
+        ...prev,
+        imageUrl: dataUrl,
+      }));
+      showToast('Rasm yuklandi', 'Kategoriya rasmi muvaffaqiyatli tanlandi.', 'success');
+    } catch (err: any) {
+      showToast('Xatolik', 'Rasm yuklashda xatolik yuz berdi: ' + err.message, 'error');
+    }
+  };
+
+  const handleCreateInitialCategories = async () => {
+    try {
+      setLoading(true);
+      const defaultCats = [
+        {
+          name: 'Elektronika va Gadjetlar',
+          description: 'Smartfonlar, quloqchinlar va aqlli gadjetlar',
+          imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&auto=format&fit=crop&q=80',
+          order: 1,
+          isActive: true,
+        },
+        {
+          name: 'Kiyim va Poyabzallar',
+          description: 'Erkaklar, ayollar va bolalar uchun sifatli kiyimlar',
+          imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80',
+          order: 2,
+          isActive: true,
+        },
+        {
+          name: 'Go‘zallik va Parvarish',
+          description: 'Kosmetika, parfyumeriya va tana parvarishi',
+          imageUrl: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&auto=format&fit=crop&q=80',
+          order: 3,
+          isActive: true,
+        },
+        {
+          name: 'Uy va Oshxona',
+          description: 'Uy-ro‘zg‘or buyumlari va qulay oshxona anjomlari',
+          imageUrl: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
+          order: 4,
+          isActive: true,
+        },
+        {
+          name: 'Aksessuarlar va Hamyonlar',
+          description: 'Charm hamyonlar, soatlar va kamarlar',
+          imageUrl: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=800&auto=format&fit=crop&q=80',
+          order: 5,
+          isActive: true,
+        },
+      ];
+
+      for (const cat of defaultCats) {
+        const catId = `dscat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        await firestoreService.saveDropshippingCategory({
+          id: catId,
+          ...cat,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      showToast('Kategoriyalar yaratildi', 'Standart dropshipping kategoriyalari muvaffaqiyatli saqlandi.', 'success');
+      await loadDropshippingData();
+    } catch (err: any) {
+      showToast('Xatolik', err.message || 'Kategoriyalarni yuklashda xatolik yuz berdi.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!categoryFormData.name.trim()) {
@@ -335,30 +410,53 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
     }
 
     try {
-      const selectedCat = categories.find((c) => c.id === productFormData.categoryId);
+      let catId = productFormData.categoryId;
+      let catName = 'Umumiy';
+      const selectedCat = categories.find((c) => c.id === catId);
+
+      if (selectedCat) {
+        catName = selectedCat.name;
+      } else if (categories.length > 0) {
+        catId = categories[0].id;
+        catName = categories[0].name;
+      } else {
+        // Automatically create a default category so product save never fails
+        catId = `dscat_${Date.now()}`;
+        catName = 'Barcha Mahsulotlar';
+        await firestoreService.saveDropshippingCategory({
+          id: catId,
+          name: catName,
+          description: 'Standart dropshipping kategoriyasi',
+          imageUrl: productFormData.images[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800',
+          order: 1,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
       const prodId = editingProduct?.id || `dscatprod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
       const payload: DropshippingCatalogProduct = {
         id: prodId,
-        title: productFormData.title.trim(),
-        description: productFormData.description.trim(),
-        images: productFormData.images.filter(Boolean),
-        categoryId: productFormData.categoryId,
-        categoryName: selectedCat ? selectedCat.name : 'Umumiy',
+        title: (productFormData.title || '').trim(),
+        description: (productFormData.description || '').trim(),
+        images: (productFormData.images || []).filter(Boolean),
+        categoryId: catId,
+        categoryName: catName,
         supplierCost: Number(productFormData.supplierCost) || 0,
         recommendedPrice: Number(productFormData.recommendedPrice) || 0,
         minSellingPrice: Number(productFormData.minSellingPrice) || 0,
         stock: Number(productFormData.stock) || 0,
-        isAvailable: productFormData.isAvailable,
-        deliveryInfo: productFormData.deliveryInfo.trim(),
-        estimatedDeliveryDays: productFormData.estimatedDeliveryDays.trim(),
-        isActive: productFormData.isActive,
-        supplierName: productFormData.supplierName.trim(),
-        supplierProductCode: productFormData.supplierProductCode.trim() || undefined,
-        supplierUrl: productFormData.supplierUrl.trim() || undefined,
+        isAvailable: productFormData.isAvailable !== false,
+        deliveryInfo: (productFormData.deliveryInfo || 'Barcha viloyatlarga 1-3 kunda yetkazib beriladi').trim(),
+        estimatedDeliveryDays: (productFormData.estimatedDeliveryDays || '1-2 kun').trim(),
+        isActive: productFormData.isActive !== false,
+        supplierName: (productFormData.supplierName || 'Sahiy Distribyutsiya').trim(),
+        supplierProductCode: productFormData.supplierProductCode ? productFormData.supplierProductCode.trim() : undefined,
+        supplierUrl: productFormData.supplierUrl ? productFormData.supplierUrl.trim() : undefined,
         defaultDeliveryFee: Number(productFormData.defaultDeliveryFee) || 15000,
         commissionPercent: Number(productFormData.commissionPercent) || 5,
-        sku: productFormData.sku.trim() || `DP-${Date.now().toString().slice(-4)}`,
+        sku: (productFormData.sku || '').trim() || `DP-${Date.now().toString().slice(-4)}`,
         createdAt: editingProduct?.createdAt || new Date().toISOString(),
       };
 
@@ -400,14 +498,14 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
     if (!file) return;
 
     try {
-      const { dataUrl } = await compressProductImageBlob(file, 1200, 0.85);
+      const { dataUrl } = await compressProductImageBlob(file, 800, 0.75);
       setProductFormData((prev) => ({
         ...prev,
-        images: [dataUrl, ...prev.images],
+        images: [dataUrl, ...(prev.images || []).filter((img) => !img.startsWith('data:image')).slice(0, 4)],
       }));
       showToast('Rasm yuklandi', 'Mahsulot rasmi ro‘yxatga qo‘shildi.', 'success');
     } catch (err: any) {
-      showToast('Xatolik', 'Rasm yuklashda xatolik yuz berdi', 'error');
+      showToast('Xatolik', 'Rasm yuklashda xatolik yuz berdi: ' + (err?.message || ''), 'error');
     }
   };
 
@@ -691,26 +789,43 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {catalog
-                    .filter((p) => {
-                      const matchCat = categoryFilter === 'all' || p.categoryId === categoryFilter;
-                      const q = searchQuery.toLowerCase().trim();
-                      const matchSearch =
-                        !q ||
-                        p.title.toLowerCase().includes(q) ||
-                        p.sku.toLowerCase().includes(q) ||
-                        p.supplierName.toLowerCase().includes(q);
-                      return matchCat && matchSearch;
-                    })
-                    .map((prod) => (
-                      <tr key={prod.id} className="hover:bg-slate-800/40 transition">
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={prod.images[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=100'}
-                              alt=""
-                              className="w-12 h-12 object-cover rounded-xl border border-slate-700 shrink-0 bg-slate-950"
-                            />
+                  {catalog.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-500">
+                        <Boxes className="w-10 h-10 mx-auto mb-3 opacity-30 text-blue-400" />
+                        <p className="font-bold text-sm text-slate-300">Hozircha dropshipping tovarlari mavjud emas</p>
+                        <p className="text-xs text-slate-500 mt-1">Yangi tovar qo‘shish tugmasi orqali katalogga mahsulot yuklang.</p>
+                        <button
+                          type="button"
+                          onClick={handleOpenAddProduct}
+                          className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl inline-flex items-center gap-1.5 transition shadow-lg shadow-blue-600/20"
+                        >
+                          <PlusCircle className="w-4 h-4" />
+                          <span>Birinchi Mahsulotni Yuklash</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    catalog
+                      .filter((p) => {
+                        const matchCat = categoryFilter === 'all' || p.categoryId === categoryFilter;
+                        const q = searchQuery.toLowerCase().trim();
+                        const matchSearch =
+                          !q ||
+                          Boolean(p.title && p.title.toLowerCase().includes(q)) ||
+                          Boolean(p.sku && p.sku.toLowerCase().includes(q)) ||
+                          Boolean(p.supplierName && p.supplierName.toLowerCase().includes(q));
+                        return matchCat && matchSearch;
+                      })
+                      .map((prod) => (
+                        <tr key={prod.id} className="hover:bg-slate-800/40 transition">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={prod.images?.[0] || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=100'}
+                                alt=""
+                                className="w-12 h-12 object-cover rounded-xl border border-slate-700 shrink-0 bg-slate-950"
+                              />
                             <div>
                               <div className="font-bold text-white text-xs line-clamp-1">{prod.title}</div>
                               <div className="text-[10px] text-slate-500 font-mono mt-0.5">SKU: {prod.sku}</div>
@@ -771,7 +886,8 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -784,23 +900,68 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
       {/* ======================================================== */}
       {activeSubTab === 'categories' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/90 p-4 rounded-2xl border border-slate-800">
             <div>
               <h3 className="font-bold text-white text-sm">Dropshipping Kategoriyalari</h3>
               <p className="text-xs text-slate-400">
-                Faqat admin tomonidan boshqariladi. Oddiy sotuvchilar bu kategoriyalarni o‘zgartira olmaydi.
+                Faqat admin tomonidan boshqariladi. Yangi tovarlar yuklash uchun kategoriyalarni yarating.
               </p>
             </div>
-            <button
-              onClick={handleOpenAddCategory}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-blue-600/20"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Yangi Kategoriya</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCreateInitialCategories}
+                disabled={loading}
+                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition flex items-center gap-1.5 border border-slate-700"
+                title="Tizimga standart 5 ta kategoriyani avtomatik qo‘shish"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Standart Kategoriyalarni Yuklash</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenAddCategory}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-blue-600/20"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Yangi Kategoriya</span>
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {categories.length === 0 ? (
+            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-10 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
+                <Layers className="w-7 h-7 text-blue-400" />
+              </div>
+              <div className="max-w-md mx-auto">
+                <h4 className="font-bold text-white text-sm">Kategoriyalar mavjud emas</h4>
+                <p className="text-xs text-slate-400 mt-1">
+                  Mahsulotlarni guruhlash uchun standart kategoriyalarni bir tugma bilan yuklashingiz yoki o‘zingiz xohlagan yangi kategoriyani kiritishingiz mumkin.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleCreateInitialCategories}
+                  disabled={loading}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-2 shadow-lg shadow-blue-600/20"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Standart 5 ta Kategoriyani Yuklash</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenAddCategory}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-slate-700"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Noldan Kategoriya Yaratish</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {categories.map((cat) => {
               const productCount = catalog.filter((p) => p.categoryId === cat.id).length;
               return (
@@ -854,6 +1015,7 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
               );
             })}
           </div>
+          )}
         </div>
       )}
 
@@ -1504,6 +1666,9 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                     onChange={(e) => setProductFormData({ ...productFormData, categoryId: e.target.value })}
                     className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
                   >
+                    {categories.length === 0 && (
+                      <option value="">Standart Kategoriya (Avtomatik yaratiladi)</option>
+                    )}
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -1774,14 +1939,35 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-400 font-bold mb-1">Rasm URL Manzili</label>
-                <input
-                  type="url"
-                  value={categoryFormData.imageUrl}
-                  onChange={(e) => setCategoryFormData({ ...categoryFormData, imageUrl: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-slate-400 font-bold">Kategoriya Rasmi</label>
+                  <label className="text-[11px] font-bold text-blue-400 hover:text-blue-300 cursor-pointer flex items-center gap-1">
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    <span>Fayldan rasm yuklash</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCategoryImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <div className="flex items-center gap-3">
+                  {categoryFormData.imageUrl && (
+                    <img
+                      src={categoryFormData.imageUrl}
+                      alt="Preview"
+                      className="w-12 h-12 object-cover rounded-xl border border-slate-700 shrink-0 bg-slate-950"
+                    />
+                  )}
+                  <input
+                    type="url"
+                    value={categoryFormData.imageUrl}
+                    onChange={(e) => setCategoryFormData({ ...categoryFormData, imageUrl: e.target.value })}
+                    placeholder="https://images.unsplash.com/..."
+                    className="flex-1 px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
