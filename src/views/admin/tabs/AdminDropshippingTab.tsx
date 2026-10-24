@@ -119,6 +119,13 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isActionProcessing, setIsActionProcessing] = useState(false);
 
+  // In-app Delete Confirmation Modal State (replaces blocked window.confirm)
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
+    type: 'product' | 'category';
+    id: string;
+    title: string;
+  } | null>(null);
+
   // Sahiy / External Supplier Order Edit State
   const [supplierOrderState, setSupplierOrderState] = useState({
     supplierName: '',
@@ -166,12 +173,14 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
   // Update supplier order state when an order is selected
   useEffect(() => {
     if (selectedOrder) {
+      const items = Array.isArray(selectedOrder.items) ? selectedOrder.items : [];
+      const firstItem = items[0];
       const sup = selectedOrder.supplierOrder || {
-        supplierName: selectedOrder.items[0]?.supplier || 'Sahiy',
+        supplierName: firstItem?.supplier || 'Sahiy',
         externalOrderId: '',
         supplierProductCode: '',
         supplierUrl: '',
-        supplierCost: selectedOrder.totalSupplierCost || selectedOrder.items[0]?.supplierCost || 0,
+        supplierCost: selectedOrder.totalSupplierCost || firstItem?.supplierCost || 0,
         shippingCost: selectedOrder.shippingFee || 15000,
         orderDate: new Date().toISOString().split('T')[0],
         estimatedArrivalDate: '',
@@ -322,19 +331,23 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
     }
   };
 
-  const handleDeleteCategory = async (cat: DropshippingCategory) => {
-    if (!confirm(`Rostdan ham "${cat.name}" kategoriyasini o‘chirmoqchimisiz?`)) return;
+  const handleDeleteCategory = (cat: DropshippingCategory) => {
+    setDeleteConfirmTarget({
+      type: 'category',
+      id: cat.id,
+      title: cat.name,
+    });
+  };
 
+  const handleToggleCategoryActive = async (cat: DropshippingCategory) => {
     try {
-      const res = await firestoreService.deleteDropshippingCategory(cat.id);
-      if (!res.success) {
-        showToast('Kategoriyani o‘chirib bo‘lmaydi', res.error, 'error');
-        return;
-      }
-      showToast('Kategoriya o‘chirildi', `"${cat.name}" tizimdan o‘chirildi.`, 'info');
+      const currentActive = cat.isActive !== false;
+      const updated = { ...cat, isActive: !currentActive };
+      await firestoreService.saveDropshippingCategory(updated);
+      showToast('Kategoriya holati yangilandi', `"${cat.name}" ${updated.isActive ? 'faollashtirildi' : 'nofaol qilindi'}.`, 'success');
       await loadDropshippingData();
     } catch (err: any) {
-      showToast('Xatolik', err.message || 'Kategoriyani o‘chirishda xatolik yuz berdi', 'error');
+      showToast('Xatolik', 'Kategoriya holatini o‘zgartirib bo‘lmadi', 'error');
     }
   };
 
@@ -371,14 +384,14 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
   const handleOpenEditProduct = (prod: DropshippingCatalogProduct) => {
     setEditingProduct(prod);
     setProductFormData({
-      title: prod.title,
+      title: prod.title || '',
       description: prod.description || '',
-      categoryId: prod.categoryId,
-      images: prod.images && prod.images.length > 0 ? prod.images : ['https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800'],
-      supplierCost: prod.supplierCost,
-      recommendedPrice: prod.recommendedPrice,
-      minSellingPrice: prod.minSellingPrice,
-      stock: prod.stock,
+      categoryId: prod.categoryId || (categories[0]?.id || ''),
+      images: prod.images && prod.images.length > 0 ? [...prod.images] : ['https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800'],
+      supplierCost: prod.supplierCost || 0,
+      recommendedPrice: prod.recommendedPrice || 0,
+      minSellingPrice: prod.minSellingPrice || 0,
+      stock: prod.stock ?? 50,
       isAvailable: prod.isAvailable !== false,
       deliveryInfo: prod.deliveryInfo || 'Barcha viloyatlarga 1-3 kunda yetkazib beriladi',
       estimatedDeliveryDays: prod.estimatedDeliveryDays || '1-2 kun',
@@ -400,15 +413,20 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
       showToast('Nomi kiritilmadi', 'Mahsulot nomini kiriting', 'warning');
       return;
     }
-    if (productFormData.minSellingPrice < productFormData.supplierCost) {
-      showToast('Narx xatosi', 'Eng kam sotish narxi xarid narxidan kam bo‘lishi mumkin emas.', 'warning');
+    const supplierCost = Math.max(0, Number(productFormData.supplierCost) || 0);
+    const minSellingPrice = Math.max(0, Number(productFormData.minSellingPrice) || 0);
+    const recommendedPrice = Math.max(0, Number(productFormData.recommendedPrice) || 0);
+
+    if (minSellingPrice > 0 && supplierCost > 0 && minSellingPrice < supplierCost) {
+      showToast('Narx xatosi', 'Eng kam sotish narxi xarid narxidan kam bo‘lmasligi lozim.', 'warning');
       return;
     }
-    if (productFormData.recommendedPrice < productFormData.minSellingPrice) {
+    if (recommendedPrice > 0 && minSellingPrice > 0 && recommendedPrice < minSellingPrice) {
       showToast('Narx xatosi', 'Tavsiya etilgan narx eng kam narxdan yuqori bo‘lishi lozim.', 'warning');
       return;
     }
 
+    setIsActionProcessing(true);
     try {
       let catId = productFormData.categoryId;
       let catName = 'Umumiy';
@@ -443,9 +461,9 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
         images: (productFormData.images || []).filter(Boolean),
         categoryId: catId,
         categoryName: catName,
-        supplierCost: Number(productFormData.supplierCost) || 0,
-        recommendedPrice: Number(productFormData.recommendedPrice) || 0,
-        minSellingPrice: Number(productFormData.minSellingPrice) || 0,
+        supplierCost,
+        recommendedPrice,
+        minSellingPrice,
         stock: Number(productFormData.stock) || 0,
         isAvailable: productFormData.isAvailable !== false,
         deliveryInfo: (productFormData.deliveryInfo || 'Barcha viloyatlarga 1-3 kunda yetkazib beriladi').trim(),
@@ -463,29 +481,54 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
       await firestoreService.saveDropshippingProduct(payload);
       showToast('Mahsulot saqlandi', `"${payload.title}" katalogga saqlandi.`, 'success');
       setIsProductModalOpen(false);
+      setEditingProduct(null);
       await loadDropshippingData();
     } catch (err: any) {
       showToast('Xatolik', err.message || 'Mahsulotni saqlashda xatolik yuz berdi', 'error');
+    } finally {
+      setIsActionProcessing(false);
     }
   };
 
-  const handleDeleteProduct = async (prod: DropshippingCatalogProduct) => {
-    if (!confirm(`Rostdan ham "${prod.title}" mahsulotini katalogdan butunlay o‘chirmoqchimisiz?`)) return;
+  const handleDeleteProduct = (prod: DropshippingCatalogProduct) => {
+    setDeleteConfirmTarget({
+      type: 'product',
+      id: prod.id,
+      title: prod.title,
+    });
+  };
 
+  const executeConfirmDelete = async () => {
+    if (!deleteConfirmTarget) return;
+    setIsActionProcessing(true);
     try {
-      await firestoreService.deleteDropshippingProduct(prod.id);
-      showToast('Mahsulot o‘chirildi', `"${prod.title}" katalogdan o‘chirildi.`, 'info');
+      if (deleteConfirmTarget.type === 'product') {
+        await firestoreService.deleteDropshippingProduct(deleteConfirmTarget.id);
+        showToast('Mahsulot o‘chirildi', `"${deleteConfirmTarget.title}" katalogdan o‘chirildi.`, 'info');
+      } else {
+        const res = await firestoreService.deleteDropshippingCategory(deleteConfirmTarget.id);
+        if (!res.success) {
+          showToast('Kategoriyani o‘chirib bo‘lmaydi', res.error, 'error');
+          setIsActionProcessing(false);
+          return;
+        }
+        showToast('Kategoriya o‘chirildi', `"${deleteConfirmTarget.title}" tizimdan o‘chirildi.`, 'info');
+      }
+      setDeleteConfirmTarget(null);
       await loadDropshippingData();
     } catch (err: any) {
-      showToast('Xatolik', err.message || 'Mahsulotni o‘chirishda xatolik yuz berdi', 'error');
+      showToast('Xatolik', err.message || 'O‘chirishda xatolik yuz berdi', 'error');
+    } finally {
+      setIsActionProcessing(false);
     }
   };
 
   const handleToggleProductActive = async (prod: DropshippingCatalogProduct) => {
     try {
-      const updated = { ...prod, isActive: !prod.isActive };
+      const currentActive = prod.isActive !== false;
+      const updated = { ...prod, isActive: !currentActive };
       await firestoreService.saveDropshippingProduct(updated);
-      showToast('Holat yangilandi', `"${prod.title}" ${updated.isActive ? 'faollashtirildi' : 'faolsizlantirildi'}.`, 'success');
+      showToast('Holat yangilandi', `"${prod.title}" ${updated.isActive ? 'faollashtirildi' : 'nofaol qilindi'}.`, 'success');
       await loadDropshippingData();
     } catch (err: any) {
       showToast('Xatolik', 'Holatni o‘zgartirib bo‘lmadi', 'error');
@@ -615,10 +658,11 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
     ];
 
     const rows = dropshippingOrders.map((o) => {
-      const itemsStr = o.items.map((i) => `${i.title} (${i.quantity}x)`).join('; ');
+      const items = Array.isArray(o.items) ? o.items : [];
+      const itemsStr = items.map((i) => `${i?.title || 'Mahsulot'} (${i?.quantity || 1}x)`).join('; ');
       return [
-        o.orderNumber,
-        new Date(o.createdAt).toLocaleDateString('uz-UZ'),
+        o.orderNumber || '',
+        o.createdAt ? new Date(o.createdAt).toLocaleDateString('uz-UZ') : '',
         `"${o.customerName || ''}"`,
         `"${o.customerPhone || ''}"`,
         `"${o.shippingAddress?.region || ''}"`,
@@ -627,12 +671,12 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
         `"${o.storeName || ''}"`,
         `"${o.sellerName || ''}"`,
         `"${itemsStr}"`,
-        o.totalAmount,
+        o.totalAmount || 0,
         o.totalSupplierCost || 0,
-        o.commissionAmount || Math.round(o.totalAmount * 0.05),
-        o.sellerProfitAmount || Math.max(0, o.totalAmount - (o.totalSupplierCost || 0) - (o.shippingFee || 0) - Math.round(o.totalAmount * 0.05)),
-        o.paymentStatus,
-        o.orderStatus,
+        o.commissionAmount || Math.round((o.totalAmount || 0) * 0.05),
+        o.sellerProfitAmount || Math.max(0, (o.totalAmount || 0) - (o.totalSupplierCost || 0) - (o.shippingFee || 0) - Math.round((o.totalAmount || 0) * 0.05)),
+        o.paymentStatus || '',
+        o.orderStatus || '',
         o.deliveryDirection === 'via_seller' ? 'Avval sotuvchiga' : 'Bevosita xaridorga',
         `"${o.supplierOrder?.externalOrderId || ''}"`,
       ].join(',');
@@ -651,11 +695,13 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
   };
 
   // Filter dropshipping orders from global orders
-  const dropshippingOrders = orders.filter((o) => {
+  const dropshippingOrders = (orders || []).filter((o) => {
+    if (!o) return false;
+    const items = Array.isArray(o.items) ? o.items : [];
     // If explicitly marked as dropshipping or contains dropshipping catalog items
     const isDropship =
       o.businessMode === 'dropshipping' ||
-      o.items.some((i) => i.businessMode === 'dropshipping' || i.catalogProductId || (i.supplier && i.supplier !== 'Local Warehouse'));
+      items.some((i) => i && (i.businessMode === 'dropshipping' || i.catalogProductId || (i.supplier && i.supplier !== 'Local Warehouse')));
 
     if (!isDropship) return false;
 
@@ -665,11 +711,11 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
     if (orderSearchQuery.trim()) {
       const q = orderSearchQuery.toLowerCase().trim();
       const match =
-        o.orderNumber.toLowerCase().includes(q) ||
-        o.customerName.toLowerCase().includes(q) ||
-        o.customerPhone.includes(q) ||
-        (o.supplierOrder?.externalOrderId && o.supplierOrder.externalOrderId.toLowerCase().includes(q)) ||
-        o.items.some((i) => i.title.toLowerCase().includes(q));
+        Boolean(o.orderNumber && o.orderNumber.toLowerCase().includes(q)) ||
+        Boolean(o.customerName && o.customerName.toLowerCase().includes(q)) ||
+        Boolean(o.customerPhone && o.customerPhone.includes(q)) ||
+        Boolean(o.supplierOrder?.externalOrderId && o.supplierOrder.externalOrderId.toLowerCase().includes(q)) ||
+        items.some((i) => Boolean(i?.title && i.title.toLowerCase().includes(q)));
       if (!match) return false;
     }
     return true;
@@ -978,13 +1024,16 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <h4 className="font-bold text-white text-sm truncate">{cat.name}</h4>
-                        <span
-                          className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
-                            cat.isActive !== false ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-500'
+                        <button
+                          type="button"
+                          onClick={() => handleToggleCategoryActive(cat)}
+                          title="Holatni o‘zgartirish (Faol / Nofaol)"
+                          className={`text-[9px] font-extrabold px-2 py-0.5 rounded cursor-pointer transition ${
+                            cat.isActive !== false ? 'bg-emerald-950 text-emerald-400 hover:bg-emerald-900 border border-emerald-800/60' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
                           }`}
                         >
                           {cat.isActive !== false ? 'Faol' : 'Nofaol'}
-                        </span>
+                        </button>
                       </div>
                       <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-relaxed">
                         {cat.description || 'Tavsif kiritilmagan'}
@@ -1105,7 +1154,8 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                     </tr>
                   ) : (
                     dropshippingOrders.map((order) => {
-                      const firstItem = order.items[0];
+                      const items = Array.isArray(order.items) ? order.items : [];
+                      const firstItem = items[0];
                       const hasReceipt = Boolean(order.receiptUrl);
                       return (
                         <tr key={order.id} className="hover:bg-slate-800/40 transition">
@@ -1139,7 +1189,7 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                                 />
                               )}
                               <span className="text-xs text-slate-300 truncate font-medium">
-                                {firstItem?.title} {order.items.length > 1 && `(+${order.items.length - 1})`}
+                                {firstItem?.title || 'Mahsulot'} {items.length > 1 && `(+${items.length - 1})`}
                               </span>
                             </div>
                           </td>
@@ -1338,30 +1388,30 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
               {/* Items List */}
               <div className="bg-slate-950/80 rounded-2xl p-4 border border-slate-800 space-y-3">
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                  Buyurtma qilingan mahsulotlar ({selectedOrder.items.length})
+                  Buyurtma qilingan mahsulotlar ({(selectedOrder.items || []).length})
                 </span>
                 <div className="divide-y divide-slate-850">
-                  {selectedOrder.items.map((item, idx) => (
+                  {(selectedOrder.items || []).map((item, idx) => (
                     <div key={idx} className="py-2.5 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <img
-                          src={item.image || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=100'}
+                          src={item?.image || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=100'}
                           alt=""
                           className="w-12 h-12 object-cover rounded-xl border border-slate-800"
                         />
                         <div>
-                          <h5 className="font-bold text-white text-xs">{item.title}</h5>
+                          <h5 className="font-bold text-white text-xs">{item?.title || 'Mahsulot'}</h5>
                           <span className="text-[10px] text-slate-400">
-                            Soni: {item.quantity} dona • Xarid: {formatMoney(item.supplierCost || 0)}
+                            Soni: {item?.quantity || 1} dona • Xarid: {formatMoney(item?.supplierCost || 0)}
                           </span>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="font-mono font-black text-white text-xs">
-                          {formatMoney(item.sellingPrice * item.quantity)}
+                          {formatMoney((item?.sellingPrice || 0) * (item?.quantity || 1))}
                         </div>
                         <div className="text-[10px] text-emerald-400 font-bold">
-                          Foyda: +{formatMoney((item.profit || 0) * item.quantity)}
+                          Foyda: +{formatMoney((item?.profit || 0) * (item?.quantity || 1))}
                         </div>
                       </div>
                     </div>
@@ -1669,6 +1719,11 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                     {categories.length === 0 && (
                       <option value="">Standart Kategoriya (Avtomatik yaratiladi)</option>
                     )}
+                    {productFormData.categoryId && !categories.some((c) => c.id === productFormData.categoryId) && (
+                      <option value={productFormData.categoryId}>
+                        {editingProduct?.categoryName || 'Mavjud Kategoriya'}
+                      </option>
+                    )}
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -1711,7 +1766,7 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                   </label>
                   <input
                     type="number"
-                    min={productFormData.supplierCost}
+                    min={0}
                     step={1000}
                     required
                     value={productFormData.minSellingPrice}
@@ -1726,7 +1781,7 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                   </label>
                   <input
                     type="number"
-                    min={productFormData.minSellingPrice}
+                    min={0}
                     step={1000}
                     required
                     value={productFormData.recommendedPrice}
@@ -1884,9 +1939,11 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/20"
+                  disabled={isActionProcessing}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/20 flex items-center gap-1.5"
                 >
-                  Mahsulotni Saqlash
+                  {isActionProcessing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  <span>{editingProduct ? 'O‘zgarishlarni Saqlash' : 'Mahsulotni Saqlash'}</span>
                 </button>
               </div>
             </form>
@@ -2010,6 +2067,45 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ======================================================== */}
+      {/* MODAL 6: IN-APP DELETE CONFIRMATION (REPLACES BLOCKED WINDOW.CONFIRM) */}
+      {/* ======================================================== */}
+      {deleteConfirmTarget && (
+        <div className="fixed inset-0 z-60 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl text-slate-200 animate-scaleIn">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div className="text-center space-y-1">
+              <h4 className="font-black text-white text-base">
+                {deleteConfirmTarget.type === 'product' ? 'Mahsulotni o‘chirish' : 'Kategoriyani o‘chirish'}
+              </h4>
+              <p className="text-xs text-slate-400">
+                Rostdan ham <strong className="text-white">"{deleteConfirmTarget.title}"</strong> ni tizimdan butunlay o‘chirmoqchimisiz?
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmTarget(null)}
+                disabled={isActionProcessing}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition"
+              >
+                Bekor qilish
+              </button>
+              <button
+                type="button"
+                onClick={executeConfirmDelete}
+                disabled={isActionProcessing}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-lg shadow-rose-600/30 disabled:opacity-50"
+              >
+                {isActionProcessing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>Ha, butunlay o‘chirish</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

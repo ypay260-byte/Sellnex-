@@ -15,6 +15,8 @@ import {
   X,
   Tag,
   DollarSign,
+  Edit2,
+  Check,
 } from 'lucide-react';
 
 interface AdminProductsTabProps {
@@ -42,6 +44,20 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [flagReason, setFlagReason] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Direct Edit Product State for Admin
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    category: '',
+    sellingPrice: 0,
+    stock: 0,
+    status: 'Published' as Product['status'],
+  });
+
+  // Direct Delete Target State
+  const [directDeleteProduct, setDirectDeleteProduct] = useState<Product | null>(null);
 
   const storeMap = new Map<string, Store>();
   stores.forEach((s) => storeMap.set(s.id, s));
@@ -153,6 +169,63 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       await onRefresh();
     } catch (err: any) {
       showToast('Delete Failed', err.message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleOpenEditProduct = (prod: Product) => {
+    setEditingProduct(prod);
+    setEditFormData({
+      title: prod.title || '',
+      description: prod.description || '',
+      category: prod.category || '',
+      sellingPrice: prod.sellingPrice || 0,
+      stock: prod.stock || 0,
+      status: prod.status || 'Published',
+    });
+  };
+
+  const handleSaveProductEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    if (!editFormData.title.trim()) {
+      showToast('Xatolik', 'Mahsulot nomini kiriting', 'warning');
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      const updates = {
+        title: editFormData.title.trim(),
+        description: editFormData.description.trim(),
+        category: editFormData.category.trim() || 'General',
+        sellingPrice: Math.max(0, Number(editFormData.sellingPrice) || 0),
+        stock: Math.max(0, Number(editFormData.stock) || 0),
+        status: editFormData.status,
+      };
+      await firestoreService.updateProduct(editingProduct.id, updates);
+      await recordAudit('edit_product_admin', editingProduct.id, { title: editingProduct.title }, updates);
+      showToast('Mahsulot saqlandi', `"${updates.title}" muvaffaqiyatli yangilandi`, 'success');
+      setEditingProduct(null);
+      await onRefresh();
+    } catch (err: any) {
+      showToast('Xatolik', err.message || 'Mahsulotni yangilashda xatolik', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleExecuteDirectDelete = async () => {
+    if (!directDeleteProduct) return;
+    setIsProcessing(true);
+    try {
+      await firestoreService.deleteProduct(directDeleteProduct.id);
+      await recordAudit('delete_product_admin', directDeleteProduct.id, { title: directDeleteProduct.title }, null);
+      showToast('Mahsulot o‘chirildi', `"${directDeleteProduct.title}" tizimdan o‘chirildi`, 'info');
+      setDirectDeleteProduct(null);
+      await onRefresh();
+    } catch (err: any) {
+      showToast('Xatolik', err.message || 'O‘chirishda xatolik yuz berdi', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -284,15 +357,40 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       </td>
 
                       <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedProduct(p);
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 transition-colors cursor-pointer"
-                        >
-                          Review
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditProduct(p);
+                            }}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                            title="Tahrirlash"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDirectDeleteProduct(p);
+                            }}
+                            className="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-400 transition-colors"
+                            title="O‘chirish"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedProduct(p);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 transition-colors"
+                          >
+                            Review
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -412,6 +510,148 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Admin Direct Product Edit Modal */}
+      {editingProduct && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-slate-200 animate-scaleIn">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="font-black text-white text-base">Mahsulotni Tahrirlash</h3>
+              <button
+                onClick={() => setEditingProduct(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProductEdit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Mahsulot Nomi</label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 font-bold mb-1">Narxi (UZS)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    required
+                    value={editFormData.sellingPrice}
+                    onChange={(e) => setEditFormData({ ...editFormData, sellingPrice: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono outline-none focus:border-blue-500 font-bold text-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 font-bold mb-1">Zaxiradagi Soni</label>
+                  <input
+                    type="number"
+                    min={0}
+                    required
+                    value={editFormData.stock}
+                    onChange={(e) => setEditFormData({ ...editFormData, stock: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 font-bold mb-1">Kategoriya</label>
+                  <input
+                    type="text"
+                    value={editFormData.category}
+                    onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 font-bold mb-1">Holati (Status)</label>
+                  <select
+                    value={editFormData.status}
+                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value as any })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500"
+                  >
+                    <option value="Published">Published (Sotuvda)</option>
+                    <option value="Draft">Draft (Qoralama)</option>
+                    <option value="Archived">Archived (Arxivda)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Tavsif</label>
+                <textarea
+                  rows={3}
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-blue-600/30 disabled:opacity-50"
+                >
+                  {isProcessing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  <span>O‘zgarishlarni Saqlash</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Direct Delete Confirmation Modal */}
+      {directDeleteProduct && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 text-slate-200 animate-scaleIn text-center">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="font-black text-white text-base">Mahsulotni o‘chirish</h4>
+              <p className="text-xs text-slate-400 mt-1">
+                Rostdan ham <strong className="text-white">"{directDeleteProduct.title}"</strong> mahsulotini tizimdan butunlay o‘chirmoqchimisiz?
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDirectDeleteProduct(null)}
+                disabled={isProcessing}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs"
+              >
+                Bekor qilish
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDirectDelete}
+                disabled={isProcessing}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-rose-600/30 disabled:opacity-50"
+              >
+                {isProcessing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>Ha, butunlay o‘chirish</span>
+              </button>
             </div>
           </div>
         </div>
