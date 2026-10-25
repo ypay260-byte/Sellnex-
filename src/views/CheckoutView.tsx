@@ -441,6 +441,8 @@ export const CheckoutView: React.FC = () => {
             sellingPrice,
             quantity,
             variant: item.selectedVariant,
+            selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor,
             supplierCost,
             profit,
             supplier: item.product.supplier || 'Sellnex Warehouse',
@@ -1506,8 +1508,8 @@ export const CheckoutView: React.FC = () => {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-slate-900 truncate">{item.product?.title || 'Mahsulot'}</p>
-                        <p className="text-[11px] text-slate-400">
-                          Soni: {item.quantity} {item.selectedVariant ? `• ${item.selectedVariant}` : ''}
+                        <p className="text-[11px] text-slate-500">
+                          Soni: {item.quantity} {item.selectedSize ? `• Razmer: ${item.selectedSize}` : ''} {item.selectedColor ? `• Rang: ${item.selectedColor}` : ''} {item.selectedVariant && !item.selectedSize && !item.selectedColor ? `• ${item.selectedVariant}` : ''}
                         </p>
                       </div>
                       <span className="font-bold text-slate-900">

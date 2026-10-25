@@ -322,9 +322,7 @@ ${itemsList}
 💳 <b>Toʻlov Usuli:</b> ${escapeHtml(payment.paymentMethod)}
 ${payment.notes ? `📝 <b>Izoh / Tranzaksiya:</b> <i>${escapeHtml(payment.notes)}</i>\n` : ''}
 ━━━━━━━━━━━━━━━━━━━━
-⚡ <i>Admin Panel orqali tasdiqlash uchun saytga kiring:</i>
-👉 <b>Login:</b> <code>+998942865021</code>
-👉 <b>Parol:</b> <code>Kamoliddin1986.</code>`;
+⚡ <i>Iltimos, to'lovni tasdiqlash uchun xavfsiz Admin Panelga kiring.</i>`;
 
     return this.sendMessage(message);
   },

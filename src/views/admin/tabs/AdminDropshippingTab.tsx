@@ -109,8 +109,12 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
     defaultDeliveryFee: 15000,
     commissionPercent: 5,
     sku: 'DP-PROD-01',
+    sizes: [] as string[],
+    colors: [] as string[],
   });
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [newCustomSize, setNewCustomSize] = useState('');
+  const [newCustomColor, setNewCustomColor] = useState('');
 
   // Modals state: Order Details & Receipt
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -353,7 +357,86 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
 
   // ==========================================
   // PRODUCT ACTIONS (ADMIN EXCLUSIVE)
-  // ==========================================
+  // Helper constants for shoe and clothing sizes & colors
+  const SHOE_SIZE_PRESETS = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45'];
+  const CLOTHING_SIZE_PRESETS = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+  const COLOR_PRESETS = [
+    { name: 'Qora', hex: '#111827', border: false },
+    { name: 'Oq', hex: '#FFFFFF', border: true },
+    { name: 'Ko‘k', hex: '#2563EB', border: false },
+    { name: 'Qizil', hex: '#DC2626', border: false },
+    { name: 'Jigarrang', hex: '#78350F', border: false },
+    { name: 'Kulrang', hex: '#6B7280', border: false },
+    { name: 'Yashil', hex: '#16A34A', border: false },
+    { name: 'Bej', hex: '#D4C4B5', border: false },
+    { name: 'Sariq', hex: '#EAB308', border: false },
+    { name: 'To‘q ko‘k', hex: '#1E3A8A', border: false },
+  ];
+
+  const toggleSizeOption = (size: string) => {
+    const s = size.trim();
+    if (!s) return;
+    setProductFormData((prev) => {
+      const exists = prev.sizes.includes(s);
+      return {
+        ...prev,
+        sizes: exists ? prev.sizes.filter((x) => x !== s) : [...prev.sizes, s],
+      };
+    });
+  };
+
+  const handleAddCustomSize = () => {
+    const s = newCustomSize.trim();
+    if (!s) return;
+    if (!productFormData.sizes.includes(s)) {
+      setProductFormData((prev) => ({
+        ...prev,
+        sizes: [...prev.sizes, s],
+      }));
+    }
+    setNewCustomSize('');
+  };
+
+  const toggleColorOption = (color: string) => {
+    const c = color.trim();
+    if (!c) return;
+    setProductFormData((prev) => {
+      const exists = prev.colors.includes(c);
+      return {
+        ...prev,
+        colors: exists ? prev.colors.filter((x) => x !== c) : [...prev.colors, c],
+      };
+    });
+  };
+
+  const handleAddCustomColor = () => {
+    const c = newCustomColor.trim();
+    if (!c) return;
+    if (!productFormData.colors.includes(c)) {
+      setProductFormData((prev) => ({
+        ...prev,
+        colors: [...prev.colors, c],
+      }));
+    }
+    setNewCustomColor('');
+  };
+
+  const handleAddShoeSizeBatch = () => {
+    const shoeSizes = ['38', '39', '40', '41', '42', '43', '44'];
+    setProductFormData((prev) => {
+      const merged = Array.from(new Set([...prev.sizes, ...shoeSizes]));
+      return { ...prev, sizes: merged };
+    });
+  };
+
+  const handleAddClothingSizeBatch = () => {
+    const clothingSizes = ['S', 'M', 'L', 'XL', '2XL'];
+    setProductFormData((prev) => {
+      const merged = Array.from(new Set([...prev.sizes, ...clothingSizes]));
+      return { ...prev, sizes: merged };
+    });
+  };
+
   const handleOpenAddProduct = () => {
     setEditingProduct(null);
     const defaultCatId = categories[0]?.id || '';
@@ -376,8 +459,12 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
       defaultDeliveryFee: 15000,
       commissionPercent: 5,
       sku: `DP-${Math.floor(1000 + Math.random() * 9000)}`,
+      sizes: [],
+      colors: [],
     });
     setNewImageUrl('');
+    setNewCustomSize('');
+    setNewCustomColor('');
     setIsProductModalOpen(true);
   };
 
@@ -402,8 +489,12 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
       defaultDeliveryFee: prod.defaultDeliveryFee || 15000,
       commissionPercent: prod.commissionPercent || 5,
       sku: prod.sku || `DP-${Math.floor(1000 + Math.random() * 9000)}`,
+      sizes: prod.sizes && Array.isArray(prod.sizes) ? [...prod.sizes] : [],
+      colors: prod.colors && Array.isArray(prod.colors) ? [...prod.colors] : [],
     });
     setNewImageUrl('');
+    setNewCustomSize('');
+    setNewCustomColor('');
     setIsProductModalOpen(true);
   };
 
@@ -453,6 +544,8 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
       }
 
       const prodId = editingProduct?.id || `dscatprod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const cleanSizes = (productFormData.sizes || []).map((s) => s.trim()).filter(Boolean);
+      const cleanColors = (productFormData.colors || []).map((c) => c.trim()).filter(Boolean);
 
       const payload: DropshippingCatalogProduct = {
         id: prodId,
@@ -475,6 +568,8 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
         defaultDeliveryFee: Number(productFormData.defaultDeliveryFee) || 15000,
         commissionPercent: Number(productFormData.commissionPercent) || 5,
         sku: (productFormData.sku || '').trim() || `DP-${Date.now().toString().slice(-4)}`,
+        sizes: cleanSizes,
+        colors: cleanColors,
         createdAt: editingProduct?.createdAt || new Date().toISOString(),
       };
 
@@ -874,7 +969,19 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                               />
                             <div>
                               <div className="font-bold text-white text-xs line-clamp-1">{prod.title}</div>
-                              <div className="text-[10px] text-slate-500 font-mono mt-0.5">SKU: {prod.sku}</div>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                <span className="text-[10px] text-slate-500 font-mono">SKU: {prod.sku}</span>
+                                {Boolean(prod.sizes && prod.sizes.length > 0) && (
+                                  <span className="text-[10px] bg-blue-950 text-blue-300 px-1.5 py-0.5 rounded border border-blue-800 font-medium">
+                                    👟 {prod.sizes.join(', ')}
+                                  </span>
+                                )}
+                                {Boolean(prod.colors && prod.colors.length > 0) && (
+                                  <span className="text-[10px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-800 font-medium">
+                                    🎨 {prod.colors.join(', ')}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -1401,9 +1508,26 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                         />
                         <div>
                           <h5 className="font-bold text-white text-xs">{item?.title || 'Mahsulot'}</h5>
-                          <span className="text-[10px] text-slate-400">
-                            Soni: {item?.quantity || 1} dona • Xarid: {formatMoney(item?.supplierCost || 0)}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] text-slate-400">
+                              Soni: {item?.quantity || 1} dona • Xarid: {formatMoney(item?.supplierCost || 0)}
+                            </span>
+                            {Boolean(item?.selectedSize) && (
+                              <span className="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800 text-[10px] font-bold">
+                                👟 Razmer: {item.selectedSize}
+                              </span>
+                            )}
+                            {Boolean(item?.selectedColor) && (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold">
+                                🎨 Rang: {item.selectedColor}
+                              </span>
+                            )}
+                            {Boolean(item?.variant && !item.selectedSize && !item.selectedColor) && (
+                              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                                {item.variant}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -1905,6 +2029,247 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
                   placeholder="Mahsulot afzalliklari va texnik xususiyatlari..."
                   className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-600 text-xs"
                 />
+              </div>
+
+              {/* SIZES AND COLORS (RAZMERLAR VA RANGLAR) SECTION */}
+              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-black text-white uppercase tracking-wider">
+                      O‘lchamlar va Ranglar (Razmer & Rang)
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">
+                    Oyoq kiyim va kiyimlar uchun xaridor tanlaydigan variantlar
+                  </span>
+                </div>
+
+                {/* SIZES / RAZMERLAR */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                      <span>👟 Razmerlar (O‘lchamlar):</span>
+                      <span className="text-blue-400 font-mono">
+                        ({productFormData.sizes.length} ta tanlandi)
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAddShoeSizeBatch}
+                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-800 transition"
+                      >
+                        + 38-44 Poyabzal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddClothingSizeBatch}
+                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-800 transition"
+                      >
+                        + S-XXL Kiyim
+                      </button>
+                      {productFormData.sizes.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setProductFormData((prev) => ({ ...prev, sizes: [] }))}
+                          className="text-[10px] font-bold text-slate-400 hover:text-rose-400 ml-1"
+                        >
+                          Tozalash
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Shoe size presets */}
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-medium">Poyabzal razmerlari (ustiga bosib tanlang):</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {SHOE_SIZE_PRESETS.map((sz) => {
+                        const isSelected = productFormData.sizes.includes(sz);
+                        return (
+                          <button
+                            key={sz}
+                            type="button"
+                            onClick={() => toggleSizeOption(sz)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
+                              isSelected
+                                ? 'bg-blue-600 text-white border-blue-500 shadow-md ring-1 ring-blue-400'
+                                : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
+                            }`}
+                          >
+                            {sz}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Clothing size presets */}
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-medium">Kiyim razmerlari:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {CLOTHING_SIZE_PRESETS.map((sz) => {
+                        const isSelected = productFormData.sizes.includes(sz);
+                        return (
+                          <button
+                            key={sz}
+                            type="button"
+                            onClick={() => toggleSizeOption(sz)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
+                              isSelected
+                                ? 'bg-indigo-600 text-white border-indigo-500 shadow-md ring-1 ring-indigo-400'
+                                : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
+                            }`}
+                          >
+                            {sz}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Custom Size Input */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="text"
+                      value={newCustomSize}
+                      onChange={(e) => setNewCustomSize(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomSize();
+                        }
+                      }}
+                      placeholder="Boshqa razmer (masalan: 42.5, 46 yoki Universal)..."
+                      className="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomSize}
+                      className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl"
+                    >
+                      Qo‘shish
+                    </button>
+                  </div>
+
+                  {/* Selected Sizes Chips */}
+                  {productFormData.sizes.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-900">
+                      <span className="text-[11px] text-slate-400 mr-1">Tanlangan o‘lchamlar:</span>
+                      {productFormData.sizes.map((sz) => (
+                        <span
+                          key={sz}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-900/40 text-blue-200 border border-blue-700/60 text-xs font-bold"
+                        >
+                          <span>{sz}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleSizeOption(sz)}
+                            className="p-0.5 hover:text-white hover:bg-blue-800 rounded-md"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* COLORS / RANGLAR */}
+                <div className="space-y-2.5 pt-3 border-t border-slate-900">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                      <span>🎨 Ranglar:</span>
+                      <span className="text-emerald-400 font-mono">
+                        ({productFormData.colors.length} ta tanlandi)
+                      </span>
+                    </label>
+                    {productFormData.colors.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setProductFormData((prev) => ({ ...prev, colors: [] }))}
+                        className="text-[10px] font-bold text-slate-400 hover:text-rose-400"
+                      >
+                        Tozalash
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Color Presets */}
+                  <div className="flex flex-wrap gap-2">
+                    {COLOR_PRESETS.map((col) => {
+                      const isSelected = productFormData.colors.includes(col.name);
+                      return (
+                        <button
+                          key={col.name}
+                          type="button"
+                          onClick={() => toggleColorOption(col.name)}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                            isSelected
+                              ? 'bg-emerald-950/90 text-emerald-200 border-emerald-500 shadow-sm ring-1 ring-emerald-500/40'
+                              : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          <span
+                            className={`w-3.5 h-3.5 rounded-full shrink-0 ${
+                              col.border ? 'border border-slate-400' : ''
+                            }`}
+                            style={{ backgroundColor: col.hex }}
+                          />
+                          <span>{col.name}</span>
+                          {isSelected && <Check className="w-3 h-3 text-emerald-400" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Color Input */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="text"
+                      value={newCustomColor}
+                      onChange={(e) => setNewCustomColor(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomColor();
+                        }
+                      }}
+                      placeholder="Boshqa rang (masalan: Xaki, Kumushrang, Oltinrang)..."
+                      className="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomColor}
+                      className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl"
+                    >
+                      Qo‘shish
+                    </button>
+                  </div>
+
+                  {/* Selected Colors Chips */}
+                  {productFormData.colors.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-900">
+                      <span className="text-[11px] text-slate-400 mr-1">Tanlangan ranglar:</span>
+                      {productFormData.colors.map((c) => (
+                        <span
+                          key={c}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/70 text-emerald-200 border border-emerald-800/80 text-xs font-bold"
+                        >
+                          <span>{c}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleColorOption(c)}
+                            className="p-0.5 hover:text-white hover:bg-emerald-900 rounded-md"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-4 pt-1">

@@ -154,6 +154,8 @@ export interface Product {
   moderationStatus?: ProductModerationStatus;
   sku: string;
   variants: ProductVariant[];
+  sizes?: string[]; // e.g. ["38", "39", "40", "41", "42", "43", "44"] or ["S", "M", "L", "XL"]
+  colors?: string[]; // e.g. ["Qora", "Oq", "Jigarrang", "Ko'k"]
   rating: number;
   reviewCount: number;
   salesCount: number;
@@ -196,6 +198,8 @@ export interface OrderItem {
   title: string;
   image: string;
   variant?: string;
+  selectedSize?: string;
+  selectedColor?: string;
   quantity: number;
   supplierCost: number;
   sellingPrice: number;
@@ -437,6 +441,8 @@ export interface NotificationItem {
 export interface CartItem {
   product: Product;
   selectedVariant?: string;
+  selectedSize?: string;
+  selectedColor?: string;
   quantity: number;
 }
 
@@ -891,6 +897,9 @@ export interface DropshippingCatalogProduct {
   commissionPercent?: number; // Sellnex komissiyasi foizda (default 5%)
   commissionFixed?: number; // Yoki qat'iy komissiya summasi
   sku: string;
+  sizes?: string[]; // e.g. ["38", "39", "40", "41", "42", "43", "44"] or ["S", "M", "L", "XL"]
+  colors?: string[]; // e.g. ["Qora", "Oq", "Ko'k", "Jigarrang"]
+  variants?: ProductVariant[];
   createdAt: string;
   updatedAt?: string;
 }

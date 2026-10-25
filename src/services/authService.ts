@@ -51,7 +51,7 @@ export const authService = {
   // === FIREBASE AUTH LOGIN ===
   async login({ email, password }: LoginParams): Promise<{ success: boolean; user?: User; error?: string }> {
     const rawInput = (email || '').trim();
-    const cleanInput = rawInput.toLowerCase();
+    let cleanInput = rawInput.toLowerCase();
     const normalizedPhone = rawInput.replace(/[\s\-\(\)]/g, '');
 
     if (!rawInput) {
@@ -61,80 +61,15 @@ export const authService = {
       return { success: false, error: 'Iltimos, parolingizni kiriting.' };
     }
 
-    // Direct Super Admin Login via phone (+998942865021) or email with master password
-    const isMasterAdminAuth =
-      (normalizedPhone === '+998942865021' ||
-        normalizedPhone === '942865021' ||
-        normalizedPhone === '8942865021' ||
-        cleanInput === 'ypay260@gmail.com' ||
-        cleanInput === 'admin@sellnex.uz' ||
-        cleanInput === 'admin') &&
-      password === 'Kamoliddin1986.';
-
-    if (isMasterAdminAuth) {
-      const adminUserId = 'admin_kamoliddin_5021';
-      const adminUser: User = {
-        id: adminUserId,
-        name: 'Kamoliddin (Super Admin)',
-        email: 'ypay260@gmail.com',
-        phone: '+998942865021',
-        role: 'admin',
-        plan: 'premium_pro',
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        subscriptionExpiresAt: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
-      };
-
-      try {
-        await firestoreService.setUser(adminUserId, adminUser);
-      } catch (err) {
-        console.warn('Admin user sync warning:', err);
-      }
-
-      return { success: true, user: adminUser };
-    }
-
-    // Standard phone lookup if phone was entered
+    // If phone number entered, attempt to find user's corresponding email to authenticate via Firebase Auth
     if (normalizedPhone.startsWith('+998') || /^\d{9,12}$/.test(normalizedPhone)) {
       try {
-        const allUsers = await firestoreService.getAllUsers();
-        const found = allUsers.find(
-          (u) => u.phone && u.phone.replace(/[\s\-\(\)]/g, '') === normalizedPhone
-        );
-        if (found) {
-          // If this is an admin account, require the master admin password
-          if (found.role === 'admin' || normalizedPhone.includes('942865021')) {
-            if (password !== 'Kamoliddin1986.') {
-              return { success: false, error: 'Boshqaruvchi paroli notoʻgʻri kiritildi.' };
-            }
-          } else {
-            // For regular sellers, verify passwordHash if present
-            const storedHash = (found as any).passwordHash;
-            if (storedHash) {
-              const enteredHash = btoa(password);
-              if (storedHash !== enteredHash && password !== 'Kamoliddin1986.') {
-                return { success: false, error: 'Telefon raqam yoki parol notoʻgʻri.' };
-              }
-            }
-          }
-
-          if (found.status === 'suspended') {
-            return { success: false, error: 'Bu hisob vaqtincha toʻxtatilgan. Qoʻllab-quvvatlash bilan bogʻlaning.' };
-          }
-
-          // If user has email in profile, also sign in with Firebase Auth to keep session synchronized
-          if (found.email && password) {
-            try {
-              await signInWithEmailAndPassword(auth, found.email, password);
-            } catch (syncAuthErr) {
-              console.warn('Background auth sync for phone login notice:', syncAuthErr);
-            }
-          }
-
-          return { success: true, user: found };
+        const found = await firestoreService.getUserByPhone(normalizedPhone);
+        if (found && found.email) {
+          cleanInput = found.email.toLowerCase();
         }
       } catch (phoneErr) {
-        console.warn('Phone user query warning:', phoneErr);
+        console.warn('Phone lookup notice:', phoneErr);
       }
     }
 
@@ -357,9 +292,6 @@ export const authService = {
         paymentAmount: 0,
         createdAt: now.toISOString(),
       };
-      if (password) {
-        (userProfile as any).passwordHash = btoa(password);
-      }
 
       try {
         await firestoreService.setUser(uid, userProfile);

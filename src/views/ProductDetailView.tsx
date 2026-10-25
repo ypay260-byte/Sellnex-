@@ -14,6 +14,7 @@ import {
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
+  Check,
   Share2,
   Heart,
   ChevronRight,
@@ -115,8 +116,49 @@ export const ProductDetailView: React.FC = () => {
   const [selectedVariant, setSelectedVariant] = useState(
     product?.variants?.[0]?.options?.[0] || 'Standard'
   );
+  const [selectedSize, setSelectedSize] = useState<string>('');
+  const [selectedColor, setSelectedColor] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'desc' | 'shipping' | 'reviews'>('desc');
+
+  // Extract available sizes from product.sizes or variants
+  const availableSizes = React.useMemo(() => {
+    if (product?.sizes && product.sizes.length > 0) return product.sizes;
+    const sizeVar = product?.variants?.find((v) =>
+      /razmer|o['‘`]?lcham|size/i.test(v.name)
+    );
+    return sizeVar?.options || [];
+  }, [product]);
+
+  // Extract available colors from product.colors or variants
+  const availableColors = React.useMemo(() => {
+    if (product?.colors && product.colors.length > 0) return product.colors;
+    const colorVar = product?.variants?.find((v) =>
+      /rang|color|colour/i.test(v.name)
+    );
+    return colorVar?.options || [];
+  }, [product]);
+
+  // Other variants that are neither size nor color
+  const otherVariants = React.useMemo(() => {
+    return (product?.variants || []).filter(
+      (v) =>
+        !/razmer|o['‘`]?lcham|size/i.test(v.name) &&
+        !/rang|color|colour/i.test(v.name)
+    );
+  }, [product]);
+
+  useEffect(() => {
+    if (availableSizes.length > 0 && !selectedSize) {
+      setSelectedSize(availableSizes[0]);
+    }
+  }, [availableSizes, selectedSize]);
+
+  useEffect(() => {
+    if (availableColors.length > 0 && !selectedColor) {
+      setSelectedColor(availableColors[0]);
+    }
+  }, [availableColors, selectedColor]);
 
   if (loading || publicStoreLoading || publicStoreStatus === 'loading') {
     return (
@@ -176,12 +218,40 @@ export const ProductDetailView: React.FC = () => {
   const primaryColor = activeStore?.theme?.primaryColor || (activeStore as any)?.primaryColor || '#2563eb';
 
   const handleAddToCart = () => {
-    addToCart(product, quantity, selectedVariant);
-    showToast('Added to Bag!', `${quantity}x ${product.title} (${selectedVariant}) added.`, 'success');
+    if (availableSizes.length > 0 && !selectedSize) {
+      showToast('Razmer tanlanmadi', 'Iltimos, o‘zingizga kerakli o‘lcham (razmer)ni tanlang.', 'warning');
+      return;
+    }
+    if (availableColors.length > 0 && !selectedColor) {
+      showToast('Rang tanlanmadi', 'Iltimos, o‘zingizga yoqqan rangni tanlang.', 'warning');
+      return;
+    }
+    const comboDesc = [
+      selectedSize ? `Razmer: ${selectedSize}` : '',
+      selectedColor ? `Rang: ${selectedColor}` : '',
+      selectedVariant && selectedVariant !== 'Standard' && selectedVariant !== 'Standart' ? selectedVariant : '',
+    ].filter(Boolean).join(' • ');
+
+    addToCart(product, quantity, comboDesc || selectedVariant, selectedSize, selectedColor);
+    showToast('Savatga qo‘shildi!', `${quantity}x ${product.title} ${comboDesc ? `(${comboDesc})` : ''} savatga qo‘shildi.`, 'success');
   };
 
   const handleBuyNow = () => {
-    addToCart(product, quantity, selectedVariant);
+    if (availableSizes.length > 0 && !selectedSize) {
+      showToast('Razmer tanlanmadi', 'Iltimos, o‘zingizga kerakli o‘lcham (razmer)ni tanlang.', 'warning');
+      return;
+    }
+    if (availableColors.length > 0 && !selectedColor) {
+      showToast('Rang tanlanmadi', 'Iltimos, o‘zingizga yoqqan rangni tanlang.', 'warning');
+      return;
+    }
+    const comboDesc = [
+      selectedSize ? `Razmer: ${selectedSize}` : '',
+      selectedColor ? `Rang: ${selectedColor}` : '',
+      selectedVariant && selectedVariant !== 'Standard' && selectedVariant !== 'Standart' ? selectedVariant : '',
+    ].filter(Boolean).join(' • ');
+
+    addToCart(product, quantity, comboDesc || selectedVariant, selectedSize, selectedColor);
     try {
       confetti({ particleCount: 50, spread: 60 });
     } catch {
@@ -363,20 +433,79 @@ export const ProductDetailView: React.FC = () => {
                 </span>
               </div>
 
-              {/* Variant Selector */}
-              {product.variants && product.variants.length > 0 && product.variants[0].options?.length > 0 && (
+              {/* Size Selector (Razmer) */}
+              {availableSizes.length > 0 && (
+                <div className="space-y-2 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200/80">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span>👟 Razmer (O‘lcham):</span>
+                      <span className="text-blue-600 font-black">{selectedSize || 'Tanlang'}</span>
+                    </label>
+                    <span className="text-[11px] text-blue-600 font-medium">Oyoq kiyim / kiyim o‘lchami</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {availableSizes.map((sz) => (
+                      <button
+                        key={sz}
+                        type="button"
+                        onClick={() => setSelectedSize(sz)}
+                        className={`min-w-11 px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          selectedSize === sz
+                            ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-600/20'
+                            : 'border-slate-300 bg-white text-slate-800 hover:border-blue-400 hover:bg-blue-50/50'
+                        }`}
+                      >
+                        {sz}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Color Selector (Rang) */}
+              {availableColors.length > 0 && (
+                <div className="space-y-2 p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200/80">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span>🎨 Rang:</span>
+                      <span className="text-emerald-700 font-black">{selectedColor || 'Tanlang'}</span>
+                    </label>
+                    <span className="text-[11px] text-emerald-700 font-medium">Mavjud ranglar</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {availableColors.map((col) => (
+                      <button
+                        key={col}
+                        type="button"
+                        onClick={() => setSelectedColor(col)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                          selectedColor === col
+                            ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-500/25 ring-2 ring-emerald-600/20'
+                            : 'border-slate-300 bg-white text-slate-800 hover:border-emerald-400 hover:bg-emerald-50/50'
+                        }`}
+                      >
+                        <span>{col}</span>
+                        {selectedColor === col && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Other Variant Selector (agar mavjud bo'lsa) */}
+              {otherVariants.length > 0 && otherVariants[0].options?.length > 0 && (
                 <div className="space-y-2">
                   <label className="block text-xs font-bold text-slate-700">
-                    {product.variants[0].name || 'Select Option'}: <span className="text-blue-600">{selectedVariant}</span>
+                    {otherVariants[0].name || 'Tanlov'}: <span className="text-blue-600">{selectedVariant}</span>
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {product.variants[0].options.map((opt) => (
+                    {otherVariants[0].options.map((opt) => (
                       <button
                         key={opt}
                         id={`variant-btn-${opt.replace(/\s+/g, '')}`}
                         type="button"
                         onClick={() => setSelectedVariant(opt)}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                           selectedVariant === opt
                             ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-600/20'
                             : 'border-slate-200 text-slate-700 hover:border-slate-300'

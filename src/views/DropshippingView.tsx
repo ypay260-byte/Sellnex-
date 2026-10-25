@@ -501,6 +501,22 @@ export const DropshippingView: React.FC = () => {
                       </span>
                     </div>
 
+                    {/* Sizes and Colors Badges */}
+                    {(Boolean(product.sizes?.length) || Boolean(product.colors?.length)) && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {Boolean(product.sizes?.length) && (
+                          <span className="text-[10px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded-md border border-blue-200">
+                            👟 Razmer: {product.sizes!.slice(0, 4).join(', ')}{product.sizes!.length > 4 ? ` +${product.sizes!.length - 4}` : ''}
+                          </span>
+                        )}
+                        {Boolean(product.colors?.length) && (
+                          <span className="text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-md border border-emerald-200">
+                            🎨 {product.colors!.length} xil rang
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     {/* Price Breakdown Box */}
                     <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1.5 text-xs">
                       <div className="flex items-center justify-between text-slate-600">
@@ -896,6 +912,47 @@ export const DropshippingView: React.FC = () => {
                   </span>
                 </div>
               </div>
+
+              {/* Sizes & Colors in Detail Modal */}
+              {(Boolean(detailProduct.sizes?.length) || Boolean(detailProduct.colors?.length)) && (
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">
+                  {Boolean(detailProduct.sizes?.length) && (
+                    <div>
+                      <span className="text-xs font-bold text-slate-700 block mb-1.5">
+                        👟 Mavjud Razmerlar (O‘lchamlar):
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {detailProduct.sizes!.map((sz) => (
+                          <span
+                            key={sz}
+                            className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 shadow-xs"
+                          >
+                            {sz}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {Boolean(detailProduct.colors?.length) && (
+                    <div className={detailProduct.sizes?.length ? 'pt-2.5 border-t border-slate-200' : ''}>
+                      <span className="text-xs font-bold text-slate-700 block mb-1.5">
+                        🎨 Mavjud Ranglar:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {detailProduct.colors!.map((col) => (
+                          <span
+                            key={col}
+                            className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-bold text-emerald-800 shadow-xs"
+                          >
+                            {col}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Supplier & Logistics info */}
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2 text-xs text-slate-700">

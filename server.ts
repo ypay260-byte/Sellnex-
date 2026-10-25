@@ -340,9 +340,16 @@ async function startServer() {
     }
   });
 
-  // E. Test Payment Simulator (for QA and Verification)
+  // E. Test Payment Simulator (Restricted to non-production or authenticated admin)
   app.post('/api/payment/paynet/simulate', (req: Request, res: Response) => {
     try {
+      if (process.env.NODE_ENV === 'production' && req.headers['x-admin-simulation-secret'] !== process.env.ADMIN_SIMULATION_SECRET) {
+        return res.status(403).json({
+          success: false,
+          error: 'Toʻlov simulyatori production muhitida xavfsizlik maqsadida cheklangan.',
+        });
+      }
+
       const { transactionId, simulateStatus = 'PAID' } = req.body;
       if (!transactionId) {
         return res.status(400).json({ success: false, error: 'transactionId talab qilinadi' });

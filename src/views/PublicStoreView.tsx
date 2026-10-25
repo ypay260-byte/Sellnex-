@@ -483,8 +483,14 @@ export const PublicStoreView: React.FC = () => {
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-slate-900 truncate">{item.product.title}</p>
-                      {item.selectedVariant && (
-                        <p className="text-[11px] text-slate-400">Option: {item.selectedVariant}</p>
+                      {Boolean(item.selectedSize || item.selectedColor || item.selectedVariant) && (
+                        <p className="text-[11px] text-slate-500">
+                          {[
+                            item.selectedSize ? `Razmer: ${item.selectedSize}` : null,
+                            item.selectedColor ? `Rang: ${item.selectedColor}` : null,
+                            !item.selectedSize && !item.selectedColor ? item.selectedVariant : null,
+                          ].filter(Boolean).join(' • ')}
+                        </p>
                       )}
                       <p className="text-xs font-bold text-slate-900 mt-1">
                         {formatMoney(item.product.sellingPrice)}

@@ -23,6 +23,7 @@ import {
   Image as ImageIcon,
   DollarSign,
   FileSpreadsheet,
+  X,
 } from 'lucide-react';
 import { SellerAiAssistantModal } from '../components/ai/SellerAiAssistantModal';
 
@@ -73,7 +74,11 @@ export const ProductsView: React.FC = () => {
     stock: 35,
     status: 'Published' as Product['status'],
     sku: 'SL-NEW-01',
+    sizes: [] as string[],
+    colors: [] as string[],
   });
+  const [newSizeInput, setNewSizeInput] = useState('');
+  const [newColorInput, setNewColorInput] = useState('');
 
   const categories = ['All', ...Array.from(new Set(products.map((p) => p.category)))];
 
@@ -109,7 +114,11 @@ export const ProductsView: React.FC = () => {
       stock: 35,
       status: 'Published',
       sku: `SL-${Math.floor(1000 + Math.random() * 9000)}`,
+      sizes: [],
+      colors: [],
     });
+    setNewSizeInput('');
+    setNewColorInput('');
     setIsModalOpen(true);
   };
 
@@ -128,7 +137,11 @@ export const ProductsView: React.FC = () => {
       stock: p.stock ?? 35,
       status: p.status || 'Published',
       sku: p.sku || `SL-${Math.floor(1000 + Math.random() * 9000)}`,
+      sizes: p.sizes && Array.isArray(p.sizes) ? [...p.sizes] : [],
+      colors: p.colors && Array.isArray(p.colors) ? [...p.colors] : [],
     });
+    setNewSizeInput('');
+    setNewColorInput('');
     setIsModalOpen(true);
   };
 
@@ -168,6 +181,48 @@ export const ProductsView: React.FC = () => {
     }
   };
 
+  const toggleSizeOption = (sz: string) => {
+    const s = sz.trim();
+    if (!s) return;
+    setFormData((prev) => {
+      const exists = prev.sizes.includes(s);
+      return {
+        ...prev,
+        sizes: exists ? prev.sizes.filter((x) => x !== s) : [...prev.sizes, s],
+      };
+    });
+  };
+
+  const handleAddCustomSize = () => {
+    const s = newSizeInput.trim();
+    if (!s) return;
+    if (!formData.sizes.includes(s)) {
+      setFormData((prev) => ({ ...prev, sizes: [...prev.sizes, s] }));
+    }
+    setNewSizeInput('');
+  };
+
+  const toggleColorOption = (col: string) => {
+    const c = col.trim();
+    if (!c) return;
+    setFormData((prev) => {
+      const exists = prev.colors.includes(c);
+      return {
+        ...prev,
+        colors: exists ? prev.colors.filter((x) => x !== c) : [...prev.colors, c],
+      };
+    });
+  };
+
+  const handleAddCustomColor = () => {
+    const c = newColorInput.trim();
+    if (!c) return;
+    if (!formData.colors.includes(c)) {
+      setFormData((prev) => ({ ...prev, colors: [...prev.colors, c] }));
+    }
+    setNewColorInput('');
+  };
+
   const handleSaveModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) {
@@ -180,6 +235,22 @@ export const ProductsView: React.FC = () => {
     const shippingCost = isPersonal ? 0 : Number(formData.shippingCost || 0);
     const sellingPrice = Number(formData.sellingPrice || 0);
     const calculatedProfit = isPersonal ? sellingPrice : Math.max(0, sellingPrice - (supplierCost + shippingCost));
+
+    const cleanSizes = (formData.sizes || []).map((s) => s.trim()).filter(Boolean);
+    const cleanColors = (formData.colors || []).map((c) => c.trim()).filter(Boolean);
+    const constructedVariants = (() => {
+      const vList: any[] = [];
+      if (cleanSizes.length > 0) {
+        vList.push({ id: 'v-sizes', name: 'O‘lcham (Razmer)', options: cleanSizes });
+      }
+      if (cleanColors.length > 0) {
+        vList.push({ id: 'v-colors', name: 'Rang', options: cleanColors });
+      }
+      if (vList.length === 0) {
+        vList.push({ id: 'v1', name: 'Standard', options: ['Default'] });
+      }
+      return vList;
+    })();
 
     setIsSaving(true);
     try {
@@ -198,6 +269,9 @@ export const ProductsView: React.FC = () => {
           stock: Number(formData.stock || 1),
           status: formData.status,
           sku: formData.sku,
+          sizes: cleanSizes,
+          colors: cleanColors,
+          variants: constructedVariants,
         });
       } else {
         await addProduct({
@@ -219,7 +293,9 @@ export const ProductsView: React.FC = () => {
           stock: Number(formData.stock || 1),
           status: formData.status,
           sku: formData.sku,
-          variants: [{ id: 'v1', name: 'Standard', options: ['Default'] }],
+          sizes: cleanSizes,
+          colors: cleanColors,
+          variants: constructedVariants,
           rating: 5.0,
           reviewCount: 1,
           featured: false,
@@ -908,6 +984,142 @@ export const ProductsView: React.FC = () => {
                   placeholder="Mahsulotning xususiyatlari, afzalliklari, o‘lchamlari va materialini yozing..."
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-hidden focus:ring-2 focus:ring-purple-500 font-normal leading-relaxed text-xs"
                 />
+              </div>
+
+              {/* SIZES AND COLORS (RAZMERLAR VA RANGLAR) */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3.5 text-xs">
+                <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                  <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                    <span>👟 Razmerlar va Ranglar (Variantlar)</span>
+                  </span>
+                  <span className="text-[11px] text-slate-500">Mijozlar buyurtma berganda o‘z o‘lchamini tanlaydi</span>
+                </div>
+
+                {/* Sizes */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-700 text-xs">
+                      O‘lchamlar / Razmerlar ({formData.sizes.length} ta)
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const presets = ['38', '39', '40', '41', '42', '43', '44'];
+                          setFormData((prev) => ({ ...prev, sizes: Array.from(new Set([...prev.sizes, ...presets])) }));
+                        }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-blue-100 text-blue-800 hover:bg-blue-200 transition"
+                      >
+                        + 38-44 Poyabzal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const presets = ['S', 'M', 'L', 'XL', '2XL'];
+                          setFormData((prev) => ({ ...prev, sizes: Array.from(new Set([...prev.sizes, ...presets])) }));
+                        }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition"
+                      >
+                        + S-XXL Kiyim
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', 'S', 'M', 'L', 'XL', '2XL'].map((sz) => {
+                      const isSelected = formData.sizes.includes(sz);
+                      return (
+                        <button
+                          key={sz}
+                          type="button"
+                          onClick={() => toggleSizeOption(sz)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                            isSelected
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          {sz}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Size Input */}
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <input
+                      type="text"
+                      value={newSizeInput}
+                      onChange={(e) => setNewSizeInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomSize();
+                        }
+                      }}
+                      placeholder="Boshqa razmer (masalan: 42.5 yoki 46)..."
+                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl text-xs bg-white outline-hidden focus:ring-2 focus:ring-blue-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomSize}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl"
+                    >
+                      Qo‘shish
+                    </button>
+                  </div>
+                </div>
+
+                {/* Colors */}
+                <div className="space-y-2 pt-2 border-t border-slate-200/80">
+                  <label className="block font-bold text-slate-700 text-xs">
+                    Ranglar ({formData.colors.length} ta tanlandi)
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Qora', 'Oq', 'Ko‘k', 'Qizil', 'Jigarrang', 'Kulrang', 'Yashil', 'Bej', 'Sariq'].map((col) => {
+                      const isSelected = formData.colors.includes(col);
+                      return (
+                        <button
+                          key={col}
+                          type="button"
+                          onClick={() => toggleColorOption(col)}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold border transition flex items-center gap-1 ${
+                            isSelected
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <span>{col}</span>
+                          {isSelected && <Check className="w-3 h-3" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Color Input */}
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <input
+                      type="text"
+                      value={newColorInput}
+                      onChange={(e) => setNewColorInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomColor();
+                        }
+                      }}
+                      placeholder="Boshqa rang (masalan: Oltinrang, Zangori)..."
+                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl text-xs bg-white outline-hidden focus:ring-2 focus:ring-emerald-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomColor}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl"
+                    >
+                      Qo‘shish
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Personal Mode: Only single clean Selling Price */}

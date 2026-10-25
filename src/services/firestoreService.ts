@@ -184,6 +184,26 @@ export const firestoreService = {
     }
   },
 
+  async getUserByPhone(phone: string): Promise<User | null> {
+    try {
+      if (!phone) return null;
+      const clean = phone.replace(/[\s\-\(\)]/g, '');
+      const q = query(collection(db, COLLECTIONS.USERS), where('phone', '==', clean));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const docSnap = snapshot.docs[0];
+        return {
+          id: docSnap.id,
+          ...docSnap.data(),
+        } as User;
+      }
+      return null;
+    } catch (err) {
+      console.warn('Error fetching user by phone from Firestore:', err);
+      return null;
+    }
+  },
+
   async getAllUsers(): Promise<User[]> {
     try {
       const snapshot = await getDocs(collection(db, COLLECTIONS.USERS));
@@ -2789,7 +2809,29 @@ export const firestoreService = {
       stock: catalogProduct.stock || 50,
       status: 'Published',
       sku: `${catalogProduct.sku || 'DP'}-${Math.floor(100 + Math.random() * 900)}`,
-      variants: [{ id: 'v1', name: 'Standart', options: ['Standart'] }],
+      sizes: catalogProduct.sizes || [],
+      colors: catalogProduct.colors || [],
+      variants: (() => {
+        const vList: any[] = [];
+        if (catalogProduct.sizes && catalogProduct.sizes.length > 0) {
+          vList.push({
+            id: 'v-sizes',
+            name: 'O‘lcham (Razmer)',
+            options: catalogProduct.sizes,
+          });
+        }
+        if (catalogProduct.colors && catalogProduct.colors.length > 0) {
+          vList.push({
+            id: 'v-colors',
+            name: 'Rang',
+            options: catalogProduct.colors,
+          });
+        }
+        if (vList.length === 0) {
+          vList.push({ id: 'v1', name: 'Standart', options: ['Standart'] });
+        }
+        return vList;
+      })(),
       rating: 5.0,
       reviewCount: 0,
       salesCount: 0,

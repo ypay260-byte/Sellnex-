@@ -192,7 +192,7 @@ interface AppContextType {
 
   // Cart
   cart: CartItem[];
-  addToCart: (product: Product, quantity?: number, variant?: string) => void;
+  addToCart: (product: Product, quantity?: number, variant?: string, size?: string, color?: string) => void;
   removeFromCart: (productId: string, variant?: string) => void;
   updateCartQuantity: (productId: string, quantity: number, variant?: string) => void;
   clearCart: () => void;
@@ -1904,16 +1904,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Cart operations
-  const addToCart = (product: Product, quantity = 1, variant?: string) => {
+  const addToCart = (product: Product, quantity = 1, variant?: string, size?: string, color?: string) => {
     const currentCart = [...cart];
+    const comboVariant = [size ? `Razmer: ${size}` : '', color ? `Rang: ${color}` : '', variant].filter(Boolean).join(' • ') || variant;
     const existingIndex = currentCart.findIndex(
-      (item) => item.product.id === product.id && item.selectedVariant === variant
+      (item) => item.product.id === product.id && item.selectedVariant === comboVariant && item.selectedSize === size && item.selectedColor === color
     );
 
     if (existingIndex !== -1) {
       currentCart[existingIndex].quantity += quantity;
     } else {
-      currentCart.push({ product, quantity, selectedVariant: variant });
+      currentCart.push({ product, quantity, selectedVariant: comboVariant, selectedSize: size, selectedColor: color });
     }
 
     setCartState(currentCart);
