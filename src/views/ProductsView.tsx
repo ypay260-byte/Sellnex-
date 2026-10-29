@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Product, BusinessMode } from '../types';
 import { BackHeader } from '../components/common/BackHeader';
+import { firestoreService, compressProductImageBlob } from '../services/firestoreService';
 import {
   Package,
   PlusCircle,
@@ -151,33 +152,35 @@ export const ProductsView: React.FC = () => {
 
     try {
       setIsUploadingImage(true);
+      showToast('Surat tayyorlanmoqda...', 'Surat hajmi moslashtirilmoqda...', 'info');
 
-      // Fast local preview using FileReader
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const localDataUrl = event.target?.result as string;
-        if (localDataUrl) {
-          setFormData((prev) => ({ ...prev, imageUrl: localDataUrl }));
-        }
-      };
-      reader.readAsDataURL(file);
+      // 1. High-speed client compression: shrinks 5-10MB mobile photos to ~60KB
+      const { blob, dataUrl } = await compressProductImageBlob(file, 800, 0.75);
 
-      // Upload to Firebase Storage in background or store as URL
+      // Instant local preview
+      if (dataUrl) {
+        setFormData((prev) => ({ ...prev, imageUrl: dataUrl }));
+      }
+
+      // 2. Upload compressed blob to Firebase Storage for permanent public CDN URL
       try {
-        const url = await uploadImage(`products/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`, file);
-        if (url) {
+        const cleanExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+        const storagePath = `products/prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${cleanExt}`;
+        const url = await firestoreService.uploadImage(storagePath, blob);
+        if (url && url.startsWith('http')) {
           setFormData((prev) => ({ ...prev, imageUrl: url }));
         }
       } catch (uploadErr) {
-        console.warn('Storage upload note:', uploadErr);
+        console.warn('Storage upload fallback, keeping compressed dataUrl:', uploadErr);
       }
 
-      showToast('Image Loaded', 'Product image ready', 'success');
+      showToast('Surat yuklandi!', 'Mahsulot surati muvaffaqiyatli saqlandi.', 'success');
     } catch (err: any) {
       console.error('Image upload error:', err);
-      showToast('Upload Warning', 'Image loaded locally for product', 'info');
+      showToast('Xatolik', 'Suratni yuklab bo‘lmadi: ' + (err?.message || ''), 'error');
     } finally {
       setIsUploadingImage(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -898,40 +901,57 @@ export const ProductsView: React.FC = () => {
                 <label className="block font-semibold text-slate-700">
                   Product Image <span className="text-red-500">*</span>
                 </label>
-                <div className="flex items-center gap-2">
-                  {formData.imageUrl && (
-                    <img
-                      src={formData.imageUrl}
-                      alt="Preview"
-                      className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0 bg-slate-50"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&auto=format&fit=crop&q=80';
-                      }}
-                    />
-                  )}
-                  <input
-                    id="modal-input-image"
-                    type="text"
-                    required
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    placeholder="https://... or click Upload"
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-xl outline-hidden focus:ring-2 focus:ring-blue-600 text-xs"
-                  />
-                  <label
-                    className={`cursor-pointer px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-colors ${
-                      isUploadingImage ? 'opacity-50 pointer-events-none' : ''
-                    }`}
-                  >
-                    <UploadCloud className="w-4 h-4 text-blue-600" />
-                    <span>{isUploadingImage ? 'Loading...' : 'Upload'}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageFileUpload}
-                      className="hidden"
-                    />
-                  </label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    {formData.imageUrl ? (
+                      <div className="relative group w-14 h-14 rounded-xl overflow-hidden border border-slate-300 shadow-xs shrink-0 bg-slate-100">
+                        <img
+                          src={formData.imageUrl}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&auto=format&fit=crop&q=80';
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl border border-dashed border-slate-300 flex items-center justify-center text-slate-400 bg-slate-50 shrink-0">
+                        <ImageIcon className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <label
+                          className={`cursor-pointer px-4 py-2.5 rounded-xl border border-blue-600 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-xs ${
+                            isUploadingImage ? 'opacity-60 pointer-events-none' : ''
+                          }`}
+                        >
+                          <UploadCloud className="w-4 h-4 text-white" />
+                          <span>{isUploadingImage ? 'Yuklanmoqda...' : 'Qurilmadan surat tanlash'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                        {formData.imageUrl && (
+                          <span className="text-[11px] font-medium text-emerald-600 flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" /> Surat tayyor
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        id="modal-input-image"
+                        type="text"
+                        required
+                        value={formData.imageUrl}
+                        onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                        placeholder="Yoki to‘g‘ridan-to‘g‘ri rasm havolasini (URL) kiriting..."
+                        className="w-full px-3 py-1.5 border border-slate-200 rounded-lg outline-hidden focus:ring-2 focus:ring-blue-600 text-xs text-slate-600"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

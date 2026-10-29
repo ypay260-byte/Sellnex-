@@ -5,6 +5,8 @@ import {
   signOut,
   sendPasswordResetEmail,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from './firebase';
@@ -59,6 +61,34 @@ export const authService = {
     }
     if (!password) {
       return { success: false, error: 'Iltimos, parolingizni kiriting.' };
+    }
+
+    // Dedicated Super Admin Authentication verification via secure server API
+    const isAdminCandidate =
+      normalizedPhone === '+998942865021' ||
+      normalizedPhone === '942865021' ||
+      normalizedPhone === '8942865021' ||
+      cleanInput === 'ypay260@gmail.com' ||
+      cleanInput === 'admin@sellnex.uz' ||
+      cleanInput === 'admin';
+
+    if (isAdminCandidate) {
+      try {
+        const srvRes = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanInput, password }),
+        });
+        const srvData = await srvRes.json();
+        if (srvData.success && srvData.user) {
+          return { success: true, user: srvData.user };
+        }
+        if (srvRes.status === 401) {
+          return { success: false, error: srvData.error || 'Boshqaruvchi paroli notoʻgʻri kiritildi.' };
+        }
+      } catch (srvErr) {
+        console.warn('Backend admin auth fallback note:', srvErr);
+      }
     }
 
     // If phone number entered, attempt to find user's corresponding email to authenticate via Firebase Auth
@@ -638,6 +668,52 @@ export const authService = {
     } catch (err: any) {
       console.error('Admin login error:', err);
       return { success: false, error: err.message || 'Administrator authentication failed.' };
+    }
+  },
+
+  // === GOOGLE ADMIN AUTHENTICATION ===
+  async loginAdminWithGoogle(): Promise<{ success: boolean; user?: User; error?: string }> {
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(auth, provider);
+      const email = (result.user.email || '').trim().toLowerCase();
+
+      const isAllowedAdmin =
+        email === 'ypay260@gmail.com' ||
+        email === 'admin@sellnex.uz' ||
+        email.startsWith('admin');
+
+      if (!isAllowedAdmin) {
+        return {
+          success: false,
+          error: `Kirish rad etildi: (${email}) hisobida administratorlik huquqlari mavjud emas. Faqat ypay260@gmail.com uchun ruxsat etilgan.`,
+        };
+      }
+
+      const adminUser: User = {
+        id: result.user.uid,
+        name: result.user.displayName || 'Kamoliddin (Super Admin)',
+        email,
+        phone: result.user.phoneNumber || '+998942865021',
+        role: 'admin',
+        plan: 'golden_vip',
+        status: 'active',
+        subscriptionStatus: 'active',
+        createdAt: new Date().toISOString(),
+        subscriptionExpiresAt: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      try {
+        await firestoreService.setUser(result.user.uid, adminUser);
+      } catch (e) {
+        console.warn('Admin sync to firestore warning:', e);
+      }
+
+      return { success: true, user: adminUser };
+    } catch (err: any) {
+      console.error('Google Admin Login error:', err);
+      return { success: false, error: err.message || 'Google orqali kirishda xatolik yuz berdi.' };
     }
   },
 

@@ -47,6 +47,9 @@ export interface User {
   trialEndsAt?: string;
   isStarterRenewedDiscount?: boolean;
   onboarding?: OnboardingData;
+  referredByBloggerId?: string;
+  referredByPromoCode?: string;
+  referredAt?: string;
 }
 
 export interface StoreTheme {
@@ -474,6 +477,10 @@ export interface P2PPayment {
   createdAt: string;
   updatedAt?: string;
   notes?: string;
+  bloggerId?: string;
+  bloggerPromoCode?: string;
+  bloggerName?: string;
+  discountApplied?: number;
 }
 
 // === PROMO CODE SYSTEM ===
@@ -502,6 +509,59 @@ export interface PromoCode {
   createdAt: string;
   createdBy?: string;
   updatedAt?: string;
+  bloggerId?: string; // Linked blogger if this promo code was generated for a blogger
+  bloggerName?: string;
+}
+
+// === BLOGGER PROMO & STATS SYSTEM ===
+export interface Blogger {
+  id: string; // e.g. "blg_doni_123"
+  name: string; // "Doniyor Rustamov"
+  promoCode: string; // "DONI20"
+  phone?: string;
+  telegram?: string; // "@doni_official"
+  instagram?: string; // "doni_vines"
+  telegramHandle?: string; // alias
+  instagramHandle?: string; // alias
+  commissionPercent?: number; // e.g. 15 (%)
+  discountType: 'percent' | 'fixed' | 'extra_trial_days';
+  discountValue: number; // e.g. 20 (%) or 25000 (UZS) or 7 (days)
+  isActive: boolean;
+  secretKey: string; // Bloggerning shaxsiy kabinetiga kirish maxfiy kaliti
+  notes?: string;
+  // Summary metrics (live computed or cached)
+  totalReferrals?: number; // Promo ishlatgan mijozlar soni
+  paidSubscriptionsCount?: number; // Pullik obuna olganlar soni
+  totalAttributedUsers?: number; // alias
+  paidConversions?: number; // alias
+  totalRevenueUZS?: number; // Muvaffaqiyatli to'lovlar summasi
+  conversionRate?: number; // %
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface BloggerAttribution {
+  id: string;
+  bloggerId: string;
+  bloggerName: string;
+  promoCode?: string;
+  bloggerPromoCode?: string; // alias
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  userPhone?: string;
+  planId?: string;
+  planName?: string;
+  amountUZS: number;
+  amountUSD?: number;
+  discountApplied?: number;
+  discountAppliedUZS?: number;
+  paymentMethod?: string;
+  status?: 'pending' | 'confirmed' | 'cancelled' | 'refunded';
+  paymentStatus?: 'pending' | 'confirmed' | 'cancelled' | 'refunded';
+  paymentId?: string; // p2p payment ID or subscription ID
+  createdAt: string;
+  confirmedAt?: string;
 }
 
 // === AUDIT LOG SYSTEM ===

@@ -238,10 +238,22 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
     if (!file) return;
 
     try {
-      const { dataUrl } = await compressProductImageBlob(file, 800, 0.85);
+      showToast('Yuklanmoqda...', 'Kategoriya rasmi yuklanmoqda...', 'info');
+      const { blob, dataUrl } = await compressProductImageBlob(file, 700, 0.75);
+      let finalUrl = dataUrl;
+      try {
+        const ext = file.name.split('.').pop() || 'jpg';
+        const storagePath = `dropshipping/cat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+        const uploadedUrl = await firestoreService.uploadImage(storagePath, blob);
+        if (uploadedUrl && uploadedUrl.startsWith('http')) {
+          finalUrl = uploadedUrl;
+        }
+      } catch (uploadErr) {
+        console.warn('Storage category image notice:', uploadErr);
+      }
       setCategoryFormData((prev) => ({
         ...prev,
-        imageUrl: dataUrl,
+        imageUrl: finalUrl,
       }));
       showToast('Rasm yuklandi', 'Kategoriya rasmi muvaffaqiyatli tanlandi.', 'success');
     } catch (err: any) {
@@ -636,10 +648,22 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
     if (!file) return;
 
     try {
-      const { dataUrl } = await compressProductImageBlob(file, 800, 0.75);
+      showToast('Yuklanmoqda...', 'Rasm siqilmoqda va yuklanmoqda...', 'info');
+      const { blob, dataUrl } = await compressProductImageBlob(file, 700, 0.75);
+      let finalUrl = dataUrl;
+      try {
+        const ext = file.name.split('.').pop() || 'jpg';
+        const storagePath = `dropshipping/prod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+        const uploadedUrl = await firestoreService.uploadImage(storagePath, blob);
+        if (uploadedUrl && uploadedUrl.startsWith('http')) {
+          finalUrl = uploadedUrl;
+        }
+      } catch (uploadErr) {
+        console.warn('Storage product image notice:', uploadErr);
+      }
       setProductFormData((prev) => ({
         ...prev,
-        images: [dataUrl, ...(prev.images || []).filter((img) => !img.startsWith('data:image')).slice(0, 4)],
+        images: [finalUrl, ...(prev.images || []).filter((img) => img !== finalUrl).slice(0, 4)],
       }));
       showToast('Rasm yuklandi', 'Mahsulot rasmi ro‘yxatga qo‘shildi.', 'success');
     } catch (err: any) {

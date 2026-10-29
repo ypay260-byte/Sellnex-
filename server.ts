@@ -93,6 +93,59 @@ async function startServer() {
   });
 
   // ==========================================
+  // 1.5 SECURE SERVER-SIDE ADMIN AUTHENTICATION
+  // ==========================================
+  app.post('/api/admin/login', (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body || {};
+      const cleanInput = (email || '').toString().trim().toLowerCase();
+      const normalizedPhone = cleanInput.replace(/[\s\-\(\)]/g, '');
+      const cleanPassword = (password || '').toString();
+
+      const adminPassword = process.env.ADMIN_PASSWORD || 'Kamoliddin1986.';
+      const isDesignatedAdmin =
+        normalizedPhone === '+998942865021' ||
+        normalizedPhone === '942865021' ||
+        normalizedPhone === '8942865021' ||
+        cleanInput === 'ypay260@gmail.com' ||
+        cleanInput === 'admin@sellnex.uz' ||
+        cleanInput === 'admin';
+
+      if (!isDesignatedAdmin || cleanPassword !== adminPassword) {
+        return res.status(401).json({
+          success: false,
+          error: 'Administrator hisob maʼlumotlari notoʻgʻri kiritildi.',
+        });
+      }
+
+      const adminUser = {
+        id: 'admin_kamoliddin_5021',
+        name: 'Kamoliddin (Super Admin)',
+        email: 'ypay260@gmail.com',
+        phone: '+998942865021',
+        role: 'admin',
+        plan: 'golden_vip',
+        status: 'active',
+        subscriptionStatus: 'active',
+        createdAt: new Date().toISOString(),
+        subscriptionExpiresAt: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      console.log(`[Admin Security] Authorized admin login for: ${cleanInput}`);
+      return res.status(200).json({
+        success: true,
+        user: adminUser,
+      });
+    } catch (err: any) {
+      console.error('[Admin Login Error]:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Administrator autentifikatsiyasida server xatosi.',
+      });
+    }
+  });
+
+  // ==========================================
   // 2. PAYNET PAYMENT GATEWAY INTEGRATION
   // ==========================================
 

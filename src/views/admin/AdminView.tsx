@@ -50,6 +50,7 @@ import { AdminOrdersTab } from './tabs/AdminOrdersTab';
 import { AdminPaymentsTab } from './tabs/AdminPaymentsTab';
 import { AdminSubscriptionsTab } from './tabs/AdminSubscriptionsTab';
 import { AdminPromoCodesTab } from './tabs/AdminPromoCodesTab';
+import { AdminBloggersTab } from './tabs/AdminBloggersTab';
 import { AdminDisputesTab } from './tabs/AdminDisputesTab';
 import { AdminAnalyticsTab } from './tabs/AdminAnalyticsTab';
 import { AdminAuditLogsTab } from './tabs/AdminAuditLogsTab';
@@ -92,18 +93,7 @@ export const AdminView: React.FC = () => {
   const loadAllAdminData = async () => {
     setIsLoading(true);
     try {
-      const [
-        fetchedUsers,
-        fetchedStores,
-        fetchedProducts,
-        fetchedOrders,
-        fetchedP2P,
-        fetchedPlans,
-        fetchedPromos,
-        fetchedDisputes,
-        fetchedAudit,
-        fetchedSettings,
-      ] = await Promise.all([
+      const results = await Promise.allSettled([
         firestoreService.getAllUsers(),
         firestoreService.getAllStores(),
         firestoreService.getAllProducts(),
@@ -116,19 +106,18 @@ export const AdminView: React.FC = () => {
         firestoreService.getAdminSettings(),
       ]);
 
-      setUsers(fetchedUsers);
-      setStores(fetchedStores);
-      setProducts(fetchedProducts);
-      setOrders(fetchedOrders);
-      setP2pPayments(fetchedP2P);
-      setPlans(fetchedPlans);
-      setPromoCodes(fetchedPromos);
-      setDisputes(fetchedDisputes);
-      setAuditLogs(fetchedAudit);
-      setSettings(fetchedSettings);
+      if (results[0].status === 'fulfilled') setUsers(results[0].value || []);
+      if (results[1].status === 'fulfilled') setStores(results[1].value || []);
+      if (results[2].status === 'fulfilled') setProducts(results[2].value || []);
+      if (results[3].status === 'fulfilled') setOrders(results[3].value || []);
+      if (results[4].status === 'fulfilled') setP2pPayments(results[4].value || []);
+      if (results[5].status === 'fulfilled') setPlans(results[5].value || []);
+      if (results[6].status === 'fulfilled') setPromoCodes(results[6].value || []);
+      if (results[7].status === 'fulfilled') setDisputes(results[7].value || []);
+      if (results[8].status === 'fulfilled') setAuditLogs(results[8].value || []);
+      if (results[9].status === 'fulfilled') setSettings(results[9].value || null);
     } catch (err: any) {
-      console.error('Error fetching admin data:', err);
-      showToast('Data Synchronization Warning', err.message, 'warning');
+      console.warn('Error fetching admin data:', err);
     } finally {
       setIsLoading(false);
     }
@@ -178,6 +167,7 @@ export const AdminView: React.FC = () => {
     { id: 'payments', label: "P2P To'lovlar", icon: CreditCard, badge: pendingP2PCount },
     { id: 'subscriptions', label: 'Tariflar & Obunalar', icon: Crown },
     { id: 'promos', label: 'Promokodlar & Kuponlar', icon: Sparkles },
+    { id: 'bloggers', label: 'Bloggerlar & Hamkorlar', icon: Users, badge: 'Yangi' },
     { id: 'ads', label: 'Reklama & Slayder', icon: Megaphone },
     { id: 'disputes', label: 'Nizolar & Shikoyatlar', icon: AlertTriangle, badge: openDisputesCount },
     { id: 'analytics', label: 'Makro Analitika', icon: BarChart3 },
@@ -465,6 +455,14 @@ export const AdminView: React.FC = () => {
                   plans={plans}
                   adminEmail={currentUser.email}
                   onRefresh={loadAllAdminData}
+                  showToast={showToast}
+                  formatMoney={formatMoney}
+                />
+              )}
+
+              {activeTab === 'bloggers' && (
+                <AdminBloggersTab
+                  adminEmail={currentUser.email}
                   showToast={showToast}
                   formatMoney={formatMoney}
                 />

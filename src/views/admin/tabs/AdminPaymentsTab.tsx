@@ -344,6 +344,13 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
         });
       }
 
+      // Automatically confirm blogger attribution if linked
+      try {
+        await firestoreService.updateBloggerAttributionStatus(payment.id, 'confirmed');
+      } catch (attrErr) {
+        console.warn('Failed to update blogger attribution status:', attrErr);
+      }
+
       await recordAudit(
         'approve_p2p_payment',
         payment.id,
@@ -370,6 +377,13 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
         approvedBy: adminEmail,
         approvedAt: new Date().toISOString(),
       });
+
+      // Automatically cancel blogger attribution if linked
+      try {
+        await firestoreService.updateBloggerAttributionStatus(payment.id, 'cancelled');
+      } catch (attrErr) {
+        console.warn('Failed to cancel blogger attribution status:', attrErr);
+      }
 
       await recordAudit('reject_p2p_payment', payment.id, { status: 'pending' }, { status: 'rejected', reason: rejectReason });
       showToast('Payment Rejected', 'Status marked as rejected', 'info');
@@ -746,6 +760,12 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                       >
                         {pay.status}
                       </span>
+                      {pay.bloggerPromoCode && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-950/80 text-purple-300 border border-purple-800 flex items-center gap-1">
+                          <Sparkles className="w-2.5 h-2.5" />
+                          <span>Blogger: {pay.bloggerPromoCode}</span>
+                        </span>
+                      )}
                     </div>
 
                     <div className="text-xs text-slate-400 flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -755,6 +775,11 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                       <span>
                         Amount: <strong className="text-emerald-400">{formatMoney(pay.amount)}</strong>
                       </span>
+                      {pay.discountApplied ? (
+                        <span className="text-amber-400 font-medium">
+                          Chegirma: -{formatMoney(pay.discountApplied)}
+                        </span>
+                      ) : null}
                       <span>Sender: {pay.senderName || 'Anonymous'}</span>
                       <span>Date: {new Date(pay.createdAt).toLocaleString()}</span>
                     </div>

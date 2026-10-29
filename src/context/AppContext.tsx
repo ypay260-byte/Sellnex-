@@ -109,6 +109,7 @@ interface AppContextType {
   setPendingRegistration: (data: PendingRegistration | null) => void;
   login: (email: string, password?: string) => Promise<{ success: boolean; user?: User; error?: string }>;
   adminLogin: (email: string, password?: string, twoFactorCode?: string) => Promise<{ success: boolean; user?: User; error?: string }>;
+  loginAdminWithGoogle: () => Promise<{ success: boolean; user?: User; error?: string }>;
   loginWithTelegram: (params: { telegramUserId: string | number; name?: string; username?: string }) => Promise<{ success: boolean; user?: User; error?: string }>;
   signUp: (data: SignUpParams) => Promise<{ success: boolean; error?: string }>;
   completeOnboarding: (onboardingData: OnboardingData) => Promise<{ success: boolean; error?: string }>;
@@ -412,6 +413,36 @@ export function parseLocationRoute(
     searchParams.get('page') === 'admin'
   ) {
     return { route: 'admin-panel', params: {} };
+  }
+
+  // 4.5. Blogger Portal routes: /#blogger, /#blogger/:code, /#blogger-portal, ?route=blogger
+  if (
+    lowerHash === 'blogger' ||
+    lowerHash === 'blogger-portal' ||
+    lowerHash.startsWith('blogger/') ||
+    lowerHash.startsWith('blogger-portal/') ||
+    lowerPath === 'blogger' ||
+    lowerPath === 'blogger-portal' ||
+    lowerPath.startsWith('blogger/') ||
+    searchParams.get('route') === 'blogger' ||
+    searchParams.get('route') === 'blogger-portal'
+  ) {
+    const rawTarget = lowerHash.startsWith('blogger') ? cleanHash : cleanPath;
+    const parts = rawTarget.split('/').filter(Boolean);
+    const code = parts[1] || searchParams.get('code') || searchParams.get('blogger') || hashParams?.get('code') || '';
+    const key = searchParams.get('key') || hashParams?.get('key') || '';
+    return {
+      route: 'blogger-portal',
+      params: { code, key },
+    };
+  }
+
+  // Auto-record referral promo code from URL (e.g. ?ref=TIMUR or #ref=TIMUR)
+  const refCode = searchParams.get('ref') || searchParams.get('promo') || hashParams?.get('ref') || hashParams?.get('promo');
+  if (refCode && typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('sellnex_blogger_ref', refCode.trim().toUpperCase());
+    } catch {}
   }
 
   // 5. Standard app routes
@@ -1228,6 +1259,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: false, error: res.error };
   };
 
+  const loginAdminWithGoogle = async () => {
+    try {
+      const res = await authService.loginAdminWithGoogle();
+      if (res.success && res.user) {
+        setCurrentUserState(res.user);
+        Storage.setCurrentUser(res.user);
+        showToast('Boshqaruvchi Tasdiqlandi', `Xush kelibsiz, ${res.user.name}!`, 'success');
+        return { success: true, user: res.user };
+      }
+      showToast('Admin Kirish Rad Etildi', res.error || 'Ruxsat berilmadi', 'error');
+      return { success: false, error: res.error };
+    } catch (err: any) {
+      showToast('Xatolik', err.message || 'Google orqali kirib bo‘lmadi', 'error');
+      return { success: false, error: err.message };
+    }
+  };
+
   const loginWithTelegram = async (params: {
     telegramUserId: string | number;
     name?: string;
@@ -2000,6 +2048,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         switchBusinessType,
         login,
         adminLogin,
+        loginAdminWithGoogle,
         loginWithTelegram,
         signUp,
         logout,

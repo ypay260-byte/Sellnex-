@@ -4,7 +4,7 @@ import { BackHeader } from '../components/common/BackHeader';
 import { subscriptionService, PLAN_CONFIGS } from '../services/subscriptionService';
 import { paynetService, PaynetPaymentResponse } from '../services/paynetService';
 import { firestoreService } from '../services/firestoreService';
-import { PlanType, AdminSettings } from '../types';
+import { PlanType, AdminSettings, Blogger } from '../types';
 import QRCode from 'qrcode';
 import {
   Check,
@@ -59,6 +59,82 @@ export const PricingView: React.FC = () => {
   const [senderPhone, setSenderPhone] = useState(currentUser?.phone || '');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccessInfo, setPaymentSuccessInfo] = useState<{ mode: 'paynet' | 'p2p' | 'instant'; refNumber?: string; plan?: PlanType } | null>(null);
+
+  // Blogger Promocode state
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedBlogger, setAppliedBlogger] = useState<Blogger | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [isCheckingPromo, setIsCheckingPromo] = useState(false);
+
+  // Detect referral code from URL or cache on mount
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash || '';
+      let refCode = searchParams.get('ref') || searchParams.get('promo');
+      if (!refCode && hash.includes('ref=')) {
+        const hashQ = hash.slice(hash.indexOf('?'));
+        const hashParams = new URLSearchParams(hashQ);
+        refCode = hashParams.get('ref') || hashParams.get('promo');
+      }
+      if (!refCode) {
+        refCode = localStorage.getItem('sellnex_blogger_ref');
+      }
+
+      if (refCode) {
+        const cleanRef = refCode.trim().toUpperCase();
+        setPromoInput(cleanRef);
+        firestoreService.getBloggerByPromoCode(cleanRef).then((b) => {
+          if (b && b.isActive) {
+            setAppliedBlogger(b);
+            try {
+              localStorage.setItem('sellnex_blogger_ref', b.promoCode);
+            } catch {}
+          }
+        });
+      }
+    } catch (e) {
+      // quiet fallback
+    }
+  }, []);
+
+  const handleApplyPromo = async () => {
+    const cleanCode = promoInput.trim().toUpperCase();
+    if (!cleanCode) return;
+    setIsCheckingPromo(true);
+    setPromoError(null);
+    try {
+      const blogger = await firestoreService.getBloggerByPromoCode(cleanCode);
+      if (!blogger) {
+        setPromoError('Bunday promokod topilmadi');
+        setAppliedBlogger(null);
+      } else if (!blogger.isActive) {
+        setPromoError('Ushbu promokod hozirda to‘xtatilgan');
+        setAppliedBlogger(null);
+      } else {
+        setAppliedBlogger(blogger);
+        setPromoError(null);
+        try {
+          localStorage.setItem('sellnex_blogger_ref', blogger.promoCode);
+        } catch {}
+        showToast('Promokod faollashtirildi! 🎉', `${blogger.name} dan chegirma muvaffaqiyatli qo‘llandi`, 'success');
+      }
+    } catch (err: any) {
+      setPromoError('Promokodni tekshirishda xatolik yuz berdi');
+    } finally {
+      setIsCheckingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedBlogger(null);
+    setPromoInput('');
+    setPromoError(null);
+    try {
+      localStorage.removeItem('sellnex_blogger_ref');
+    } catch {}
+    showToast('Promokod olib tashlandi', '', 'info');
+  };
 
   // Auth requirement prompt modal
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
@@ -393,7 +469,32 @@ export const PricingView: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      const result = await subscriptionService.upgradePlan(currentUser, planId, method, isRenewalOption);
+      const selectedPlan = plans.find((p) => p.id === planId);
+      const baseUZS = selectedPlan?.priceUZS || (planId === 'starter' ? 13000 : 65000);
+      const baseUSD = selectedPlan?.priceUSD || (planId === 'starter' ? 1 : 5);
+      const discountUZS = appliedBlogger
+        ? (appliedBlogger.discountType === 'percent'
+            ? Math.round((baseUZS * (appliedBlogger.discountValue || 10)) / 100)
+            : Math.min(baseUZS, appliedBlogger.discountValue || 0))
+        : 0;
+      const finalUZS = Math.max(1000, baseUZS - discountUZS);
+
+      const result = await subscriptionService.upgradePlan(
+        currentUser,
+        planId,
+        method,
+        isRenewalOption,
+        appliedBlogger
+          ? {
+              bloggerId: appliedBlogger.id,
+              bloggerPromoCode: appliedBlogger.promoCode,
+              bloggerName: appliedBlogger.name,
+              amountUZS: finalUZS,
+              amountUSD: baseUSD,
+              discountApplied: discountUZS,
+            }
+          : undefined
+      );
       setCurrentUser(result.user);
       updateStore({ theme: store.theme });
 
@@ -506,18 +607,28 @@ export const PricingView: React.FC = () => {
 
     setIsProcessing(true);
     const plan = plans.find((p) => p.id === selectedPlanModal);
-    const amountUZS = plan?.priceUZS || (selectedPlanModal === 'starter' ? 13000 : 65000);
-    const amountUSD = plan?.priceUSD || (selectedPlanModal === 'starter' ? 1 : 5);
+    const baseUZS = plan?.priceUZS || (selectedPlanModal === 'starter' ? 13000 : 65000);
+    const baseUSD = plan?.priceUSD || (selectedPlanModal === 'starter' ? 1 : 5);
+    const discountUZS = appliedBlogger
+      ? (appliedBlogger.discountType === 'percent'
+          ? Math.round((baseUZS * (appliedBlogger.discountValue || 10)) / 100)
+          : Math.min(baseUZS, appliedBlogger.discountValue || 0))
+      : 0;
+    const finalUZS = Math.max(1000, baseUZS - discountUZS);
 
     const res = await subscriptionService.submitP2PPaymentRequest({
       user: currentUser,
       planRequested: selectedPlanModal,
-      amountUZS,
-      amountUSD,
+      amountUZS: finalUZS,
+      amountUSD: baseUSD,
       paymentMethod: cardMethod,
       receiptImageUrl: receiptImage || undefined,
       transactionRef: transactionRef.trim() || undefined,
       senderPhone: senderPhone.trim() || currentUser.phone || undefined,
+      bloggerId: appliedBlogger?.id,
+      bloggerPromoCode: appliedBlogger?.promoCode,
+      bloggerName: appliedBlogger?.name,
+      discountApplied: discountUZS,
     });
 
     setIsProcessing(false);
@@ -825,25 +936,116 @@ export const PricingView: React.FC = () => {
                 </div>
 
                 {/* Price Summary */}
-                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex items-center justify-between text-xs">
-                  <div>
-                    <p className="font-extrabold text-slate-800">{PLAN_CONFIGS[selectedPlanModal]?.name || selectedPlanModal.toUpperCase()} {t('pricing_plan_suffix', 'Tarifi')}</p>
-                    <p className="text-[11px] text-slate-500">
-                      {selectedPlanModal === 'starter'
-                        ? '3 oylik toʻliq kirish (90 kun)'
-                        : '1 oylik toʻliq kirish (30 kun)'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black text-emerald-600">
-                      {plans.find((p) => p.id === selectedPlanModal)?.priceFormatted ||
-                        `${PLAN_CONFIGS[selectedPlanModal]?.priceUZS.toLocaleString()} UZS ($${PLAN_CONFIGS[selectedPlanModal]?.priceUSD})`}
-                    </p>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      Limit: {PLAN_CONFIGS[selectedPlanModal]?.limits.maxProducts || 5} ta mahsulot
-                    </span>
-                  </div>
-                </div>
+                {(() => {
+                  const plan = plans.find((p) => p.id === selectedPlanModal);
+                  const baseUZS = plan?.priceUZS || (selectedPlanModal === 'starter' ? 13000 : 65000);
+                  const discountUZS = appliedBlogger
+                    ? (appliedBlogger.discountType === 'percent'
+                        ? Math.round((baseUZS * (appliedBlogger.discountValue || 10)) / 100)
+                        : Math.min(baseUZS, appliedBlogger.discountValue || 0))
+                    : 0;
+                  const finalUZS = Math.max(1000, baseUZS - discountUZS);
+
+                  return (
+                    <>
+                      <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-extrabold text-slate-800">{PLAN_CONFIGS[selectedPlanModal]?.name || selectedPlanModal.toUpperCase()} {t('pricing_plan_suffix', 'Tarifi')}</p>
+                          <p className="text-[11px] text-slate-500">
+                            {selectedPlanModal === 'starter'
+                              ? '3 oylik toʻliq kirish (90 kun)'
+                              : '1 oylik toʻliq kirish (30 kun)'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          {appliedBlogger ? (
+                            <div>
+                              <span className="text-xs text-slate-400 line-through mr-1.5 font-medium">
+                                {baseUZS.toLocaleString()} UZS
+                              </span>
+                              <p className="text-lg font-black text-emerald-600">
+                                {finalUZS.toLocaleString()} UZS
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-lg font-black text-emerald-600">
+                              {plans.find((p) => p.id === selectedPlanModal)?.priceFormatted ||
+                                `${PLAN_CONFIGS[selectedPlanModal]?.priceUZS.toLocaleString()} UZS ($${PLAN_CONFIGS[selectedPlanModal]?.priceUSD})`}
+                            </p>
+                          )}
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            Limit: {PLAN_CONFIGS[selectedPlanModal]?.limits.maxProducts || 5} ta mahsulot
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Promokod / Blogger Referral Input */}
+                      <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Blogger yoki Promokodingiz bormi?</span>
+                          </label>
+                          {appliedBlogger && (
+                            <button
+                              type="button"
+                              onClick={handleRemovePromo}
+                              className="text-[10px] text-rose-500 hover:underline cursor-pointer"
+                            >
+                              O‘chirish
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={promoInput}
+                            disabled={!!appliedBlogger || isCheckingPromo}
+                            onChange={(e) => {
+                              setPromoInput(e.target.value.toUpperCase().replace(/\s/g, ''));
+                              setPromoError(null);
+                            }}
+                            placeholder="Masalan: TIMUR2026"
+                            className="flex-1 px-3 py-2 bg-white border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-xs font-mono font-bold uppercase text-slate-800 placeholder-slate-400 outline-hidden disabled:bg-slate-100 disabled:text-slate-500"
+                          />
+                          {!appliedBlogger ? (
+                            <button
+                              type="button"
+                              disabled={!promoInput.trim() || isCheckingPromo}
+                              onClick={handleApplyPromo}
+                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1"
+                            >
+                              {isCheckingPromo ? <RefreshCw className="w-3 h-3 animate-spin" /> : <span>Qo‘llash</span>}
+                            </button>
+                          ) : (
+                            <div className="px-3 py-2 bg-emerald-100 text-emerald-700 font-bold text-xs rounded-xl flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Qo‘llandi</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {promoError && (
+                          <p className="text-[10px] text-rose-500 font-medium">{promoError}</p>
+                        )}
+
+                        {appliedBlogger && (
+                          <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] flex items-center justify-between">
+                            <span>
+                              🎉 <strong>{appliedBlogger.name}</strong> promokodi faollashtirildi!
+                            </span>
+                            <strong className="text-emerald-700 font-bold">
+                              {appliedBlogger.discountType === 'percent'
+                                ? `-${appliedBlogger.discountValue}% (${discountUZS.toLocaleString()} so‘m)`
+                                : `-${discountUZS.toLocaleString()} so‘m`}
+                            </strong>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
 
                 {/* Direct Card Payment (Click / Payme / Uzum Bank) - No Expiring QR */}
                 <div className="space-y-4">

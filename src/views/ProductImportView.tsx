@@ -134,47 +134,52 @@ export const ProductImportView: React.FC = () => {
 
   const profitMarginPercent = customerPrice > 0 ? Math.round((sellerProfit / customerPrice) * 100) : 0;
 
-  const handleAddProductToStore = (andPublish = true) => {
+  const handleAddProductToStore = async (andPublish = true) => {
     if (!importedDraft) return;
 
-    addProduct({
-      storeId: store.id,
-      title: importedDraft.title,
-      description: importedDraft.description,
-      category: importedDraft.category,
-      images: importedDraft.images,
-      supplier: importedDraft.supplier,
-      supplierUrl: importedDraft.supplierUrl,
-      supplierCost: importedDraft.supplierCost,
-      shippingCost: importedDraft.shippingCost,
-      paymentFeePercent: 1.5,
-      platformFeePercent: 0,
-      profitType,
-      profitValue: profitType === 'fixed' ? fixedProfitValue : percentageMarginValue,
-      calculatedProfit: sellerProfit,
-      sellingPrice: customerPrice,
-      oldPrice: importedDraft.suggestedOldPrice || Math.round(customerPrice * 1.25),
-      stock: importedDraft.stock,
-      status: andPublish ? 'Published' : 'Draft',
-      sku: `SL-${Math.floor(1000 + Math.random() * 9000)}`,
-      variants: importedDraft.variants,
-      rating: 4.9,
-      reviewCount: 1,
-      featured: true,
-    });
-
     try {
-      confetti({ particleCount: 75, spread: 60 });
-    } catch {
-      // ignore
-    }
+      await addProduct({
+        storeId: store.id,
+        title: importedDraft.title,
+        description: importedDraft.description,
+        category: importedDraft.category,
+        images: importedDraft.images,
+        supplier: importedDraft.supplier,
+        supplierUrl: importedDraft.supplierUrl,
+        supplierCost: importedDraft.supplierCost,
+        shippingCost: importedDraft.shippingCost,
+        paymentFeePercent: 1.5,
+        platformFeePercent: 0,
+        profitType,
+        profitValue: profitType === 'fixed' ? fixedProfitValue : percentageMarginValue,
+        calculatedProfit: sellerProfit,
+        sellingPrice: customerPrice,
+        oldPrice: importedDraft.suggestedOldPrice || Math.round(customerPrice * 1.25),
+        stock: importedDraft.stock,
+        status: andPublish ? 'Published' : 'Draft',
+        sku: `SL-${Math.floor(1000 + Math.random() * 9000)}`,
+        variants: importedDraft.variants,
+        rating: 4.9,
+        reviewCount: 1,
+        featured: true,
+      });
 
-    if (andPublish) {
-      showToast('Doʻkonga qoʻshildi!', 'Mahsulot muvaffaqiyatli nashr etildi va doʻkonda koʻrinmoqda.', 'success');
-      navigateTo('public-store', { storeSlug: store.slug });
-    } else {
-      showToast('Qoralama saqlandi', 'Mahsulotlar roʻyxatiga saqlandi.', 'info');
-      navigateTo('products');
+      try {
+        confetti({ particleCount: 75, spread: 60 });
+      } catch {
+        // ignore
+      }
+
+      if (andPublish) {
+        showToast('Doʻkonga qoʻshildi!', 'Mahsulot muvaffaqiyatli nashr etildi va doʻkonda koʻrinmoqda.', 'success');
+        navigateTo('public-store', { storeSlug: store.slug });
+      } else {
+        showToast('Qoralama saqlandi', 'Mahsulotlar roʻyxatiga saqlandi.', 'info');
+        navigateTo('products');
+      }
+    } catch (err: any) {
+      console.error('Import addProduct error:', err);
+      showToast('Xatolik', err?.message || 'Mahsulotni qo‘shishda xatolik yuz berdi.', 'error');
     }
   };
 

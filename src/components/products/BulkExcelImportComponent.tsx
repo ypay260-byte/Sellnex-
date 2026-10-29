@@ -253,7 +253,17 @@ export const BulkExcelImportComponent: React.FC<BulkExcelImportComponentProps> =
 
   // Run the batch import
   const handleExecuteImport = async () => {
-    if (!store?.id || !currentUser?.id) {
+    let targetStoreId = store?.id;
+    if (!targetStoreId && currentUser?.id) {
+      try {
+        const autoStore = await firestoreService.createDefaultStoreForUser(currentUser);
+        targetStoreId = autoStore?.id;
+      } catch (storeErr) {
+        console.warn('Auto store creation error in bulk import:', storeErr);
+      }
+    }
+
+    if (!targetStoreId || !currentUser?.id) {
       showToast('Xatolik', 'Do‘kon yoki foydalanuvchi tizimga kirmagan.', 'error');
       return;
     }

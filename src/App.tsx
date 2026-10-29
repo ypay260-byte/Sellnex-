@@ -46,6 +46,7 @@ import { RestaurantDashboardView } from './views/restaurant/RestaurantDashboardV
 import { RestaurantMenuView } from './views/restaurant/RestaurantMenuView';
 import { RestaurantSettingsView } from './views/restaurant/RestaurantSettingsView';
 import { RestaurantOnboarding } from './views/restaurant/RestaurantOnboarding';
+import { BloggerPortalView } from './views/BloggerPortalView';
 
 const PUBLIC_ROUTES = [
   'landing',
@@ -64,6 +65,8 @@ const PUBLIC_ROUTES = [
   'r',
   'restaurant-onboarding',
   'dropshipping',
+  'blogger',
+  'blogger-portal',
 ];
 
 const MainAppContent: React.FC = () => {
@@ -226,6 +229,21 @@ const MainAppContent: React.FC = () => {
       <div id="sellnex-app-container" className="w-full min-h-screen flex flex-col bg-slate-50">
         <DropshippingView />
         <DeviceSelectorModal />
+        <ToastContainer />
+      </div>
+    );
+  }
+
+  // Dedicated isolated Blogger & Influencer Portal
+  if (
+    currentRoute === 'blogger-portal' ||
+    currentRoute === 'blogger' ||
+    currentRoute.startsWith('blogger/') ||
+    currentRoute.startsWith('blogger-portal/')
+  ) {
+    return (
+      <div id="sellnex-blogger-container" className="w-full min-h-screen flex flex-col bg-slate-950 text-slate-100">
+        <BloggerPortalView />
         <ToastContainer />
       </div>
     );

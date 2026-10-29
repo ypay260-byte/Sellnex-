@@ -430,28 +430,28 @@ export const subscriptionService = {
   },
 
   checkCanAddProduct(user: User | null, currentProductCount: number): { allowed: boolean; reason?: string; limit: number } {
-    if (user?.role === 'admin') {
+    if (user?.role === 'admin' || user?.email === 'ypay260@gmail.com' || user?.email === 'admin@sellnex.uz') {
       return { allowed: true, limit: 10000 };
     }
 
     const plan = (user?.plan === 'free' ? 'trial' : user?.plan) || 'trial';
     const statusInfo = this.getTrialStatus(user);
 
-    if (statusInfo.isExpired) {
+    if (statusInfo.isExpired && plan !== 'trial') {
       return {
         allowed: false,
-        reason: 'Your subscription has expired.',
+        reason: 'Obuna muddati tugagan. Davom ettirish uchun tarifingizni yangilang.',
         limit: statusInfo.maxProducts,
       };
     }
 
-    // Trial: 5 products
+    // Trial: 10 products
     if (plan === 'trial') {
-      const limit = 5;
+      const limit = 10;
       if (currentProductCount >= limit) {
         return {
           allowed: false,
-          reason: 'You have reached your 5 product limit.',
+          reason: 'Sizning bepul sinov tarifingiz bo‘yicha 10 ta mahsulot limiti to‘ldi. Ko‘proq mahsulot qo‘shish uchun tarifni oshiring.',
           limit,
         };
       }
@@ -540,7 +540,15 @@ export const subscriptionService = {
     user: User,
     newPlan: PlanType,
     paymentMethod: 'Click' | 'Payme' | 'Uzum Bank' | 'Card' | 'Paynet',
-    isRenewalDiscount = false
+    isRenewalDiscount = false,
+    bloggerInfo?: {
+      bloggerId: string;
+      bloggerPromoCode: string;
+      bloggerName: string;
+      amountUZS?: number;
+      amountUSD?: number;
+      discountApplied?: number;
+    }
   ): Promise<{ user: User; receiptNumber: string }> {
     const cleanPlan: PlanType = newPlan === 'free' ? 'trial' : newPlan;
     const now = new Date();
@@ -588,6 +596,9 @@ export const subscriptionService = {
       productLimit,
       paymentAmount,
       isStarterRenewedDiscount: isRenewalDiscount,
+      referredByBloggerId: bloggerInfo?.bloggerId || user.referredByBloggerId,
+      referredByPromoCode: bloggerInfo?.bloggerPromoCode || user.referredByPromoCode,
+      referredAt: bloggerInfo ? now.toISOString() : user.referredAt,
       updatedAt: now.toISOString(),
     };
 
@@ -605,6 +616,31 @@ export const subscriptionService = {
 
     const receiptNumber = `SUB-${cleanPlan.toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
+    // 3. Record confirmed blogger attribution if supplied
+    if (bloggerInfo) {
+      try {
+        await firestoreService.recordBloggerAttribution({
+          bloggerId: bloggerInfo.bloggerId,
+          promoCode: bloggerInfo.bloggerPromoCode,
+          bloggerPromoCode: bloggerInfo.bloggerPromoCode,
+          bloggerName: bloggerInfo.bloggerName,
+          paymentId: receiptNumber,
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name,
+          userPhone: user.phone || '',
+          planId: cleanPlan,
+          planName: cleanPlan.toUpperCase(),
+          amountUZS: bloggerInfo.amountUZS || (paymentAmount * 13000),
+          amountUSD: bloggerInfo.amountUSD || paymentAmount,
+          discountApplied: bloggerInfo.discountApplied || 0,
+          status: 'confirmed',
+        });
+      } catch (attribErr) {
+        console.warn('Failed to record confirmed blogger attribution:', attribErr);
+      }
+    }
+
     return { user: updatedUser, receiptNumber };
   },
 
@@ -618,6 +654,10 @@ export const subscriptionService = {
     transactionRef,
     senderPhone,
     notes,
+    bloggerId,
+    bloggerPromoCode,
+    bloggerName,
+    discountApplied,
   }: {
     user: User;
     planRequested: PlanType;
@@ -628,6 +668,10 @@ export const subscriptionService = {
     transactionRef?: string;
     senderPhone?: string;
     notes?: string;
+    bloggerId?: string;
+    bloggerPromoCode?: string;
+    bloggerName?: string;
+    discountApplied?: number;
   }): Promise<{ success: boolean; paymentId?: string; error?: string }> {
     try {
       const cleanPlan: PlanType = planRequested === 'free' ? 'trial' : planRequested;
@@ -647,9 +691,14 @@ export const subscriptionService = {
         amount: amountUZS,
         paymentMethod: paymentMethod === 'Card' ? 'P2P Card Transfer' : paymentMethod,
         screenshotUrl: receiptImageUrl || '',
+        bloggerId,
+        bloggerPromoCode,
+        bloggerName,
+        discountApplied,
         notes: [
           `Tarif: ${cleanPlan.toUpperCase()} ($${amountUSD} / ${amountUZS.toLocaleString()} UZS, ${durationMonths} oy)`,
           transactionRef ? `Tranzaksiya: ${transactionRef}` : '',
+          bloggerPromoCode ? `Promokod: ${bloggerPromoCode} (${bloggerName || 'Blogger'})` : '',
           notes,
         ]
           .filter(Boolean)
@@ -660,12 +709,37 @@ export const subscriptionService = {
 
       await firestoreService.createP2PPayment(newPayment);
 
+      // Record blogger attribution if referred by a blogger
+      if (bloggerId && bloggerPromoCode) {
+        try {
+          await firestoreService.recordBloggerAttribution({
+            bloggerId,
+            promoCode: bloggerPromoCode,
+            bloggerPromoCode,
+            bloggerName: bloggerName || 'Blogger',
+            paymentId,
+            userId: user.id,
+            userEmail: user.email,
+            userName: user.name,
+            userPhone: senderPhone || user.phone || '',
+            planId: cleanPlan,
+            planName: cleanPlan.toUpperCase(),
+            amountUZS,
+            amountUSD,
+            discountApplied: discountApplied || 0,
+            status: 'pending',
+          });
+        } catch (attribErr) {
+          console.warn('Failed to record blogger attribution for P2P payment:', attribErr);
+        }
+      }
+
       // Create admin notification
       try {
         await firestoreService.createAdminNotification({
           id: `admin_notif_${Date.now()}`,
           title: `Yangi to'lov cheki kelib tushdi!`,
-          message: `${user.name} (${user.email}) "${cleanPlan.toUpperCase()}" tarifi uchun ${amountUZS.toLocaleString()} UZS ($${amountUSD}) to'lov chekini yukladi.`,
+          message: `${user.name} (${user.email}) "${cleanPlan.toUpperCase()}" tarifi uchun ${amountUZS.toLocaleString()} UZS ($${amountUSD}) to'lov chekini yukladi.${bloggerPromoCode ? ` (Promokod: ${bloggerPromoCode})` : ''}`,
           type: 'order',
           timestamp: new Date().toISOString(),
           read: false,

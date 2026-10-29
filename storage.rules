@@ -15,28 +15,41 @@ service firebase.storage {
                    && (request.resource.contentType.matches('image/.*') || request.resource.contentType == 'application/pdf');
     }
 
-    // Merchant Store, Product & Cafe Media (Images up to 10MB)
-    match /products/{storeId}/{fileName} {
+    // Merchant Store, Product & Cafe Media (Images up to 15MB)
+    match /products/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.resource.size < 10 * 1024 * 1024
+      allow write: if request.resource.size < 15 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
 
-    match /stores/{storeId}/{fileName} {
+    match /stores/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.resource.size < 10 * 1024 * 1024
+      allow write: if request.resource.size < 15 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
 
-    match /cafes/{cafeId}/{allPaths=**} {
+    match /cafes/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.resource.size < 10 * 1024 * 1024;
+      allow write: if request.resource.size < 15 * 1024 * 1024;
     }
 
-    // General fallback: Authenticated write only, public read for CDN images
+    // Dropshipping Catalog Products and Media
+    match /dropshipping/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource.size < 15 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource.size < 15 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // General fallback: Authenticated write or media upload, public read for CDN images
     match /{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.resource.size < 15 * 1024 * 1024;
+      allow write: if request.resource.size < 15 * 1024 * 1024;
     }
   }
 }

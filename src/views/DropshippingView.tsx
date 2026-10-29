@@ -32,7 +32,17 @@ import {
 } from 'lucide-react';
 
 export const DropshippingView: React.FC = () => {
-  const { store, currentUser, products, addProduct, refreshProducts, formatMoney, showToast, navigateTo } = useApp();
+  const {
+    store,
+    currentUser,
+    products,
+    addProduct,
+    refreshProducts,
+    formatMoney,
+    showToast,
+    navigateTo,
+    openLimitModal,
+  } = useApp();
 
   const [categories, setCategories] = useState<DropshippingCategory[]>([]);
   const [catalog, setCatalog] = useState<DropshippingCatalogProduct[]>([]);
@@ -49,6 +59,20 @@ export const DropshippingView: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [directAddingId, setDirectAddingId] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Helper to ensure store exists
+  const getEnsuredStore = async () => {
+    if (store?.id) return store;
+    if (currentUser?.id) {
+      try {
+        const autoStore = await firestoreService.createDefaultStoreForUser(currentUser);
+        return autoStore;
+      } catch (err) {
+        console.warn('Could not auto-create store:', err);
+      }
+    }
+    return store;
+  };
 
   // Load Categories & Catalog
   const loadData = async () => {
@@ -73,7 +97,7 @@ export const DropshippingView: React.FC = () => {
   }, []);
 
   // Set initial price and margin when opening Add Modal
-  const handleOpenAddModal = (p: DropshippingCatalogProduct, initialMargin?: number) => {
+  const handleOpenAddModal = async (p: DropshippingCatalogProduct, initialMargin?: number) => {
     if (!currentUser) {
       showToast(
         'Tizimga kiring',
@@ -83,7 +107,9 @@ export const DropshippingView: React.FC = () => {
       navigateTo('auth', { mode: 'signup' });
       return;
     }
-    if (!store?.id) {
+
+    const activeStore = await getEnsuredStore();
+    if (!activeStore?.id) {
       showToast('Do‘kon oching', 'Mahsulotni qo‘shish uchun avval do‘koningizni sozlang.', 'info');
       navigateTo('onboarding');
       return;
@@ -138,7 +164,9 @@ export const DropshippingView: React.FC = () => {
       navigateTo('auth', { mode: 'signup' });
       return;
     }
-    if (!store?.id) {
+
+    const activeStore = await getEnsuredStore();
+    if (!activeStore?.id) {
       showToast('Do‘kon oching', 'Mahsulotni qo‘shish uchun avval do‘koningizni sozlang.', 'info');
       navigateTo('onboarding');
       return;
@@ -150,8 +178,8 @@ export const DropshippingView: React.FC = () => {
     try {
       const addedProd = await firestoreService.addDropshippingProductToStore(
         p,
-        store,
-        currentUser || ({ id: store.ownerId } as any),
+        activeStore,
+        currentUser || ({ id: activeStore.ownerId } as any),
         Number(targetPrice)
       );
 
@@ -165,7 +193,12 @@ export const DropshippingView: React.FC = () => {
       );
     } catch (err: any) {
       console.error('Failed to add dropshipping product quickly:', err);
-      showToast('Xatolik', err?.message || 'Mahsulotni qo‘shishda xatolik yuz berdi.', 'error');
+      const msg = err?.message || 'Mahsulotni qo‘shishda xatolik yuz berdi.';
+      if (msg.includes('limiti to‘ldi') || msg.includes('product limit')) {
+        openLimitModal(products.length, 10, msg);
+      } else {
+        showToast('Xatolik', msg, 'error');
+      }
     } finally {
       setDirectAddingId(null);
     }
@@ -185,7 +218,8 @@ export const DropshippingView: React.FC = () => {
       return;
     }
 
-    if (!store?.id) {
+    const activeStore = await getEnsuredStore();
+    if (!activeStore?.id) {
       showToast('Do‘kon topilmadi', 'Avval do‘koningizni yarating yoki sozlang.', 'warning');
       return;
     }
@@ -194,8 +228,8 @@ export const DropshippingView: React.FC = () => {
     try {
       const addedProd = await firestoreService.addDropshippingProductToStore(
         addModalProduct,
-        store,
-        currentUser || ({ id: store.ownerId } as any),
+        activeStore,
+        currentUser || ({ id: activeStore.ownerId } as any),
         Number(customPrice)
       );
 
@@ -211,7 +245,12 @@ export const DropshippingView: React.FC = () => {
       setAddModalProduct(null);
     } catch (err: any) {
       console.error('Failed to add dropshipping product:', err);
-      showToast('Xatolik', err?.message || 'Mahsulotni qo‘shishda xatolik yuz berdi.', 'error');
+      const msg = err?.message || 'Mahsulotni qo‘shishda xatolik yuz berdi.';
+      if (msg.includes('limiti to‘ldi') || msg.includes('product limit')) {
+        openLimitModal(products.length, 10, msg);
+      } else {
+        showToast('Xatolik', msg, 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }
