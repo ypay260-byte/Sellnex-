@@ -352,7 +352,7 @@ export const RestaurantMenuView: React.FC = () => {
     try {
       const finalImage =
         dishImage.trim() ||
-        (imagePreview.startsWith('http') || imagePreview.startsWith('data:') ? imagePreview.trim() : '') ||
+        (imagePreview.startsWith('http') || imagePreview.startsWith('data:') || imagePreview.startsWith('/uploads/') ? imagePreview.trim() : '') ||
         'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500';
 
       const payload: MenuItem = {

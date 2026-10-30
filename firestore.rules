@@ -74,12 +74,15 @@ service cloud.firestore {
       allow create, update, delete: if true;
     }
 
-    // 4. Orders: Anti-Tampering, Cross-Store Isolation, Secure Checkout
+    // 4. Orders: Anti-Tampering, Cross-Store Isolation, Secure Checkout & Mandatory Receipt
     match /orders/{orderId} {
-      // Customer can create an order, but CANNOT self-mark order as Paid
+      // Order creation STRICTLY REQUIRES a valid receiptUrl (non-empty string > 5 chars)
+      // and cannot self-mark order as Paid
       allow create: if (
-        !request.resource.data.keys().hasAny(['paymentStatus']) ||
-        request.resource.data.paymentStatus in ['pending', 'pending_verification', 'Pending', 'pending_payment_verification']
+        request.resource.data.receiptUrl is string &&
+        request.resource.data.receiptUrl.size() > 5 &&
+        (!request.resource.data.keys().hasAny(['paymentStatus']) ||
+         request.resource.data.paymentStatus in ['pending', 'pending_verification', 'Pending', 'pending_payment_verification'])
       );
 
       allow get, list: if true;

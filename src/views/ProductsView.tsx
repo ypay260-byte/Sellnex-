@@ -67,7 +67,7 @@ export const ProductsView: React.FC = () => {
     description: '',
     category: 'General',
     businessMode: 'personal' as BusinessMode,
-    imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
+    imageUrl: '',
     supplier: 'Local Warehouse' as Product['supplier'],
     supplierCost: 0,
     shippingCost: 0,
@@ -107,7 +107,7 @@ export const ProductsView: React.FC = () => {
       description: '',
       category: 'General',
       businessMode: defaultMode,
-      imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
+      imageUrl: '',
       supplier: defaultMode === 'personal' ? 'Local Warehouse' : 'Uzum Market',
       supplierCost: defaultMode === 'personal' ? 0 : 150000,
       shippingCost: defaultMode === 'personal' ? 0 : 20000,
@@ -130,7 +130,7 @@ export const ProductsView: React.FC = () => {
       description: p.description || '',
       category: p.category || 'General',
       businessMode: p.businessMode || 'personal',
-      imageUrl: p.images[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
+      imageUrl: p.images && p.images.length > 0 ? p.images[0] : '',
       supplier: p.supplier || 'Local Warehouse',
       supplierCost: p.supplierCost || 0,
       shippingCost: p.shippingCost || 0,
@@ -152,29 +152,44 @@ export const ProductsView: React.FC = () => {
 
     try {
       setIsUploadingImage(true);
-      showToast('Surat tayyorlanmoqda...', 'Surat hajmi moslashtirilmoqda...', 'info');
+      showToast('Surat tayyorlanmoqda...', 'Haqiqiy mahsulot surati optimallashtirilmoqda...', 'info');
 
       // 1. High-speed client compression: shrinks 5-10MB mobile photos to ~60KB
-      const { blob, dataUrl } = await compressProductImageBlob(file, 800, 0.75);
+      let uploadTargetBlob: Blob = file;
+      let instantPreviewUrl = '';
 
-      // Instant local preview
-      if (dataUrl) {
-        setFormData((prev) => ({ ...prev, imageUrl: dataUrl }));
+      try {
+        const { blob, dataUrl } = await compressProductImageBlob(file, 900, 0.82);
+        uploadTargetBlob = blob;
+        instantPreviewUrl = dataUrl;
+      } catch (compErr) {
+        console.warn('Direct FileReader fallback for image compression:', compErr);
+        instantPreviewUrl = await new Promise<string>((resolve) => {
+          const r = new FileReader();
+          r.onload = () => resolve((r.result as string) || '');
+          r.onerror = () => resolve('');
+          r.readAsDataURL(file);
+        });
       }
 
-      // 2. Upload compressed blob to Firebase Storage for permanent public CDN URL
+      // Instant local preview of the user's REAL product
+      if (instantPreviewUrl) {
+        setFormData((prev) => ({ ...prev, imageUrl: instantPreviewUrl }));
+      }
+
+      // 2. Upload to server (/api/upload-image) or storage for permanent URL
       try {
         const cleanExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
         const storagePath = `products/prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${cleanExt}`;
-        const url = await firestoreService.uploadImage(storagePath, blob);
-        if (url && url.startsWith('http')) {
-          setFormData((prev) => ({ ...prev, imageUrl: url }));
+        const finalUploadedUrl = await firestoreService.uploadImage(storagePath, uploadTargetBlob, file.name);
+        if (finalUploadedUrl) {
+          setFormData((prev) => ({ ...prev, imageUrl: finalUploadedUrl }));
         }
       } catch (uploadErr) {
         console.warn('Storage upload fallback, keeping compressed dataUrl:', uploadErr);
       }
 
-      showToast('Surat yuklandi!', 'Mahsulot surati muvaffaqiyatli saqlandi.', 'success');
+      showToast('Surat muvaffaqiyatli yuklandi! 🎉', 'Siz tanlagan haqiqiy mahsulot surati saqlandi.', 'success');
     } catch (err: any) {
       console.error('Image upload error:', err);
       showToast('Xatolik', 'Suratni yuklab bo‘lmadi: ' + (err?.message || ''), 'error');
@@ -257,13 +272,15 @@ export const ProductsView: React.FC = () => {
 
     setIsSaving(true);
     try {
+      const savedImages = formData.imageUrl.trim() ? [formData.imageUrl.trim()] : [];
+
       if (editingProduct) {
         await updateProduct(editingProduct.id, {
           title: formData.title.trim(),
           description: formData.description.trim() || 'Quality product on Sellnex.',
           category: formData.category.trim() || 'General',
           businessMode: formData.businessMode,
-          images: [formData.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80'],
+          images: savedImages.length > 0 ? savedImages : (editingProduct.images || []),
           supplier: formData.supplier,
           supplierCost,
           shippingCost,
@@ -283,7 +300,7 @@ export const ProductsView: React.FC = () => {
           description: formData.description.trim() || 'Quality product available on Sellnex.',
           category: formData.category.trim() || 'General',
           businessMode: formData.businessMode,
-          images: [formData.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80'],
+          images: savedImages,
           supplier: formData.supplier,
           supplierCost,
           shippingCost,
@@ -532,11 +549,17 @@ export const ProductsView: React.FC = () => {
                         {/* Product details */}
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
-                            <img
-                              src={p.images[0]}
-                              alt={p.title}
-                              className="w-11 h-11 rounded-xl object-cover border border-slate-200 shrink-0"
-                            />
+                            {p.images && p.images[0] ? (
+                              <img
+                                src={p.images[0]}
+                                alt={p.title}
+                                className="w-11 h-11 rounded-xl object-cover border border-slate-200 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
+                                <Package className="w-5 h-5 text-slate-400" />
+                              </div>
+                            )}
                             <div className="min-w-0 max-w-xs">
                               <p className="font-bold text-slate-900 truncate leading-snug">{p.title}</p>
                               <p className="text-[11px] text-slate-400 font-mono mt-0.5">
@@ -693,11 +716,17 @@ export const ProductsView: React.FC = () => {
                 return (
                   <div key={p.id} id={`mobile-product-card-${p.id}`} className="pt-3 first:pt-0 space-y-3">
                     <div className="flex items-start gap-3">
-                      <img
-                        src={p.images[0]}
-                        alt={p.title}
-                        className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0"
-                      />
+                      {p.images && p.images[0] ? (
+                        <img
+                          src={p.images[0]}
+                          alt={p.title}
+                          className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
+                          <Package className="w-6 h-6 text-slate-400" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-1">
                           <h4 className="font-bold text-slate-900 text-xs leading-snug line-clamp-2">{p.title}</h4>
@@ -904,19 +933,25 @@ export const ProductsView: React.FC = () => {
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-3">
                     {formData.imageUrl ? (
-                      <div className="relative group w-14 h-14 rounded-xl overflow-hidden border border-slate-300 shadow-xs shrink-0 bg-slate-100">
+                      <div className="relative group w-16 h-16 rounded-xl overflow-hidden border-2 border-blue-500 shadow-xs shrink-0 bg-slate-100">
                         <img
                           src={formData.imageUrl}
                           alt="Preview"
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&auto=format&fit=crop&q=80';
-                          }}
                         />
+                        <button
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, imageUrl: '' }))}
+                          className="absolute top-1 right-1 w-5 h-5 bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm hover:bg-red-700 transition"
+                          title="Rasmni o‘chirish"
+                        >
+                          ✕
+                        </button>
                       </div>
                     ) : (
-                      <div className="w-14 h-14 rounded-xl border border-dashed border-slate-300 flex items-center justify-center text-slate-400 bg-slate-50 shrink-0">
-                        <ImageIcon className="w-6 h-6" />
+                      <div className="w-16 h-16 rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 bg-slate-50 shrink-0">
+                        <ImageIcon className="w-6 h-6 text-slate-400" />
+                        <span className="text-[9px] font-bold mt-0.5 text-slate-400">Rasm yo‘q</span>
                       </div>
                     )}
                     <div className="flex-1 space-y-1.5">

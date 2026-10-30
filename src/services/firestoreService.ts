@@ -1259,9 +1259,7 @@ export const firestoreService = {
           stock: row.stock > 0 ? row.stock : 10,
           status: 'Published',
           sku: row.sku || `SL-${Math.floor(1000 + Math.random() * 9000)}`,
-          images: row.imageUrl
-            ? [row.imageUrl]
-            : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80'],
+          images: row.imageUrl ? [row.imageUrl.trim()] : [],
           variants: [{ id: 'v1', name: 'Standart', options: ['Standart'] }],
           rating: 5.0,
           reviewCount: 0,
@@ -2051,36 +2049,84 @@ export const firestoreService = {
     }
   },
 
-  // === FIREBASE STORAGE FOR IMAGES & RECEIPTS ===
-  async uploadImage(path: string, fileOrDataUrl: File | Blob | string): Promise<string> {
+  // === FIREBASE STORAGE & LOCAL SERVER UPLOAD FOR IMAGES & RECEIPTS ===
+  async uploadImage(
+    pathStr: string,
+    fileOrDataUrl: File | Blob | string,
+    fileName?: string
+  ): Promise<string> {
     try {
-      const storageRef = ref(storage, path);
-      if (typeof fileOrDataUrl === 'string') {
-        if (fileOrDataUrl.startsWith('data:')) {
-          const snapshot = await uploadString(storageRef, fileOrDataUrl, 'data_url');
-          return await getDownloadURL(snapshot.ref);
-        } else {
-          // If it's already an external HTTP/HTTPS URL, return it directly
-          return fileOrDataUrl;
-        }
-      } else {
-        const snapshot = await uploadBytes(storageRef, fileOrDataUrl);
-        return await getDownloadURL(snapshot.ref);
-      }
-    } catch (err) {
-      console.warn('Firebase storage upload fallback:', err);
-      if (typeof fileOrDataUrl === 'string') {
+      // 1. If already an external HTTP/HTTPS URL (and not a local blob/data), return directly
+      if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('http') && !fileOrDataUrl.includes('localhost')) {
         return fileOrDataUrl;
       }
-      if (typeof window !== 'undefined' && (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob)) {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve((reader.result as string) || '');
-          reader.onerror = () => resolve('');
-          reader.readAsDataURL(fileOrDataUrl);
-        });
+
+      // 2. Prepare dataUrl representation for upload and fail-safe persistence
+      let dataUrl = '';
+      let cleanFileName = fileName || (fileOrDataUrl instanceof File ? fileOrDataUrl.name : 'product.jpg');
+
+      if (typeof fileOrDataUrl === 'string') {
+        dataUrl = fileOrDataUrl;
+      } else if (typeof window !== 'undefined' && (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob)) {
+        try {
+          const compResult = await compressProductImageBlob(fileOrDataUrl, 1200, 0.85);
+          dataUrl = compResult.dataUrl;
+        } catch (compErr) {
+          console.warn('[Upload] Client compression fallback:', compErr);
+          dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve((reader.result as string) || '');
+            reader.onerror = () => resolve('');
+            reader.readAsDataURL(fileOrDataUrl);
+          });
+        }
       }
-      return '';
+
+      // 3. High-priority: Upload to reliable Sellnex server endpoint /api/upload-image
+      if (dataUrl && (dataUrl.startsWith('data:image/') || dataUrl.startsWith('data:application/'))) {
+        try {
+          const res = await fetch('/api/upload-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: dataUrl, filename: cleanFileName }),
+          });
+          if (res.ok) {
+            const json = await res.json();
+            if (json.url) {
+              return json.url;
+            }
+          }
+        } catch (serverUploadErr) {
+          console.warn('[Upload] Server endpoint fallback to storage:', serverUploadErr);
+        }
+      }
+
+      // 4. Secondary: Try Firebase Storage if configured
+      try {
+        const storageRef = ref(storage, pathStr);
+        if (typeof fileOrDataUrl === 'string') {
+          if (fileOrDataUrl.startsWith('data:')) {
+            const snapshot = await uploadString(storageRef, fileOrDataUrl, 'data_url');
+            return await getDownloadURL(snapshot.ref);
+          } else {
+            return fileOrDataUrl;
+          }
+        } else {
+          const snapshot = await uploadBytes(storageRef, fileOrDataUrl);
+          return await getDownloadURL(snapshot.ref);
+        }
+      } catch (storageErr) {
+        console.warn('Firebase storage upload fallback notice:', storageErr);
+      }
+
+      // 5. Ultimate Guarantee: Always return the real dataUrl so user's uploaded photo is NEVER lost!
+      if (dataUrl) {
+        return dataUrl;
+      }
+      return typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '';
+    } catch (err) {
+      console.warn('Image upload processing notice:', err);
+      return typeof fileOrDataUrl === 'string' ? fileOrDataUrl : '';
     }
   },
 
@@ -2618,6 +2664,26 @@ export const firestoreService = {
 
     const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
     const storagePath = `cafes/${cleanCafeId}/products/${cleanProductId}/image_${Date.now()}.${ext}`;
+
+    // Fast-path: Upload to local server /api/upload-image
+    if (dataUrlFallback) {
+      try {
+        const res = await fetch('/api/upload-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image: dataUrlFallback,
+            filename: fileName || (file instanceof File ? file.name : 'product.jpg'),
+          }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.url) return json.url;
+        }
+      } catch (srvErr) {
+        console.warn('Cafe product server upload notice:', srvErr);
+      }
+    }
 
     if (!storage) {
       if (dataUrlFallback) return dataUrlFallback;
@@ -3163,7 +3229,7 @@ export const firestoreService = {
       images:
         catalogProduct.images && catalogProduct.images.length > 0
           ? catalogProduct.images
-          : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800'],
+          : [],
       businessMode: 'dropshipping',
       dropshippingCatalogId: catalogProduct.id,
       supplier: (catalogProduct.supplierName as any) || 'Custom Supplier',

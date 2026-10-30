@@ -18,11 +18,12 @@ import {
   Trash2,
   HelpCircle,
   FileSpreadsheet,
+  UploadCloud,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const ProductImportView: React.FC = () => {
-  const { store, addProduct, navigateTo, showToast, formatMoney, t } = useApp();
+  const { store, addProduct, navigateTo, showToast, formatMoney, t, uploadImage } = useApp();
 
   const [activeTab, setActiveTab] = useState<'excel' | 'url'>('excel');
 
@@ -32,6 +33,7 @@ export const ProductImportView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [importedDraft, setImportedDraft] = useState<ImportedProductDraft | null>(null);
   const [isEditingDraft, setIsEditingDraft] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Profit Calculator states
   const [profitType, setProfitType] = useState<'fixed' | 'percentage'>('fixed');
@@ -102,6 +104,36 @@ export const ProductImportView: React.FC = () => {
       showToast('Xatolik yuz berdi', 'Havolani tekshirib qaytadan urinib koʻring.', 'error');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleImportedImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !importedDraft) return;
+
+    try {
+      setIsUploadingImage(true);
+      showToast('Surat yuklanmoqda...', 'Haqiqiy mahsulot surati optimallashtirilmoqda...', 'info');
+
+      const storagePath = `products/imported_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${file.name.split('.').pop() || 'jpg'}`;
+      const uploadedUrl = await uploadImage(storagePath, file);
+
+      if (uploadedUrl) {
+        setImportedDraft((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            images: [uploadedUrl, ...(prev.images || []).filter((img) => img !== uploadedUrl)],
+          };
+        });
+        showToast('Haqiqiy surat yuklandi! 🎉', 'Mahsulotga siz tanlagan haqiqiy fotosurat o‘rnatildi.', 'success');
+      }
+    } catch (err: any) {
+      console.error('Imported image upload failed:', err);
+      showToast('Xatolik', 'Suratni yuklab bo‘lmadi: ' + (err?.message || ''), 'error');
+    } finally {
+      setIsUploadingImage(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -336,15 +368,33 @@ export const ProductImportView: React.FC = () => {
               </div>
 
               {/* Main Image Preview */}
-              <div className="relative aspect-4/3 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
-                <img
-                  src={importedDraft.images[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80'}
-                  alt={importedDraft.title}
-                  className="w-full h-full object-cover"
-                />
+              <div className="relative aspect-4/3 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group">
+                {importedDraft.images[0] ? (
+                  <img
+                    src={importedDraft.images[0]}
+                    alt={importedDraft.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
+                    <span className="text-xs font-semibold">Rasm mavjud emas</span>
+                  </div>
+                )}
                 <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[11px] px-2 py-0.5 rounded-md backdrop-blur-xs font-medium">
                   {importedDraft.supplier}
                 </span>
+
+                {/* Quick Upload Overlay Button */}
+                <label className="absolute bottom-2 right-2 bg-blue-600/90 hover:bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 shadow-md transition-all">
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>{isUploadingImage ? 'Yuklanmoqda...' : 'Haqiqiy rasm yuklash'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImportedImageUpload}
+                    className="hidden"
+                  />
+                </label>
               </div>
 
               {/* Edit Mode vs Preview Mode */}
@@ -361,7 +411,19 @@ export const ProductImportView: React.FC = () => {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold uppercase text-slate-700">Rasm Havolasi (URL)</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold uppercase text-slate-700">Mahsulot Rasmi</label>
+                      <label className="text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1">
+                        <UploadCloud className="w-3.5 h-3.5" />
+                        <span>Qurilmadan fayl tanlash</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImportedImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                     <div className="flex gap-1.5">
                       <input
                         type="url"
@@ -372,6 +434,7 @@ export const ProductImportView: React.FC = () => {
                             images: [e.target.value, ...(importedDraft.images.slice(1) || [])],
                           })
                         }
+                        placeholder="Rasm URL havolasi yoki yuqoridagi tugma orqali fayl yuklang..."
                         className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-hidden focus:ring-2 focus:ring-blue-600"
                       />
                     </div>

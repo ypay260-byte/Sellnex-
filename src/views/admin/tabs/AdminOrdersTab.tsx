@@ -52,6 +52,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
   const [processingAction, setProcessingAction] = useState<'confirm' | 'reject' | null>(null);
+  const [orderToReject, setOrderToReject] = useState<Order | null>(null);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [viewReceiptModal, setViewReceiptModal] = useState<{ url: string; fileName?: string; fileType?: string } | null>(
@@ -74,6 +75,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       }
       if (rejectModalOpen) {
         setRejectModalOpen(false);
+        setOrderToReject(null);
         e.preventDefault();
         return;
       }
@@ -90,8 +92,14 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const storeMap = new Map<string, Store>();
   stores.forEach((s) => storeMap.set(s.id, s));
 
-  // Count how many orders have pending_verification
-  const pendingVerificationCount = localOrders.filter((o) => o.paymentStatus === 'pending_verification').length;
+  // Count how many orders have pending_verification or pending payment
+  const pendingVerificationCount = localOrders.filter(
+    (o) =>
+      o.paymentStatus === 'pending_verification' ||
+      o.paymentStatus === 'pending' ||
+      o.paymentStatus === 'pending_payment_verification' ||
+      o.orderStatus === 'pending_payment_verification'
+  ).length;
 
   const filteredOrders = localOrders.filter((o) => {
     const term = searchTerm.toLowerCase();
@@ -106,7 +114,14 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     if (!matchesSearch) return false;
 
     if (statusFilter === 'all') return true;
-    if (statusFilter === 'pending_verification') return o.paymentStatus === 'pending_verification';
+    if (statusFilter === 'pending_verification') {
+      return (
+        o.paymentStatus === 'pending_verification' ||
+        o.paymentStatus === 'pending' ||
+        o.paymentStatus === 'pending_payment_verification' ||
+        o.orderStatus === 'pending_payment_verification'
+      );
+    }
     if (statusFilter === 'paid') return o.paymentStatus === 'paid' || o.paymentStatus === 'Paid';
     if (statusFilter === 'rejected') return o.paymentStatus === 'rejected';
 
@@ -202,8 +217,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
   // ADMIN ACTION 2: REJECT PAYMENT
   const handleRejectPayment = async () => {
-    if (!selectedOrder || processingOrderId) return;
-    const targetOrder = selectedOrder;
+    const targetOrder = orderToReject || selectedOrder;
+    if (!targetOrder || processingOrderId) return;
+
     setProcessingOrderId(targetOrder.id);
     setProcessingAction('reject');
     setIsProcessing(true);
@@ -259,6 +275,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       );
 
       setRejectModalOpen(false);
+      setOrderToReject(null);
       setRejectReason('');
       await onRefresh();
     } catch (err: any) {
@@ -410,9 +427,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               ) : (
                 filteredOrders.map((o) => {
                   const st = storeMap.get(o.storeId);
-                  const isPendingCheck = o.paymentStatus === 'pending_verification';
                   const isPaidCheck = o.paymentStatus === 'paid' || o.paymentStatus === 'Paid';
                   const isRejectedCheck = o.paymentStatus === 'rejected';
+                  const isPendingCheck = !isPaidCheck && !isRejectedCheck;
 
                   return (
                     <tr
@@ -435,7 +452,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
                       <td className="py-3.5 px-4">
                         <div className="font-medium text-white">{o.customerName}</div>
-                        <div className="text-[10px] text-slate-400">{o.customerPhone}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{o.customerPhone}</div>
                       </td>
 
                       <td className="py-3.5 px-4">
@@ -466,9 +483,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                               <span>Rad etilgan</span>
                             </span>
                           )}
-                          {!isPendingCheck && !isPaidCheck && !isRejectedCheck && (
-                            <span className="text-[10px] text-slate-500">To‘lov kutilmoqda</span>
-                          )}
 
                           {o.receiptUrl && (
                             <button
@@ -495,9 +509,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                           className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                             o.orderStatus === 'confirmed' || o.orderStatus === 'Paid' || o.orderStatus === 'Delivered'
                               ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                              : o.orderStatus === 'Pending'
-                              ? 'bg-slate-800 text-slate-300 border border-slate-700'
-                              : o.orderStatus === 'Cancelled'
+                              : o.orderStatus === 'Pending' || o.orderStatus === 'pending_payment_verification'
+                              ? 'bg-amber-950/70 text-amber-300 border border-amber-800'
+                              : o.orderStatus === 'Cancelled' || o.orderStatus === 'rejected'
                               ? 'bg-rose-950 text-rose-400 border border-rose-800'
                               : 'bg-blue-950 text-blue-400 border border-blue-800'
                           }`}
@@ -508,22 +522,52 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                          {isPendingCheck && (
-                            <button
-                              onClick={() => handleConfirmPayment(o)}
-                              disabled={isProcessing}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1"
-                              title="To‘lovni tasdiqlash"
-                            >
-                              {isProcessing && processingOrderId === o.id && processingAction === 'confirm' ? (
-                                <>
-                                  <RefreshCw className="w-3 h-3 animate-spin" />
-                                  <span>Tasdiqlanmoqda...</span>
-                                </>
-                              ) : (
-                                <span>Tasdiqlash</span>
-                              )}
-                            </button>
+                          {!isPaidCheck && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleConfirmPayment(o)}
+                                disabled={isProcessing}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+                                title="To‘lovni tasdiqlash"
+                              >
+                                {isProcessing && processingOrderId === o.id && processingAction === 'confirm' ? (
+                                  <>
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                    <span>...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    <span>Tasdiqlash</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOrderToReject(o);
+                                  setRejectReason(o.receiptRejectedReason || '');
+                                  setRejectModalOpen(true);
+                                }}
+                                disabled={isProcessing}
+                                className="px-2 py-1 rounded-lg bg-rose-950 hover:bg-rose-900 border border-rose-800 disabled:opacity-50 text-rose-300 font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1"
+                                title="To‘lovni rad etish"
+                              >
+                                {isProcessing && processingOrderId === o.id && processingAction === 'reject' ? (
+                                  <>
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                    <span>...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <XCircle className="w-3 h-3" />
+                                    <span>Rad etish</span>
+                                  </>
+                                )}
+                              </button>
+                            </>
                           )}
                           <button
                             onClick={() => setSelectedOrder(o)}
@@ -667,60 +711,87 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     </div>
                   </div>
                 </div>
-
-                {/* THE 2 MAIN ACTION BUTTONS: CONFIRM & REJECT PAYMENT */}
-                <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={isProcessing || selectedOrder.paymentStatus === 'paid'}
-                    onClick={() => handleConfirmPayment(selectedOrder)}
-                    className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {isProcessing && processingOrderId === selectedOrder.id && processingAction === 'confirm' ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Tasdiqlanmoqda...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Confirm Payment (Tasdiqlash)</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isProcessing}
-                    onClick={() => {
-                      setRejectReason(selectedOrder.receiptRejectedReason || '');
-                      setRejectModalOpen(true);
-                    }}
-                    className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-rose-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {isProcessing && processingOrderId === selectedOrder.id && processingAction === 'reject' ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Rad etilmoqda...</span>
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="w-4 h-4" />
-                        <span>Reject Payment (Rad etish)</span>
-                      </>
-                    )}
-                  </button>
-                </div>
               </div>
             ) : (
               <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-1.5">
                 <Clock className="w-6 h-6 text-slate-500 mx-auto" />
-                <p className="text-xs font-bold text-slate-300">Ushbu buyurtmaga hali chek yuklanmagan</p>
+                <p className="text-xs font-bold text-slate-300">Ushbu buyurtmaga hali chek biriktirilmagan</p>
                 <p className="text-[11px] text-slate-500">
-                  Mijoz Sellnex kartasiga to‘lov qilib chekni yuklashi kutilmoqda.
+                  Mijoz Sellnex kartasiga to‘lov qilib chek yuklashi kutilmoqda. Biroq administrator to‘lovni to‘g‘ridan-to‘g‘ri tasdiqlashi yoki rad etishi mumkin.
                 </p>
               </div>
             )}
+
+            {/* THE 2 MAIN ACTION BUTTONS: CONFIRM & REJECT PAYMENT (ALWAYS ACCESSIBLE) */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white uppercase tracking-wider">To‘lov Amali:</span>
+                <span
+                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                    selectedOrder.paymentStatus === 'paid'
+                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                      : selectedOrder.paymentStatus === 'rejected'
+                      ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                      : 'bg-amber-950 text-amber-300 border border-amber-800'
+                  }`}
+                >
+                  {selectedOrder.paymentStatus === 'paid'
+                    ? 'Tasdiqlangan (To‘langan)'
+                    : selectedOrder.paymentStatus === 'rejected'
+                    ? 'Rad etilgan'
+                    : 'Kutilmoqda / Tekshiruvda'}
+                </span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <button
+                  type="button"
+                  disabled={isProcessing || selectedOrder.paymentStatus === 'paid'}
+                  onClick={() => handleConfirmPayment(selectedOrder)}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isProcessing && processingOrderId === selectedOrder.id && processingAction === 'confirm' ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Tasdiqlanmoqda...</span>
+                    </>
+                  ) : selectedOrder.paymentStatus === 'paid' ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>To‘lov Tasdiqlangan</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Tasdiqlash (To‘lovni qabul qilish)</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={() => {
+                    setOrderToReject(selectedOrder);
+                    setRejectReason(selectedOrder.receiptRejectedReason || '');
+                    setRejectModalOpen(true);
+                  }}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-rose-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isProcessing && processingOrderId === selectedOrder.id && processingAction === 'reject' ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Rad etilmoqda...</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-4 h-4" />
+                      <span>Rad etish</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
 
             {/* Buyer Details & Destination */}
             <div className="space-y-2 text-xs bg-slate-950 p-4 rounded-2xl border border-slate-800">

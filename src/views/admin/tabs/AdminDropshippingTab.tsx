@@ -82,7 +82,7 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
   const [categoryFormData, setCategoryFormData] = useState({
     name: '',
     description: '',
-    imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&auto=format&fit=crop&q=80',
+    imageUrl: '',
     order: 1,
     isActive: true,
   });
@@ -94,7 +94,7 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
     title: '',
     description: '',
     categoryId: '',
-    images: ['https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&auto=format&fit=crop&q=80'],
+    images: [] as string[],
     supplierCost: 100000,
     recommendedPrice: 180000,
     minSellingPrice: 130000,
@@ -239,25 +239,35 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
 
     try {
       showToast('Yuklanmoqda...', 'Kategoriya rasmi yuklanmoqda...', 'info');
-      const { blob, dataUrl } = await compressProductImageBlob(file, 700, 0.75);
-      let finalUrl = dataUrl;
+      let targetBlob: Blob = file;
+      let finalUrl = '';
+      try {
+        const { blob, dataUrl } = await compressProductImageBlob(file, 800, 0.82);
+        targetBlob = blob;
+        finalUrl = dataUrl;
+      } catch (compErr) {
+        console.warn('Compression notice:', compErr);
+      }
+
       try {
         const ext = file.name.split('.').pop() || 'jpg';
         const storagePath = `dropshipping/cat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
-        const uploadedUrl = await firestoreService.uploadImage(storagePath, blob);
-        if (uploadedUrl && uploadedUrl.startsWith('http')) {
+        const uploadedUrl = await firestoreService.uploadImage(storagePath, targetBlob, file.name);
+        if (uploadedUrl) {
           finalUrl = uploadedUrl;
         }
       } catch (uploadErr) {
         console.warn('Storage category image notice:', uploadErr);
       }
-      setCategoryFormData((prev) => ({
-        ...prev,
-        imageUrl: finalUrl,
-      }));
-      showToast('Rasm yuklandi', 'Kategoriya rasmi muvaffaqiyatli tanlandi.', 'success');
+      if (finalUrl) {
+        setCategoryFormData((prev) => ({
+          ...prev,
+          imageUrl: finalUrl,
+        }));
+        showToast('Rasm yuklandi', 'Kategoriya rasmi muvaffaqiyatli saqlandi.', 'success');
+      }
     } catch (err: any) {
-      showToast('Xatolik', 'Rasm yuklashda xatolik yuz berdi: ' + err.message, 'error');
+      showToast('Xatolik', 'Rasm yuklashda xatolik yuz berdi: ' + (err?.message || ''), 'error');
     }
   };
 
@@ -456,7 +466,7 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
       title: '',
       description: '',
       categoryId: defaultCatId,
-      images: ['https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&auto=format&fit=crop&q=80'],
+      images: [],
       supplierCost: 100000,
       recommendedPrice: 180000,
       minSellingPrice: 130000,
@@ -486,7 +496,7 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
       title: prod.title || '',
       description: prod.description || '',
       categoryId: prod.categoryId || (categories[0]?.id || ''),
-      images: prod.images && prod.images.length > 0 ? [...prod.images] : ['https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800'],
+      images: prod.images && prod.images.length > 0 ? [...prod.images] : [],
       supplierCost: prod.supplierCost || 0,
       recommendedPrice: prod.recommendedPrice || 0,
       minSellingPrice: prod.minSellingPrice || 0,
@@ -648,24 +658,41 @@ export const AdminDropshippingTab: React.FC<AdminDropshippingTabProps> = ({
     if (!file) return;
 
     try {
-      showToast('Yuklanmoqda...', 'Rasm siqilmoqda va yuklanmoqda...', 'info');
-      const { blob, dataUrl } = await compressProductImageBlob(file, 700, 0.75);
-      let finalUrl = dataUrl;
+      showToast('Yuklanmoqda...', 'Mahsulot rasmi yuklanmoqda...', 'info');
+      let targetBlob: Blob = file;
+      let finalUrl = '';
+      try {
+        const { blob, dataUrl } = await compressProductImageBlob(file, 900, 0.82);
+        targetBlob = blob;
+        finalUrl = dataUrl;
+      } catch (compErr) {
+        console.warn('Compression notice:', compErr);
+      }
+
       try {
         const ext = file.name.split('.').pop() || 'jpg';
         const storagePath = `dropshipping/prod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
-        const uploadedUrl = await firestoreService.uploadImage(storagePath, blob);
-        if (uploadedUrl && uploadedUrl.startsWith('http')) {
+        const uploadedUrl = await firestoreService.uploadImage(storagePath, targetBlob, file.name);
+        if (uploadedUrl) {
           finalUrl = uploadedUrl;
         }
       } catch (uploadErr) {
         console.warn('Storage product image notice:', uploadErr);
       }
-      setProductFormData((prev) => ({
-        ...prev,
-        images: [finalUrl, ...(prev.images || []).filter((img) => img !== finalUrl).slice(0, 4)],
-      }));
-      showToast('Rasm yuklandi', 'Mahsulot rasmi ro‘yxatga qo‘shildi.', 'success');
+
+      if (finalUrl) {
+        setProductFormData((prev) => ({
+          ...prev,
+          // Put the uploaded image first, and filter out any leftover mock watch/shoe photos
+          images: [
+            finalUrl,
+            ...(prev.images || []).filter(
+              (img) => img !== finalUrl && !img.includes('unsplash.com/photo-1546868871-7041f2a55e12') && !img.includes('unsplash.com/photo-1523275335684-37898b6baf30')
+            ).slice(0, 4),
+          ],
+        }));
+        showToast('Rasm yuklandi', 'Haqiqiy mahsulot rasmi ro‘yxatga qo‘shildi.', 'success');
+      }
     } catch (err: any) {
       showToast('Xatolik', 'Rasm yuklashda xatolik yuz berdi: ' + (err?.message || ''), 'error');
     }

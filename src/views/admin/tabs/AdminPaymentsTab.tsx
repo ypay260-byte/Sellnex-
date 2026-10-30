@@ -165,7 +165,15 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
     if (!matchesSearch) return false;
 
     if (orderFilter === 'all') return true;
-    if (orderFilter === 'pending_verification') return o.paymentStatus === 'pending_verification';
+    if (orderFilter === 'pending_verification') {
+      return (
+        o.paymentStatus === 'pending_verification' ||
+        o.paymentStatus === 'pending' ||
+        o.paymentStatus === 'pending_payment_verification' ||
+        o.orderStatus === 'pending_payment_verification' ||
+        o.orderStatus === 'Pending'
+      );
+    }
     if (orderFilter === 'paid') return o.paymentStatus === 'paid' || o.paymentStatus === 'Paid';
     if (orderFilter === 'rejected') return o.paymentStatus === 'rejected';
     return true;
@@ -675,10 +683,15 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                             <span>Tasdiqlanmoqda...</span>
                           </>
+                        ) : isPaid ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Tasdiqlangan</span>
+                          </>
                         ) : (
                           <>
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Confirm Payment</span>
+                            <span>Tasdiqlash</span>
                           </>
                         )}
                       </button>
@@ -701,7 +714,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                         ) : (
                           <>
                             <XCircle className="w-3.5 h-3.5" />
-                            <span>Reject</span>
+                            <span>Rad etish</span>
                           </>
                         )}
                       </button>

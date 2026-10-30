@@ -218,8 +218,13 @@ export const authService = {
     if (!cleanEmail || !/\S+@\S+\.\S+/.test(cleanEmail)) {
       return { success: false, error: 'A valid email address is required.' };
     }
-    if (!cleanPhone) {
-      return { success: false, error: 'Phone number is required.' };
+    const phoneDigits = cleanPhone.replace(/\D/g, '');
+    let localDigits = phoneDigits;
+    if (phoneDigits.startsWith('998')) {
+      localDigits = phoneDigits.slice(3);
+    }
+    if (!cleanPhone || localDigits.length !== 9) {
+      return { success: false, error: 'O‘zbekiston telefon raqami majburiy: +998 XX XXX XX XX' };
     }
     if (!password) {
       return { success: false, error: 'Password is required.' };

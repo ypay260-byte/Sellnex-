@@ -9,7 +9,7 @@ export interface TelegramConfig {
   notifyPayments: boolean;
 }
 
-const DEFAULT_BOT_TOKEN = '8221894297:AAGsXEaVM0qcPcukoOhzux3ohR_EctKqdvs';
+const DEFAULT_BOT_TOKEN = '8885318556:AAGv6wzA-fv0xU19tDaSnutc8OZLXrwZ4YM';
 const STORAGE_KEY = 'sellnex_telegram_config';
 
 export const telegramService = {
@@ -335,6 +335,96 @@ Bu sinov xabarnomasi. Endi har bir yangi buyurtma, to'lovlar (Click/Payme) va ta
 💰 <i>Shopify kabi har bir savdoda darhol sof foyda va xaridor telefon raqamini ko'rib borasiz!</i>`;
 
     return this.sendMessage(message, targetChatId);
+  },
+
+  async sendWelcomeStartInterface(targetChatId?: string, firstName = 'hurmatli sotuvchi'): Promise<{ success: boolean; error?: string }> {
+    const config = this.getConfig();
+    const chatId = targetChatId || config.chatId;
+    if (!chatId) {
+      return { success: false, error: 'Chat ID belgilanmagan' };
+    }
+
+    const appOrigin = typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://ais-pre-dlxz227b6eawujdxjpehjo-199879217551.asia-east1.run.app';
+
+    const safeName = escapeHtml(firstName);
+    const message = `<b>Assalomu alaykum, ${safeName}! 👋</b>
+
+🛍️ <b>Savdoni boshlash uchun quyidagi tugmani bosing!</b>
+
+━━━━━━━━━━━━━━━━━━━━
+🚀 <b>Sellnex bilan nimalarga ega bo‘lasiz?</b>
+
+✨ <b>1 daqiqada onlayn do‘kon</b> — dasturlashsiz, tayyor professional dizayn va shaxsiy katalog.
+📦 <b>10 000+ tayyor mahsulotlar</b> — omborsiz va boshlang‘ich sarmoyasiz dropshipping savdosi.
+💳 <b>Milliy to‘lovlar</b> — Click, Payme va Uzum Bank orqali to‘g‘ridan-to‘g‘ri hisobingizga tushum.
+🚚 <b>O‘zbekiston bo‘ylab yetkazib berish</b> — buyurtmalarni avtomatlashtirilgan kuryerlik tizimi.
+📊 <b>Qulay boshqaruv paneli</b> — har bir buyurtma, daromad va statistika yagona markazda.
+━━━━━━━━━━━━━━━━━━━━
+
+👇 <i>Pastdagi katta <b>🟢 «Savdoni boshlash»</b> tugmasini bosing va o‘z onlayn biznesingizni yo‘lga qo‘ying!</i>`;
+
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: '🟢 Savdoni boshlash',
+            web_app: { url: appOrigin },
+          },
+        ],
+        [
+          {
+            text: '🌐 Brauzerda ochish (sellnex.uz)',
+            url: appOrigin,
+          },
+        ],
+        [
+          {
+            text: '📦 Mahsulotlar katalogi',
+            web_app: { url: `${appOrigin}/#dropshipping` },
+          },
+          {
+            text: '💎 Tariflar & Obuna',
+            web_app: { url: `${appOrigin}/#pricing` },
+          },
+        ],
+      ],
+    };
+
+    const replyKeyboard = {
+      keyboard: [
+        [
+          {
+            text: '🟢 Savdoni boshlash',
+            web_app: { url: appOrigin },
+          },
+        ],
+        [
+          {
+            text: '📦 Dropshipping katalog',
+            web_app: { url: `${appOrigin}/#dropshipping` },
+          },
+          {
+            text: '💎 Tariflar & Obuna',
+            web_app: { url: `${appOrigin}/#pricing` },
+          },
+        ],
+        [
+          { text: 'ℹ️ Sellnex haqida' },
+          { text: '📞 Bog‘lanish va Yordam' },
+        ],
+      ],
+      resize_keyboard: true,
+      is_persistent: true,
+    };
+
+    // 1. Send welcome with inline keyboard
+    const res = await this.sendMessage(message, chatId, inlineKeyboard);
+    // 2. Set persistent bottom reply keyboard
+    await this.sendMessage('👇 Menyudan foydalanishingiz mumkin:', chatId, replyKeyboard).catch(() => {});
+
+    return res;
   },
 };
 

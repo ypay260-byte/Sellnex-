@@ -1,7 +1,15 @@
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import {
+  startTelegramBotPolling,
+  processTelegramUpdate,
+  sendWelcomeStartInterface,
+  TELEGRAM_BOT_TOKEN,
+  TELEGRAM_BOT_USERNAME,
+} from './src/services/telegramBotServer';
 
 // In-memory store for Paynet transactions & user device preferences
 interface StoredTransaction {
@@ -71,6 +79,68 @@ async function startServer() {
       console.log(`[API ${req.method}] ${req.path} - ${new Date().toISOString()}`);
     }
     next();
+  });
+
+  // Static upload storage folder
+  const UPLOADS_DIR = path.resolve(process.cwd(), 'public', 'uploads');
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    try {
+      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    } catch (dirErr) {
+      console.warn('[Uploads] Could not create uploads dir:', dirErr);
+    }
+  }
+  app.use('/uploads', express.static(UPLOADS_DIR));
+
+  // ==========================================
+  // REAL PRODUCT IMAGE UPLOAD ENDPOINT
+  // ==========================================
+  app.post('/api/upload-image', (req: Request, res: Response) => {
+    try {
+      const { image, filename } = req.body || {};
+      if (!image || typeof image !== 'string') {
+        return res.status(400).json({ error: 'Rasm maʼlumoti yuborilmadi' });
+      }
+
+      let buffer: Buffer;
+      let ext = 'jpg';
+
+      if (image.startsWith('data:')) {
+        const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches && matches[2]) {
+          const rawMime = matches[1].toLowerCase();
+          ext = rawMime.includes('png') ? 'png' : rawMime.includes('webp') ? 'webp' : 'jpg';
+          buffer = Buffer.from(matches[2], 'base64');
+        } else {
+          const parts = image.split(',');
+          if (parts[1]) {
+            buffer = Buffer.from(parts[1], 'base64');
+          } else {
+            buffer = Buffer.from(image, 'base64');
+          }
+        }
+      } else {
+        buffer = Buffer.from(image, 'base64');
+      }
+
+      if (filename && typeof filename === 'string') {
+        const cleanNameExt = filename.split('.').pop()?.toLowerCase();
+        if (cleanNameExt && ['jpg', 'jpeg', 'png', 'webp'].includes(cleanNameExt)) {
+          ext = cleanNameExt === 'jpeg' ? 'jpg' : cleanNameExt;
+        }
+      }
+
+      const uniqueName = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const filePath = path.join(UPLOADS_DIR, uniqueName);
+      fs.writeFileSync(filePath, buffer);
+
+      const publicUrl = `/uploads/${uniqueName}`;
+      console.log(`[Upload] Image successfully stored at ${publicUrl} (${buffer.length} bytes)`);
+      return res.status(200).json({ url: publicUrl, success: true });
+    } catch (err: any) {
+      console.error('[Upload] Image upload failed:', err);
+      return res.status(500).json({ error: 'Rasm saqlashda xatolik yuz berdi: ' + (err?.message || '') });
+    }
   });
 
   // ==========================================
@@ -805,6 +875,55 @@ async function startServer() {
       default:
         return `${name} bo‘yicha AI tavsiyasi tayyorlandi.`;
     }
+  }
+
+  // ==========================================
+  // 5.8. OFFICIAL SELLNEX TELEGRAM BOT API (@Sellnex_bot)
+  // ==========================================
+  app.post('/api/telegram/webhook', async (req: Request, res: Response) => {
+    try {
+      const update = req.body;
+      if (update) {
+        processTelegramUpdate(update).catch((e) => console.error('[Webhook Update Error]:', e));
+      }
+      return res.status(200).json({ ok: true });
+    } catch (err: any) {
+      console.error('[Telegram Webhook Error]:', err);
+      return res.status(200).json({ ok: false, error: err.message });
+    }
+  });
+
+  app.post('/api/telegram/send-welcome', async (req: Request, res: Response) => {
+    try {
+      const { chatId, firstName } = req.body || {};
+      if (!chatId) {
+        return res.status(400).json({ success: false, error: 'Chat ID ko‘rsatilmadi' });
+      }
+      const result = await sendWelcomeStartInterface(chatId, firstName);
+      return res.status(200).json(result);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/telegram/bot-info', async (req: Request, res: Response) => {
+    try {
+      const resp = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe`);
+      const data = await resp.json();
+      return res.status(200).json({
+        success: data.ok,
+        bot: data.result || { username: TELEGRAM_BOT_USERNAME },
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Start background Telegram long-polling for real-time /start response
+  try {
+    startTelegramBotPolling(TELEGRAM_BOT_TOKEN);
+  } catch (botErr) {
+    console.warn('[Sellnex Server] Telegram bot polling init warning:', botErr);
   }
 
   // ==========================================

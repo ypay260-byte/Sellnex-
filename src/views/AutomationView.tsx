@@ -91,6 +91,24 @@ export const AutomationView: React.FC = () => {
       showToast('Xatolik yuz berdi', res.error || 'Xabar yuborib bo\'lmadi. Botga /start bosilganini tekshiring.', 'error');
     }
   };
+
+  const handleSendWelcomeTest = async () => {
+    if (!chatIdInput) {
+      showToast('Chat ID kiritilmagan', 'Iltimos, avval Telegramda @Sellnex_bot ga kiring va /start bosing.', 'warning');
+      return;
+    }
+    setIsSendingTest(true);
+    const res = await telegramService.sendWelcomeStartInterface(chatIdInput.trim());
+    setIsSendingTest(false);
+    if (res.success) {
+      try {
+        confetti({ particleCount: 70, spread: 70 });
+      } catch {}
+      showToast('🟢 /start interfeysi yuborildi!', '@Sellnex_bot da "Savdoni boshlash" tugmasi chiqdi.', 'success');
+    } else {
+      showToast('Xatolik', res.error || 'Xabar yuborib bo‘lmadi', 'error');
+    }
+  };
   const [logs, setLogs] = useState([
     {
       id: 'log-1',
@@ -368,9 +386,17 @@ export const AutomationView: React.FC = () => {
           <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-1">
             <span className="text-slate-400 font-medium">Bot Nomi / Username:</span>
             <p className="font-bold text-white text-sm">
-              {botInfo ? `@${botInfo.username || botInfo.first_name}` : '@SellnexUzBot'}
+              {botInfo ? `@${botInfo.username || botInfo.first_name}` : '@Sellnex_bot'}
             </p>
-            <span className="text-[10px] text-slate-400">Telegram rasmiy Bot API orqali</span>
+            <a
+              href="https://t.me/Sellnex_bot"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-semibold"
+            >
+              <span>Telegramda ochish</span>
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-1">
@@ -402,20 +428,20 @@ export const AutomationView: React.FC = () => {
                   id="btn-save-chat-id"
                   type="button"
                   onClick={handleSaveChatId}
-                  className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-extrabold text-xs transition-colors shrink-0 shadow-md"
+                  className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-extrabold text-xs transition-colors shrink-0 shadow-md cursor-pointer"
                 >
                   Saqlash
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 id="btn-detect-chat-id"
                 type="button"
                 onClick={handleFetchUpdates}
                 disabled={isCheckingBot}
-                className="px-3.5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold transition-colors flex items-center gap-1.5 min-h-[40px]"
+                className="px-3.5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold transition-colors flex items-center gap-1.5 min-h-[40px] cursor-pointer"
                 title="Botga /start yozgan bo'lsangiz, ID ni avtomatik topadi"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
@@ -423,14 +449,26 @@ export const AutomationView: React.FC = () => {
               </button>
 
               <button
+                id="btn-send-welcome-test"
+                type="button"
+                onClick={handleSendWelcomeTest}
+                disabled={isSendingTest}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-md min-h-[40px] cursor-pointer"
+                title="Yangi /start boshlang'ich interfeysini xabarga yuborish"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>🟢 /start Ekranni Sinash</span>
+              </button>
+
+              <button
                 id="btn-send-telegram-test"
                 type="button"
                 onClick={handleSendTestNotification}
                 disabled={isSendingTest}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition-colors flex items-center gap-1.5 shadow-md min-h-[40px]"
+                className="px-3.5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold transition-colors flex items-center gap-1.5 min-h-[40px] cursor-pointer"
               >
                 <Send className={`w-3.5 h-3.5 ${isSendingTest ? 'animate-bounce' : ''}`} />
-                <span>{isSendingTest ? 'Yuborilmoqda...' : 'Sinov xabari yuborish 🚀'}</span>
+                <span>Sinov Xabari</span>
               </button>
             </div>
           </div>

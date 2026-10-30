@@ -434,10 +434,22 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
                             <Mail className="w-3 h-3 text-slate-500" />
                             <span>{user.email}</span>
                           </div>
-                          {user.phone && (
-                            <div className="text-slate-400 text-[11px] flex items-center gap-1">
-                              <Phone className="w-3 h-3 text-slate-500" />
-                              <span>{user.phone}</span>
+                          {user.phone ? (
+                            <div className="text-emerald-400 font-mono text-[11px] font-bold flex items-center gap-1 pt-0.5">
+                              <Phone className="w-3 h-3 text-emerald-500 shrink-0" />
+                              <a
+                                href={`tel:${user.phone}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="hover:underline hover:text-emerald-300"
+                                title="Qo‘ng‘iroq qilish"
+                              >
+                                {user.phone}
+                              </a>
+                            </div>
+                          ) : (
+                            <div className="text-slate-500 text-[10px] flex items-center gap-1 pt-0.5">
+                              <Phone className="w-3 h-3 text-slate-600 shrink-0" />
+                              <span>Telefon yo‘q</span>
                             </div>
                           )}
                         </div>

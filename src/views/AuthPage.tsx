@@ -46,6 +46,31 @@ export const AuthPage: React.FC = () => {
   // Live password validation
   const pwCheck = validatePasswordRequirements(password);
 
+  const formatUzbekistanPhone = (value: string): string => {
+    let digits = value.replace(/\D/g, '');
+    if (digits.startsWith('998')) {
+      digits = digits.slice(3);
+    }
+    digits = digits.slice(0, 9);
+
+    if (digits.length === 0) return '+998 ';
+    if (digits.length <= 2) return `+998 ${digits}`;
+    if (digits.length <= 5) return `+998 ${digits.slice(0, 2)} ${digits.slice(2)}`;
+    if (digits.length <= 7) return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`;
+    return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)}`;
+  };
+
+  const validateUzbekistanPhone = (value: string): boolean => {
+    const digits = value.replace(/\D/g, '');
+    let local = digits;
+    if (digits.startsWith('998')) {
+      local = digits.slice(3);
+    }
+    if (local.length !== 9) return false;
+    const operatorCode = local.slice(0, 2);
+    return /^(90|91|93|94|95|97|98|99|33|88|77|50|55|20|71|78)/.test(operatorCode);
+  };
+
   useEffect(() => {
     if (routeParams?.mode === 'signup') {
       setMode('signup');
@@ -84,8 +109,8 @@ export const AuthPage: React.FC = () => {
         setLoading(false);
         return;
       }
-      if (!phone.trim()) {
-        setErrorMsg(t('auth_error_phone', 'Please enter your phone number.'));
+      if (!phone.trim() || phone.trim() === '+998' || !validateUzbekistanPhone(phone)) {
+        setErrorMsg('O‘zbekiston telefon raqami majburiy: +998 XX XXX XX XX formatida kiriting (masalan: +998 90 123 45 67)');
         setLoading(false);
         return;
       }
@@ -363,7 +388,7 @@ export const AuthPage: React.FC = () => {
                 {mode === 'signup' && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      {t('auth_phone_number', 'Telefon raqam')}
+                      {t('auth_phone_number', 'Telefon raqam')} <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -374,11 +399,17 @@ export const AuthPage: React.FC = () => {
                         type="tel"
                         required
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        onFocus={() => {
+                          if (!phone) setPhone('+998 ');
+                        }}
+                        onChange={(e) => setPhone(formatUzbekistanPhone(e.target.value))}
                         placeholder="+998 90 123 45 67"
-                        className="block w-full pl-9 pr-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-hidden"
+                        className="block w-full pl-9 pr-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-hidden font-mono"
                       />
                     </div>
+                    <p className="text-[11px] text-slate-500 mt-1 font-mono">
+                      O‘zbekiston formati: +998 XX XXX XX XX
+                    </p>
                   </div>
                 )}
 

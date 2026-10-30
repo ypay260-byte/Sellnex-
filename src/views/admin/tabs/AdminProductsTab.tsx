@@ -310,11 +310,17 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     >
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={p.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100'}
-                            alt={p.title}
-                            className="w-10 h-10 rounded-lg object-cover bg-slate-950 border border-slate-800 shrink-0"
-                          />
+                          {p.images?.[0] ? (
+                            <img
+                              src={p.images[0]}
+                              alt={p.title}
+                              className="w-10 h-10 rounded-lg object-cover bg-slate-950 border border-slate-800 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 text-slate-500">
+                              <Package className="w-5 h-5 text-slate-500" />
+                            </div>
+                          )}
                           <div className="min-w-0 max-w-xs">
                             <div className="font-bold text-white truncate">{p.title}</div>
                             <div className="text-[10px] text-slate-500 font-mono truncate">{p.id}</div>
@@ -422,11 +428,17 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
             </div>
 
             <div className="flex gap-4">
-              <img
-                src={selectedProduct.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200'}
-                alt={selectedProduct.title}
-                className="w-24 h-24 rounded-xl object-cover border border-slate-800 bg-slate-950 shrink-0"
-              />
+              {selectedProduct.images?.[0] ? (
+                <img
+                  src={selectedProduct.images[0]}
+                  alt={selectedProduct.title}
+                  className="w-24 h-24 rounded-xl object-cover border border-slate-800 bg-slate-950 shrink-0"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 text-slate-500">
+                  <Package className="w-8 h-8 text-slate-500" />
+                </div>
+              )}
               <div className="space-y-1 text-xs text-slate-300 min-w-0">
                 <div className="text-slate-400 line-clamp-3">{selectedProduct.description}</div>
                 <div className="font-bold text-white pt-1">Price: {formatMoney(selectedProduct.price)}</div>

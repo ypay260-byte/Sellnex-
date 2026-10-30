@@ -363,9 +363,7 @@ export const productService = {
       title: 'Imported Supplier Product',
       description: 'High quality supplier product with fast fulfillment and guaranteed delivery across all regions.',
       category: 'General Merchandise',
-      images: [
-        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80',
-      ],
+      images: [],
       supplier: 'Custom Supplier',
       supplierUrl: cleanUrl,
       supplierCost: 110000,

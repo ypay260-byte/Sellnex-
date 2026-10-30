@@ -29,6 +29,7 @@ import {
   Zap,
   Tag,
   ArrowUpRight,
+  Package,
 } from 'lucide-react';
 
 export const DropshippingView: React.FC = () => {
@@ -494,16 +495,18 @@ export const DropshippingView: React.FC = () => {
                 <div>
                   {/* Image Container */}
                   <div className="relative aspect-square bg-slate-100 overflow-hidden cursor-pointer" onClick={() => setDetailProduct(product)}>
-                    <img
-                      src={product.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600'}
-                      alt={product.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600';
-                      }}
-                    />
+                    {product.images?.[0] ? (
+                      <img
+                        src={product.images[0]}
+                        alt={product.title}
+                        loading="lazy"
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
+                        <Package className="w-12 h-12 text-slate-300" />
+                      </div>
+                    )}
                     <span className="absolute top-2.5 left-2.5 bg-black/70 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">
                       {product.categoryName}
                     </span>
@@ -691,11 +694,17 @@ export const DropshippingView: React.FC = () => {
 
             {/* Product summary strip */}
             <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <img
-                src={addModalProduct.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600'}
-                alt={addModalProduct.title}
-                className="w-14 h-14 object-cover rounded-xl border border-slate-200 shrink-0"
-              />
+              {addModalProduct.images?.[0] ? (
+                <img
+                  src={addModalProduct.images[0]}
+                  alt={addModalProduct.title}
+                  className="w-14 h-14 object-cover rounded-xl border border-slate-200 shrink-0"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                  <Package className="w-6 h-6 text-slate-400" />
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <h4 className="font-bold text-xs text-slate-900 truncate">{addModalProduct.title}</h4>
                 <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-600">
@@ -900,11 +909,17 @@ export const DropshippingView: React.FC = () => {
               {/* Image Preview & Thumbnails */}
               <div className="space-y-2">
                 <div className="aspect-16/10 rounded-2xl bg-slate-100 overflow-hidden border border-slate-200">
-                  <img
-                    src={detailProduct.images?.[activeImageIndex] || detailProduct.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600'}
-                    alt={detailProduct.title}
-                    className="w-full h-full object-cover"
-                  />
+                  {detailProduct.images?.[activeImageIndex] || detailProduct.images?.[0] ? (
+                    <img
+                      src={detailProduct.images?.[activeImageIndex] || detailProduct.images?.[0]}
+                      alt={detailProduct.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
+                      <Package className="w-12 h-12 text-slate-300" />
+                    </div>
+                  )}
                 </div>
                 {Boolean(detailProduct.images && detailProduct.images.length > 1) && (
                   <div className="flex items-center gap-2 overflow-x-auto pb-1">

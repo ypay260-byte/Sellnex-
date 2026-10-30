@@ -21,6 +21,7 @@ import {
   Heart,
   Eye,
   Share2,
+  Package,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -376,11 +377,17 @@ export const PublicStoreView: React.FC = () => {
                   <div>
                     {/* Image & Badges */}
                     <div className="relative aspect-square bg-slate-100 overflow-hidden">
-                      <img
-                        src={p.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80'}
-                        alt={p.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
+                      {p.images?.[0] ? (
+                        <img
+                          src={p.images[0]}
+                          alt={p.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
+                          <Package className="w-12 h-12 text-slate-300" />
+                        </div>
+                      )}
                       {discountPercent > 0 && (
                         <span className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 bg-rose-600 text-white text-[10px] sm:text-[11px] font-black px-1.5 sm:px-2 py-0.5 rounded-md shadow-xs">
                           -{discountPercent}%
@@ -476,11 +483,17 @@ export const PublicStoreView: React.FC = () => {
               ) : (
                 cart.map((item, idx) => (
                   <div key={`${item.product.id}-${item.selectedVariant || idx}`} className="pt-4 first:pt-0 flex items-center gap-3">
-                    <img
-                      src={item.product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&auto=format&fit=crop&q=80'}
-                      alt={item.product.title}
-                      className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0"
-                    />
+                    {item.product.images?.[0] ? (
+                      <img
+                        src={item.product.images[0]}
+                        alt={item.product.title}
+                        className="w-16 h-16 rounded-xl object-cover border border-slate-200 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                        <Package className="w-6 h-6 text-slate-400" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-slate-900 truncate">{item.product.title}</p>
                       {Boolean(item.selectedSize || item.selectedColor || item.selectedVariant) && (

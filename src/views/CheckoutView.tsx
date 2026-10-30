@@ -33,6 +33,7 @@ import {
   XCircle,
   Crown,
   QrCode,
+  Package,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -356,7 +357,7 @@ export const CheckoutView: React.FC = () => {
     }
   };
 
-  // Step 1: Submit Customer & Delivery Information -> Create Order in Firestore
+  // Step 1: Submit Customer & Delivery Information -> Proceed to Payment & Mandatory Receipt Step
   const handleProceedToPayment = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -386,211 +387,10 @@ export const CheckoutView: React.FC = () => {
       return;
     }
 
-    setIsProcessing(true);
-
-    try {
-      const deliveryAddr = {
-        fullName: customerName.trim(),
-        phone: phone.trim(),
-        region,
-        district: district.trim(),
-        streetAddress: streetAddress.trim(),
-        zipCode: zipCode.trim() || undefined,
-        notes: notes.trim() || undefined,
-      };
-
-      // Group safeCart items by storeId to ensure correct store & owner isolation
-      const storeMap: Record<string, typeof safeCart> = {};
-      for (const item of safeCart) {
-        const sId =
-          item.product?.storeId ||
-          activeStore?.id ||
-          routeParams.storeId ||
-          store?.id ||
-          'sellnex_store';
-        if (!storeMap[sId]) {
-          storeMap[sId] = [];
-        }
-        storeMap[sId].push(item);
-      }
-
-      const storeIds = Object.keys(storeMap);
-      let primaryCreatedOrder: Order | null = null;
-
-      for (let i = 0; i < storeIds.length; i++) {
-        const currentStoreId = storeIds[i];
-        const currentItems = storeMap[currentStoreId];
-
-        const hasDropshippingItems = currentItems.some(
-          (item) => item.product?.businessMode === 'dropshipping' || !!item.product?.dropshippingCatalogId
-        );
-
-        const orderItems = currentItems.map((item) => {
-          const sellingPrice = Number(item.product?.sellingPrice) || 0;
-          const quantity = Number(item.quantity) || 1;
-          const supplierCost = Number(item.product?.supplierCost) || Math.round(sellingPrice * 0.7);
-          const profit = sellingPrice - supplierCost;
-          const isItemDropship = item.product?.businessMode === 'dropshipping' || !!item.product?.dropshippingCatalogId;
-
-          return {
-            productId: item.product.id,
-            title: item.product.title,
-            image:
-              item.product.images?.[0] ||
-              'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop&q=80',
-            sellingPrice,
-            quantity,
-            variant: item.selectedVariant,
-            selectedSize: item.selectedSize,
-            selectedColor: item.selectedColor,
-            supplierCost,
-            profit,
-            supplier: item.product.supplier || 'Sellnex Warehouse',
-            catalogProductId: item.product.dropshippingCatalogId,
-            businessMode: isItemDropship ? ('dropshipping' as const) : ('personal' as const),
-          };
-        });
-
-        const totalQuantity = orderItems.reduce((sum, it) => sum + it.quantity, 0);
-        const orderSubtotal = orderItems.reduce((sum, it) => sum + it.sellingPrice * it.quantity, 0);
-        // Delivery cost assigned to the first order, 0 for split orders
-        const allocatedShippingFee = i === 0 ? currentDeliveryCost : 0;
-        const orderTotal = orderSubtotal + allocatedShippingFee;
-
-        // Resolve store owner & store object
-        let currentOwnerId = '';
-        let targetStoreObj: any = null;
-        if (activeStore && (activeStore.id === currentStoreId || activeStore.slug === currentStoreId)) {
-          currentOwnerId = activeStore.ownerId || '';
-          targetStoreObj = activeStore;
-        } else if (publicStore && (publicStore.id === currentStoreId || publicStore.slug === currentStoreId)) {
-          currentOwnerId = publicStore.ownerId || '';
-          targetStoreObj = publicStore;
-        } else if (store && (store.id === currentStoreId || store.slug === currentStoreId)) {
-          currentOwnerId = store.ownerId || '';
-          targetStoreObj = store;
-        }
-
-        if (!targetStoreObj || !currentOwnerId) {
-          try {
-            const fetchedStore = await firestoreService.getStoreByIdOrSlug(currentStoreId);
-            if (fetchedStore) {
-              targetStoreObj = fetchedStore;
-              if (fetchedStore.ownerId) {
-                currentOwnerId = fetchedStore.ownerId;
-              }
-            }
-          } catch {
-            // fallback inside createOrder
-          }
-        }
-
-        // Direct seller payment check:
-        // For plans >= 260,000 UZS (Premium at 260,000 UZS or Golden VIP at $100 / 1,300,000 UZS)
-        // payment is made directly to the merchant card, bypassing Sellnex admin escrow
-        let isDirectSellerPayment = false;
-        let directCardNumber = '';
-        let directCardHolder = '';
-        let directBankName = '';
-
-        if (
-          targetStoreObj?.sellerCardNumber &&
-          targetStoreObj.sellerCardNumber.replace(/\s+/g, '').length >= 16 &&
-          targetStoreObj.directPayoutEnabled !== false
-        ) {
-          let ownerPlan = '';
-          if (currentOwnerId) {
-            try {
-              const ownerUser = await firestoreService.getUser(currentOwnerId);
-              ownerPlan = ownerUser?.plan || '';
-            } catch {
-              // fallback
-            }
-          }
-          if (
-            subscriptionService.canUseDirectSellerPayout(ownerPlan) ||
-            targetStoreObj.directPayoutApproved ||
-            ownerPlan === 'premium' ||
-            ownerPlan === 'premium_pro' ||
-            ownerPlan === 'golden_vip' ||
-            ownerPlan === 'golden'
-          ) {
-            isDirectSellerPayment = true;
-            directCardNumber = targetStoreObj.sellerCardNumber;
-            directCardHolder = targetStoreObj.sellerCardHolder || targetStoreObj.name || 'Do‘kon Sotuvchisi';
-            directBankName = targetStoreObj.sellerBankName || 'Uzcard / Humo (Sotuvchi)';
-          }
-        }
-
-        const created = await createOrder({
-          storeId: currentStoreId,
-          ownerId: currentOwnerId,
-          customerId: currentUser?.id || undefined,
-          customerName: customerName.trim(),
-          customerPhone: phone.trim(),
-          customerEmail: email.trim() || undefined,
-          deliveryAddress: deliveryAddr,
-          shippingAddress: deliveryAddr,
-          items: orderItems,
-          quantity: totalQuantity,
-          subtotal: orderSubtotal,
-          shippingFee: allocatedShippingFee,
-          deliveryPrice: allocatedShippingFee,
-          deliveryName: selectedDeliveryOption.name,
-          deliveryTime: selectedDeliveryOption.estimatedTime,
-          deliveryMethod: selectedDeliveryOption.name,
-          paymentFee: 0,
-          totalAmount: orderTotal,
-          totalSupplierCost: orderItems.reduce((acc, it) => acc + it.supplierCost * it.quantity, 0),
-          totalProfit: orderItems.reduce((acc, it) => acc + it.profit * it.quantity, 0),
-          businessMode: hasDropshippingItems ? 'dropshipping' : 'personal',
-          supplierOrder: hasDropshippingItems
-            ? {
-                supplierName: orderItems.find((it) => it.businessMode === 'dropshipping')?.supplier || 'Sahiy',
-                supplierCost: orderItems.reduce((acc, it) => acc + it.supplierCost * it.quantity, 0),
-                shippingCost: allocatedShippingFee,
-                orderDate: new Date().toISOString().split('T')[0],
-                status: 'not_ordered',
-                adminNotes: `Dropshipping buyurtmasi. Do‘kon: ${targetStoreObj?.name || currentStoreId}`,
-              }
-            : undefined,
-          paymentMethod: isDirectSellerPayment ? 'Direct Seller Card' : 'Sellnex Card',
-          paymentRouting: isDirectSellerPayment ? 'direct_seller' : 'admin_escrow',
-          directSellerPayment: isDirectSellerPayment,
-          directSellerCardNumber: directCardNumber || undefined,
-          directSellerCardHolder: directCardHolder || undefined,
-          directSellerBankName: directBankName || undefined,
-          paymentStatus: 'pending',
-          orderStatus: 'Pending',
-          timeline: [
-            {
-              status: 'Pending',
-              timestamp: new Date().toISOString(),
-              title: 'Buyurtma yaratildi',
-              description: isDirectSellerPayment
-                ? `Buyurtma yaratildi. To‘lov to‘g‘ridan-to‘g‘ri sotuvchi kartasiga (${directCardNumber}) yo‘naltirildi.`
-                : "Xaridor va yetkazib berish ma'lumotlari muvaffaqiyatli saqlandi. To'lov kutilmoqda.",
-            },
-          ],
-        });
-
-        if (!primaryCreatedOrder) {
-          primaryCreatedOrder = created;
-        }
-      }
-
-      if (primaryCreatedOrder) {
-        setActiveOrder(primaryCreatedOrder);
-        clearCart();
-        setCurrentStep('payment');
-        showToast('Buyurtma yaratildi', 'Endi to‘lovni amalga oshirib, chekni yuklang.', 'info');
-      }
-    } catch (err: any) {
-      console.error('Order creation error:', err);
-      showToast('Xatolik yuz berdi', err?.message || 'Buyurtma yaratishda xatolik yuz berdi.', 'error');
-    } finally {
-      setIsProcessing(false);
-    }
+    // Move to payment & receipt step WITHOUT creating empty order in Firestore yet
+    setCurrentStep('payment');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showToast('To‘lov bosqichi', 'Iltimos, kartaga to‘lov qilib, to‘lov chekini yuklang.', 'info');
   };
 
   // Receipt File Selection & Drag-and-Drop
@@ -655,121 +455,296 @@ export const CheckoutView: React.FC = () => {
     }
   };
 
-  // Step 2: Upload Receipt to Firebase Storage & Submit Payment Verification
+  // Step 2: Upload Receipt to Firebase Storage & Create Order in Firestore
   const handleSubmitPaymentConfirmation = async () => {
-    // 7. Duplicate submission prevention: immediately ignore subsequent clicks
     if (isUploadingReceipt) return;
-
-    console.log('SUBMIT_STARTED');
 
     if (!receiptFile) {
       setReceiptError("To‘lov chekini yuklash MAJBURIY. Iltimos, chek faylini tanlang.");
-      showToast('Chek yuklanmagan', "Iltimos, to‘lov chekini yuklang.", 'warning');
+      showToast('Chek yuklanmagan', "Iltimos, avval to‘lov chekini yuklang.", 'warning');
       return;
     }
-
-    if (!activeOrder) {
-      showToast('Buyurtma topilmadi', 'Iltimos, qaytadan urinib ko‘ring.', 'error');
-      return;
-    }
-
-    // 1. Receipt file validation confirmed
-    console.log('FILE_VALIDATED');
 
     setIsUploadingReceipt(true);
     setReceiptError(null);
 
     try {
-      // 2 & 3. Storage Upload & Download URL retrieval with timeout
-      console.log('STORAGE_UPLOAD_STARTED');
+      // 1. Storage Upload & Download URL retrieval
       let downloadUrl = '';
       try {
-        const uploadTask = firestoreService.uploadReceipt(activeOrder.id, receiptFile);
-        const timeoutTask = new Promise<string>((_, reject) =>
-          setTimeout(() => reject(new Error('STORAGE_TIMEOUT')), 12000)
-        );
-        downloadUrl = await Promise.race([uploadTask, timeoutTask]);
-        console.log('STORAGE_UPLOAD_COMPLETED');
+        const tempId = activeOrder?.id || `rcp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        downloadUrl = await firestoreService.uploadImage(`receipts/${tempId}`, receiptFile, receiptFile.name);
+        if (!downloadUrl || downloadUrl.length < 5) {
+          throw new Error('Chek yuklash havolasi olinmadi');
+        }
       } catch (storageErr) {
         console.error('RECEIPT_UPLOAD_ERROR', storageErr);
-        throw new Error('RECEIPT_UPLOAD_ERROR');
+        throw new Error('To‘lov chekini yuklab bo‘lmadi. Iltimos, internet aloqasini tekshirib qayta urinib ko‘ring.');
       }
 
-      // 4, 5, 6, 7. Firestore order update: paymentStatus, receiptUrl, orderStatus with timeout
-      console.log('FIRESTORE_UPDATE_STARTED');
-      try {
-        const updateTask = firestoreService.submitOrderReceipt(
+      // 2. If activeOrder already exists, update receipt in Firestore
+      if (activeOrder) {
+        await firestoreService.submitOrderReceipt(
           activeOrder.id,
           downloadUrl,
           receiptFile.name,
           receiptFile.type,
           txReceiptNumber.trim() || undefined
         );
-        const timeoutTask = new Promise<void>((_, reject) =>
-          setTimeout(() => reject(new Error('FIRESTORE_TIMEOUT')), 10000)
+
+        const updatedOrder: Order = {
+          ...activeOrder,
+          paymentStatus: 'pending_verification',
+          orderStatus: 'pending_payment_verification',
+          receiptUrl: downloadUrl,
+          receiptFileName: receiptFile.name,
+          receiptFileType: receiptFile.type,
+          receiptTxNumber: txReceiptNumber.trim() || undefined,
+          receiptUploadedAt: new Date().toISOString(),
+        };
+        setActiveOrder(updatedOrder);
+
+        try {
+          localStorage.setItem('sellnex_last_order_id', activeOrder.id);
+          localStorage.setItem(`sellnex_order_${activeOrder.id}`, JSON.stringify(updatedOrder));
+        } catch {}
+
+        clearCart();
+        try {
+          confetti({ particleCount: 70, spread: 70, origin: { y: 0.5 } });
+        } catch {}
+
+        showToast(
+          'Buyurtmangiz qabul qilindi!',
+          'To‘lov chekingiz bosh administrator tomonidan tekshiriladi.',
+          'success'
         );
-        await Promise.race([updateTask, timeoutTask]);
-        console.log('FIRESTORE_UPDATE_COMPLETED');
-      } catch (firestoreErr) {
-        console.error('FIRESTORE_UPDATE_ERROR', firestoreErr);
-        throw new Error('FIRESTORE_UPDATE_ERROR');
+
+        const targetStoreId =
+          activeStore?.slug || activeStore?.id || publicStore?.slug || publicStore?.id || store?.slug || store?.id || '';
+        navigateTo('order-success', {
+          orderId: activeOrder.id,
+          storeId: targetStoreId,
+          storeSlug: targetStoreId,
+        });
+      } else {
+        // 3. Create real order in Firestore ONLY NOW with mandatory receiptUrl!
+        const deliveryAddr = {
+          fullName: customerName.trim(),
+          phone: phone.trim(),
+          region,
+          district: district.trim(),
+          streetAddress: streetAddress.trim(),
+          zipCode: zipCode.trim() || undefined,
+          notes: notes.trim() || undefined,
+        };
+
+        const storeMap: Record<string, typeof safeCart> = {};
+        for (const item of safeCart) {
+          const sId =
+            item.product?.storeId ||
+            activeStore?.id ||
+            routeParams.storeId ||
+            store?.id ||
+            'sellnex_store';
+          if (!storeMap[sId]) {
+            storeMap[sId] = [];
+          }
+          storeMap[sId].push(item);
+        }
+
+        const storeIds = Object.keys(storeMap);
+        let primaryCreatedOrder: Order | null = null;
+
+        for (let i = 0; i < storeIds.length; i++) {
+          const currentStoreId = storeIds[i];
+          const currentItems = storeMap[currentStoreId];
+
+          const hasDropshippingItems = currentItems.some(
+            (item) => item.product?.businessMode === 'dropshipping' || !!item.product?.dropshippingCatalogId
+          );
+
+          const orderItems = currentItems.map((item) => {
+            const sellingPrice = Number(item.product?.sellingPrice) || 0;
+            const quantity = Number(item.quantity) || 1;
+            const supplierCost = Number(item.product?.supplierCost) || Math.round(sellingPrice * 0.7);
+            const profit = sellingPrice - supplierCost;
+            const isItemDropship = item.product?.businessMode === 'dropshipping' || !!item.product?.dropshippingCatalogId;
+
+            return {
+              productId: item.product.id,
+              title: item.product.title,
+              image: item.product.images?.[0] || '',
+              sellingPrice,
+              quantity,
+              variant: item.selectedVariant,
+              selectedSize: item.selectedSize,
+              selectedColor: item.selectedColor,
+              supplierCost,
+              profit,
+              supplier: item.product.supplier || 'Sellnex Warehouse',
+              catalogProductId: item.product.dropshippingCatalogId,
+              businessMode: isItemDropship ? ('dropshipping' as const) : ('personal' as const),
+            };
+          });
+
+          const totalQuantity = orderItems.reduce((sum, it) => sum + it.quantity, 0);
+          const orderSubtotal = orderItems.reduce((sum, it) => sum + it.sellingPrice * it.quantity, 0);
+          const allocatedShippingFee = i === 0 ? currentDeliveryCost : 0;
+          const orderTotal = orderSubtotal + allocatedShippingFee;
+
+          let currentOwnerId = '';
+          let targetStoreObj: any = null;
+          if (activeStore && (activeStore.id === currentStoreId || activeStore.slug === currentStoreId)) {
+            currentOwnerId = activeStore.ownerId || '';
+            targetStoreObj = activeStore;
+          } else if (publicStore && (publicStore.id === currentStoreId || publicStore.slug === currentStoreId)) {
+            currentOwnerId = publicStore.ownerId || '';
+            targetStoreObj = publicStore;
+          } else if (store && (store.id === currentStoreId || store.slug === currentStoreId)) {
+            currentOwnerId = store.ownerId || '';
+            targetStoreObj = store;
+          }
+
+          if (!targetStoreObj || !currentOwnerId) {
+            try {
+              const fetchedStore = await firestoreService.getStoreByIdOrSlug(currentStoreId);
+              if (fetchedStore) {
+                targetStoreObj = fetchedStore;
+                if (fetchedStore.ownerId) {
+                  currentOwnerId = fetchedStore.ownerId;
+                }
+              }
+            } catch {}
+          }
+
+          let isDirectSellerPayment = false;
+          let directCardNumber = '';
+          let directCardHolder = '';
+          let directBankName = '';
+
+          if (
+            targetStoreObj?.sellerCardNumber &&
+            targetStoreObj.sellerCardNumber.replace(/\s+/g, '').length >= 16 &&
+            targetStoreObj.directPayoutEnabled !== false
+          ) {
+            let ownerPlan = '';
+            if (currentOwnerId) {
+              try {
+                const ownerUser = await firestoreService.getUser(currentOwnerId);
+                ownerPlan = ownerUser?.plan || '';
+              } catch {}
+            }
+            if (
+              subscriptionService.canUseDirectSellerPayout(ownerPlan) ||
+              targetStoreObj.directPayoutApproved ||
+              ownerPlan === 'premium' ||
+              ownerPlan === 'premium_pro' ||
+              ownerPlan === 'golden_vip' ||
+              ownerPlan === 'golden'
+            ) {
+              isDirectSellerPayment = true;
+              directCardNumber = targetStoreObj.sellerCardNumber;
+              directCardHolder = targetStoreObj.sellerCardHolder || targetStoreObj.name || 'Do‘kon Sotuvchisi';
+              directBankName = targetStoreObj.sellerBankName || 'Uzcard / Humo (Sotuvchi)';
+            }
+          }
+
+          const created = await createOrder({
+            storeId: currentStoreId,
+            ownerId: currentOwnerId,
+            customerId: currentUser?.id || undefined,
+            customerName: customerName.trim(),
+            customerPhone: phone.trim(),
+            customerEmail: email.trim() || undefined,
+            deliveryAddress: deliveryAddr,
+            shippingAddress: deliveryAddr,
+            items: orderItems,
+            quantity: totalQuantity,
+            subtotal: orderSubtotal,
+            shippingFee: allocatedShippingFee,
+            deliveryPrice: allocatedShippingFee,
+            deliveryName: selectedDeliveryOption.name,
+            deliveryTime: selectedDeliveryOption.estimatedTime,
+            deliveryMethod: selectedDeliveryOption.name,
+            paymentFee: 0,
+            totalAmount: orderTotal,
+            totalSupplierCost: orderItems.reduce((acc, it) => acc + it.supplierCost * it.quantity, 0),
+            totalProfit: orderItems.reduce((acc, it) => acc + it.profit * it.quantity, 0),
+            businessMode: hasDropshippingItems ? 'dropshipping' : 'personal',
+            supplierOrder: hasDropshippingItems
+              ? {
+                  supplierName: orderItems.find((it) => it.businessMode === 'dropshipping')?.supplier || 'Sahiy',
+                  supplierCost: orderItems.reduce((acc, it) => acc + it.supplierCost * it.quantity, 0),
+                  shippingCost: allocatedShippingFee,
+                  orderDate: new Date().toISOString().split('T')[0],
+                  status: 'not_ordered',
+                  adminNotes: `Dropshipping buyurtmasi. Do‘kon: ${targetStoreObj?.name || currentStoreId}`,
+                }
+              : undefined,
+            paymentMethod: isDirectSellerPayment ? 'Direct Seller Card' : 'Sellnex Card',
+            paymentRouting: isDirectSellerPayment ? 'direct_seller' : 'admin_escrow',
+            directSellerPayment: isDirectSellerPayment,
+            directSellerCardNumber: directCardNumber || undefined,
+            directSellerCardHolder: directCardHolder || undefined,
+            directBankName: directBankName || undefined,
+            paymentStatus: 'pending_verification',
+            orderStatus: 'pending_payment_verification',
+            receiptUrl: downloadUrl,
+            receiptFileName: receiptFile.name,
+            receiptFileType: receiptFile.type,
+            receiptTxNumber: txReceiptNumber.trim() || undefined,
+            receiptUploadedAt: new Date().toISOString(),
+            timeline: [
+              {
+                status: 'Pending',
+                timestamp: new Date().toISOString(),
+                title: 'Buyurtma yaratildi va to‘lov cheki yuklandi',
+                description: isDirectSellerPayment
+                  ? `Buyurtma yaratildi. To‘lov cheki bevosita sotuvchiga yuborildi.`
+                  : "Buyurtma yaratildi va to‘lov cheki administrator tekshiruviga yuborildi.",
+              },
+            ],
+          });
+
+          if (!primaryCreatedOrder) {
+            primaryCreatedOrder = created;
+          }
+        }
+
+        if (primaryCreatedOrder) {
+          setActiveOrder(primaryCreatedOrder);
+          clearCart();
+          try {
+            localStorage.setItem('sellnex_last_order_id', primaryCreatedOrder.id);
+            localStorage.setItem(`sellnex_order_${primaryCreatedOrder.id}`, JSON.stringify(primaryCreatedOrder));
+          } catch {}
+
+          try {
+            confetti({ particleCount: 80, spread: 70, origin: { y: 0.5 } });
+          } catch {}
+
+          showToast(
+            'Buyurtmangiz qabul qilindi!',
+            'To‘lov cheki muvaffaqiyatli yuklandi va admin tekshiruviga yuborildi.',
+            'success'
+          );
+
+          const targetStoreId =
+            activeStore?.slug || activeStore?.id || publicStore?.slug || publicStore?.id || store?.slug || store?.id || '';
+          navigateTo('order-success', {
+            orderId: primaryCreatedOrder.id,
+            storeId: targetStoreId,
+            storeSlug: targetStoreId,
+          });
+        }
       }
-
-      // Update local state
-      const updatedOrder: Order = {
-        ...activeOrder,
-        paymentStatus: 'pending_verification',
-        orderStatus: 'pending_payment_verification',
-        receiptUrl: downloadUrl,
-        receiptFileName: receiptFile.name,
-        receiptFileType: receiptFile.type,
-        receiptTxNumber: txReceiptNumber.trim() || undefined,
-        receiptUploadedAt: new Date().toISOString(),
-      };
-      setActiveOrder(updatedOrder);
-
-      // Clear cart immediately
-      clearCart();
-
-      // Store order ID and order snapshot in localStorage for page refresh persistence
-      try {
-        localStorage.setItem('sellnex_last_order_id', activeOrder.id);
-        localStorage.setItem(`sellnex_order_${activeOrder.id}`, JSON.stringify(updatedOrder));
-      } catch {
-        // ignore
-      }
-
-      try {
-        confetti({ particleCount: 70, spread: 70, origin: { y: 0.5 } });
-      } catch {
-        // ignore
-      }
-
-      showToast(
-        'Buyurtmangiz qabul qilindi!',
-        activeOrder.paymentRouting === 'direct_seller' || activeOrder.directSellerPayment
-          ? 'To‘lov cheki to‘g‘ridan-to‘g‘ri do‘kon sotuvchisiga yuborildi. Sotuvchi o‘z kartasiga pul tushganini tekshirib buyurtmani tasdiqlaydi.'
-          : 'To‘lov chekingiz bosh administrator tomonidan tekshiriladi.',
-        'success'
-      );
-
-      // 8. Seamlessly navigate customer to Order Success page
-      console.log('ORDER_SUCCESS_NAVIGATION');
-      const targetStoreId =
-        activeStore?.slug || activeStore?.id || publicStore?.slug || publicStore?.id || store?.slug || store?.id || '';
-
-      navigateTo('order-success', {
-        orderId: activeOrder.id,
-        storeId: targetStoreId,
-        storeSlug: targetStoreId,
-      });
     } catch (err: any) {
       console.error('Receipt submission error occurred:', err);
-      const errMsg = 'Chekni yuborishda muammo yuz berdi. Internet aloqangizni tekshirib, qayta urinib ko‘ring.';
+      const errMsg = err?.message || 'Chekni yuborishda muammo yuz berdi. Internet aloqangizni tekshirib, qayta urinib ko‘ring.';
       setReceiptError(errMsg);
       showToast('Xatolik', errMsg, 'error');
     } finally {
-      // 2. Infinite loading prevention: isUploadingReceipt is ALWAYS reset to false
       setIsUploadingReceipt(false);
     }
   };
@@ -810,31 +785,42 @@ export const CheckoutView: React.FC = () => {
   // ==========================================
   // RENDER STEP 2: SELLNEX CARD PAYMENT & RECEIPT UPLOAD
   // ==========================================
-  if (currentStep === 'payment' && activeOrder) {
-    const isPendingVerification = activeOrder.paymentStatus === 'pending_verification';
-    const isPaid = activeOrder.paymentStatus === 'paid' || activeOrder.paymentStatus === 'Paid';
-    const isRejected = activeOrder.paymentStatus === 'rejected';
+  if (currentStep === 'payment') {
+    const isPendingVerification = activeOrder?.paymentStatus === 'pending_verification';
+    const isPaid = activeOrder?.paymentStatus === 'paid' || activeOrder?.paymentStatus === 'Paid';
+    const isRejected = activeOrder?.paymentStatus === 'rejected';
 
     return (
       <div id="checkout-payment-root" className="min-h-screen bg-slate-50 py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto space-y-6">
           {/* Top Bar Navigation */}
           <div className="flex items-center justify-between">
-            <button
-              onClick={() =>
-                navigateTo('public-store', {
-                  storeSlug: activeStore?.slug || store.slug,
-                  storeId: activeStore?.id || store.id,
-                })
-              }
-              className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Do‘konga qaytish</span>
-            </button>
+            {!activeOrder ? (
+              <button
+                type="button"
+                onClick={() => setCurrentStep('form')}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Ortga (Ma'lumotlarni o‘zgartirish)</span>
+              </button>
+            ) : (
+              <button
+                onClick={() =>
+                  navigateTo('public-store', {
+                    storeSlug: activeStore?.slug || store.slug,
+                    storeId: activeStore?.id || store.id,
+                  })
+                }
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Do‘konga qaytish</span>
+              </button>
+            )}
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold text-slate-700 bg-white px-3 py-1 rounded-xl border border-slate-200">
-                {activeOrder.orderNumber}
+                {activeOrder?.orderNumber || 'Yangi Buyurtma'}
               </span>
             </div>
           </div>
@@ -959,26 +945,26 @@ export const CheckoutView: React.FC = () => {
                   Buyurtma summasi
                 </span>
                 <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                  {activeOrder.deliveryName || activeOrder.deliveryMethod || 'Standart yetkazish'}
+                  {activeOrder?.deliveryName || activeOrder?.deliveryMethod || selectedDeliveryOption?.name || 'Standart yetkazish'}
                 </span>
               </div>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between text-slate-600">
                   <span className="font-medium">Mahsulotlar:</span>
-                  <span className="font-bold text-slate-900">{formatMoney(activeOrder.subtotal)}</span>
+                  <span className="font-bold text-slate-900">{formatMoney(activeOrder ? activeOrder.subtotal : safeCartSubtotal)}</span>
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span className="font-medium">
-                    Yetkazib berish ({activeOrder.deliveryName || activeOrder.deliveryMethod || 'Standart yetkazish'}):
+                    Yetkazib berish ({activeOrder?.deliveryName || activeOrder?.deliveryMethod || selectedDeliveryOption?.name || 'Standart yetkazish'}):
                   </span>
                   <span className="font-bold text-slate-900">
-                    {formatMoney(activeOrder.deliveryPrice !== undefined ? activeOrder.deliveryPrice : activeOrder.shippingFee)}
+                    {formatMoney(activeOrder ? (activeOrder.deliveryPrice !== undefined ? activeOrder.deliveryPrice : activeOrder.shippingFee) : currentDeliveryCost)}
                   </span>
                 </div>
                 <div className="pt-2 border-t border-slate-200 flex items-baseline justify-between">
                   <span className="font-black text-sm text-slate-800">Jami:</span>
                   <span className="text-2xl sm:text-3xl font-black text-blue-600">
-                    {formatMoney(activeOrder.totalAmount)}
+                    {formatMoney(activeOrder ? activeOrder.totalAmount : grandTotal)}
                   </span>
                 </div>
               </div>
@@ -1201,20 +1187,21 @@ export const CheckoutView: React.FC = () => {
                   {isUploadingReceipt ? (
                     <div className="flex items-center gap-2">
                       <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Chek yuklanmoqda va tekshirishga yuborilmoqda...</span>
+                      <span>Chek yuklanmoqda va buyurtma rasmiylashtirilmoqda...</span>
                     </div>
                   ) : (
                     <>
                       <CheckCircle2 className="w-5 h-5" />
-                      <span>To‘lovni tasdiqlashga yuborish</span>
+                      <span>{activeOrder ? 'To‘lov chekini tasdiqlashga yuborish' : 'Buyurtma berish va to‘lov chekini yuborish'}</span>
                     </>
                   )}
                 </button>
 
                 {!receiptFile && (
-                  <p className="text-[11px] text-center text-slate-400 font-medium">
-                    * To‘lovni tasdiqlash uchun avval chek faylini yuklashingiz shart.
-                  </p>
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs text-center font-bold flex items-center justify-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Diqqat: Chek yuklash majburiy! Chek yuklanmaguncha «Buyurtma berish» tugmasi ishlamaydi.</span>
+                  </div>
                 )}
               </div>
             )}
@@ -1229,19 +1216,18 @@ export const CheckoutView: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-600">
               <div>
                 <span className="text-slate-400 block">Qabul qiluvchi:</span>
-                <strong className="text-slate-900">{activeOrder.customerName}</strong>
+                <strong className="text-slate-900">{activeOrder ? activeOrder.customerName : customerName}</strong>
               </div>
               <div>
                 <span className="text-slate-400 block">Telefon:</span>
-                <strong className="text-slate-900">{activeOrder.customerPhone}</strong>
+                <strong className="text-slate-900">{activeOrder ? activeOrder.customerPhone : phone}</strong>
               </div>
               <div className="sm:col-span-2">
                 <span className="text-slate-400 block">Manzil:</span>
                 <span className="text-slate-900 font-medium">
-                  {activeOrder.deliveryAddress?.region || activeOrder.shippingAddress?.region || 'Toshkent shahri'},{' '}
-                  {activeOrder.deliveryAddress?.district || activeOrder.shippingAddress?.district || ''},{' '}
-                  {activeOrder.deliveryAddress?.streetAddress || activeOrder.shippingAddress?.streetAddress || ''}
-                  {activeOrder.deliveryAddress?.zipCode ? ` (Pochta indeksi: ${activeOrder.deliveryAddress.zipCode})` : ''}
+                  {activeOrder
+                    ? formatAddress(activeOrder)
+                    : `${region}, ${district}, ${streetAddress}${zipCode ? ` (Pochta indeksi: ${zipCode})` : ''}`}
                 </span>
               </div>
             </div>
@@ -1498,14 +1484,17 @@ export const CheckoutView: React.FC = () => {
                 <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 pr-1">
                   {safeCart.map((item, idx) => (
                     <div key={`${item.product?.id || idx}-${idx}`} className="py-3 first:pt-0 flex items-center gap-3 text-xs">
-                      <img
-                        src={
-                          item.product?.images?.[0] ||
-                          'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&auto=format&fit=crop&q=80'
-                        }
-                        alt={item.product?.title || 'Mahsulot'}
-                        className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
-                      />
+                      {item.product?.images?.[0] ? (
+                        <img
+                          src={item.product.images[0]}
+                          alt={item.product?.title || 'Mahsulot'}
+                          className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
+                          <Package className="w-5 h-5 text-slate-400" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-slate-900 truncate">{item.product?.title || 'Mahsulot'}</p>
                         <p className="text-[11px] text-slate-500">
