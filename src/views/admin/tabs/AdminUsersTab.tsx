@@ -63,10 +63,10 @@ export const AdminUsersTab: React.FC<AdminUsersTabProps> = ({
   const filteredUsers = users.filter((u) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
-      u.name.toLowerCase().includes(term) ||
-      u.email.toLowerCase().includes(term) ||
+      (u.name || '').toLowerCase().includes(term) ||
+      (u.email || '').toLowerCase().includes(term) ||
       (u.phone && u.phone.includes(term)) ||
-      u.id.toLowerCase().includes(term);
+      (u.id || '').toLowerCase().includes(term);
 
     if (!matchesSearch) return false;
 

@@ -10,6 +10,7 @@ import {
   TELEGRAM_BOT_TOKEN,
   TELEGRAM_BOT_USERNAME,
 } from './src/services/telegramBotServer';
+import { fetchAllPlatformData } from './server/firestoreAdmin';
 
 // In-memory store for Paynet transactions & user device preferences
 interface StoredTransaction {
@@ -211,6 +212,22 @@ async function startServer() {
       return res.status(500).json({
         success: false,
         error: 'Administrator autentifikatsiyasida server xatosi.',
+      });
+    }
+  });
+
+  // Admin High-Reliability Data Overview Endpoint
+  // Directly reads Firestore collections and delivers guaranteed data to Admin Panel
+  app.get('/api/admin/overview-data', async (_req: Request, res: Response) => {
+    try {
+      const data = await fetchAllPlatformData();
+      return res.status(200).json(data);
+    } catch (err: any) {
+      console.error('[Admin Overview Data Error]:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Platforma maʼlumotlarini yuklashda xatolik yuz berdi.',
+        details: err?.message,
       });
     }
   });

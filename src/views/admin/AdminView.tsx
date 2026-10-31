@@ -89,33 +89,79 @@ export const AdminView: React.FC = () => {
     return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
   };
 
-  // Load all admin platform data
-  const loadAllAdminData = async () => {
+  // Load all admin platform data with guaranteed resilience & server fallback
+  const loadAllAdminData = async (forceServer = false) => {
     setIsLoading(true);
-    try {
-      const results = await Promise.allSettled([
-        firestoreService.getAllUsers(),
-        firestoreService.getAllStores(),
-        firestoreService.getAllProducts(),
-        firestoreService.getAllOrders(),
-        firestoreService.getP2PPayments(),
-        firestoreService.getDynamicPlans(),
-        firestoreService.getPromoCodes(),
-        firestoreService.getDisputes(),
-        firestoreService.getAuditLogs(100),
-        firestoreService.getAdminSettings(),
-      ]);
+    let loadedUsersCount = 0;
+    let loadedStoresCount = 0;
 
-      if (results[0].status === 'fulfilled') setUsers(results[0].value || []);
-      if (results[1].status === 'fulfilled') setStores(results[1].value || []);
-      if (results[2].status === 'fulfilled') setProducts(results[2].value || []);
-      if (results[3].status === 'fulfilled') setOrders(results[3].value || []);
-      if (results[4].status === 'fulfilled') setP2pPayments(results[4].value || []);
-      if (results[5].status === 'fulfilled') setPlans(results[5].value || []);
-      if (results[6].status === 'fulfilled') setPromoCodes(results[6].value || []);
-      if (results[7].status === 'fulfilled') setDisputes(results[7].value || []);
-      if (results[8].status === 'fulfilled') setAuditLogs(results[8].value || []);
-      if (results[9].status === 'fulfilled') setSettings(results[9].value || null);
+    try {
+      if (!forceServer) {
+        const results = await Promise.allSettled([
+          firestoreService.getAllUsers(),
+          firestoreService.getAllStores(),
+          firestoreService.getAllProducts(),
+          firestoreService.getAllOrders(),
+          firestoreService.getP2PPayments(),
+          firestoreService.getDynamicPlans(),
+          firestoreService.getPromoCodes(),
+          firestoreService.getDisputes(),
+          firestoreService.getAuditLogs(100),
+          firestoreService.getAdminSettings(),
+        ]);
+
+        if (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) {
+          setUsers(results[0].value);
+          loadedUsersCount = results[0].value.length;
+        }
+        if (results[1].status === 'fulfilled' && Array.isArray(results[1].value)) {
+          setStores(results[1].value);
+          loadedStoresCount = results[1].value.length;
+        }
+        if (results[2].status === 'fulfilled') setProducts(results[2].value || []);
+        if (results[3].status === 'fulfilled') setOrders(results[3].value || []);
+        if (results[4].status === 'fulfilled') setP2pPayments(results[4].value || []);
+        if (results[5].status === 'fulfilled') setPlans(results[5].value || []);
+        if (results[6].status === 'fulfilled') setPromoCodes(results[6].value || []);
+        if (results[7].status === 'fulfilled') setDisputes(results[7].value || []);
+        if (results[8].status === 'fulfilled') setAuditLogs(results[8].value || []);
+        if (results[9].status === 'fulfilled') setSettings(results[9].value || null);
+      }
+
+      // If client-side Firestore returned 0 users or forceServer requested, fetch directly from server API
+      if (loadedUsersCount === 0 || forceServer) {
+        try {
+          const srvRes = await fetch('/api/admin/overview-data');
+          if (srvRes.ok) {
+            const srvData = await srvRes.json();
+            if (srvData.success) {
+              if (Array.isArray(srvData.users) && srvData.users.length > 0) {
+                setUsers(srvData.users);
+                loadedUsersCount = srvData.users.length;
+              }
+              if (Array.isArray(srvData.stores) && srvData.stores.length > 0) {
+                setStores(srvData.stores);
+                loadedStoresCount = srvData.stores.length;
+              }
+              if (Array.isArray(srvData.products)) setProducts(srvData.products);
+              if (Array.isArray(srvData.orders)) setOrders(srvData.orders);
+              if (Array.isArray(srvData.p2pPayments)) setP2pPayments(srvData.p2pPayments);
+              if (Array.isArray(srvData.promoCodes)) setPromoCodes(srvData.promoCodes);
+              if (Array.isArray(srvData.auditLogs)) setAuditLogs(srvData.auditLogs);
+            }
+          }
+        } catch (serverErr) {
+          console.warn('Backend overview-data query notice:', serverErr);
+        }
+      }
+
+      if (forceServer) {
+        showToast(
+          'Maʼlumotlar yangilandi',
+          `${loadedUsersCount} ta foydalanuvchi va ${loadedStoresCount} ta doʻkon sinxronlandi.`,
+          'success'
+        );
+      }
     } catch (err: any) {
       console.warn('Error fetching admin data:', err);
     } finally {
@@ -231,13 +277,23 @@ export const AdminView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Live Firestore Connection Status Pill */}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px]">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-slate-400">Baza:</span>
+            <span className="text-emerald-400 font-bold">{users.length} ta aʼzo</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-slate-300 font-bold">{stores.length} doʻkon</span>
+          </div>
+
           <button
-            onClick={loadAllAdminData}
+            onClick={() => loadAllAdminData(true)}
             disabled={isLoading}
-            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition-colors cursor-pointer"
-            title="Ma'lumotlarni yangilash"
+            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+            title="Barcha maʼlumotlarni qayta sinxronlash"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-rose-400' : ''}`} />
+            <span className="hidden md:inline">Yangilash</span>
           </button>
 
           <div className="h-4 w-px bg-slate-800 hidden sm:block" />

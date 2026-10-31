@@ -74,10 +74,10 @@ export const AdminStoresTab: React.FC<AdminStoresTabProps> = ({
     const term = searchTerm.toLowerCase();
     const owner = userMap.get(s.ownerId);
     const matchesSearch =
-      s.name.toLowerCase().includes(term) ||
-      s.slug.toLowerCase().includes(term) ||
-      (owner && owner.email.toLowerCase().includes(term)) ||
-      s.id.toLowerCase().includes(term);
+      (s.name || '').toLowerCase().includes(term) ||
+      (s.slug || '').toLowerCase().includes(term) ||
+      (owner?.email || '').toLowerCase().includes(term) ||
+      (s.id || '').toLowerCase().includes(term);
 
     if (!matchesSearch) return false;
 
