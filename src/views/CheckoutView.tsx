@@ -1226,7 +1226,9 @@ export const CheckoutView: React.FC = () => {
                 <span className="text-slate-400 block">Manzil:</span>
                 <span className="text-slate-900 font-medium">
                   {activeOrder
-                    ? formatAddress(activeOrder)
+                    ? typeof activeOrder.deliveryAddress === 'string'
+                      ? activeOrder.deliveryAddress
+                      : `${activeOrder.deliveryAddress?.region || ''}, ${activeOrder.deliveryAddress?.district || ''}, ${activeOrder.deliveryAddress?.streetAddress || ''}`
                     : `${region}, ${district}, ${streetAddress}${zipCode ? ` (Pochta indeksi: ${zipCode})` : ''}`}
                 </span>
               </div>

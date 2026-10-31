@@ -40,7 +40,7 @@ interface AdminPaymentsTabProps {
   stores?: Store[];
   adminEmail: string;
   adminUid?: string;
-  onRefresh: () => Promise<void>;
+  onRefresh: (forceServer?: boolean) => Promise<void>;
   showToast: (title: string, desc?: string, type?: 'success' | 'error' | 'info') => void;
   formatMoney: (amount: number) => string;
 }
@@ -232,11 +232,11 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
         { paymentStatus: 'paid', orderStatus: 'confirmed' }
       );
       showToast('To‘lov tasdiqlandi', `Buyurtma ${order.orderNumber || order.id} to‘lovi muvaffaqiyatli tasdiqlandi.`, 'success');
-      await onRefresh();
+      await onRefresh(true);
     } catch (err: any) {
       console.error('Confirm order payment error:', err);
       showToast('Amalni bajarib bo‘lmadi. Qayta urinib ko‘ring.', err?.message || 'Xatolik yuz berdi', 'error');
-      await onRefresh();
+      await onRefresh(true);
     } finally {
       setIsProcessing(false);
       setProcessingOrderId(null);
@@ -285,11 +285,11 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
       showToast('To‘lov rad etildi', `Buyurtma ${targetOrder.orderNumber || targetOrder.id} to‘lovi rad etildi.`, 'info');
       setRejectOrderModal(null);
       setOrderRejectReason('');
-      await onRefresh();
+      await onRefresh(true);
     } catch (err: any) {
       console.error('Reject order payment error:', err);
       showToast('Amalni bajarib bo‘lmadi. Qayta urinib ko‘ring.', err?.message || 'Xatolik yuz berdi', 'error');
-      await onRefresh();
+      await onRefresh(true);
     } finally {
       setIsProcessing(false);
       setProcessingOrderId(null);
@@ -367,7 +367,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
       );
       showToast('To‘lov Tasdiqlandi', `Obuna faollashtirildi: ${payment.userEmail}`, 'success');
       setSelectedPayment(null);
-      await onRefresh();
+      await onRefresh(true);
     } catch (err: any) {
       showToast('Xatolik', err.message, 'error');
     } finally {
@@ -397,7 +397,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
       showToast('Payment Rejected', 'Status marked as rejected', 'info');
       setSelectedPayment(null);
       setRejectReason('');
-      await onRefresh();
+      await onRefresh(true);
     } catch (err: any) {
       showToast('Rejection Failed', err.message, 'error');
     } finally {

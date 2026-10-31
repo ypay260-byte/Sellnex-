@@ -10,7 +10,13 @@ import {
   TELEGRAM_BOT_TOKEN,
   TELEGRAM_BOT_USERNAME,
 } from './src/services/telegramBotServer';
-import { fetchAllPlatformData } from './server/firestoreAdmin';
+import {
+  fetchAllPlatformData,
+  adminApproveOrder,
+  adminRejectOrder,
+  adminApproveP2PPayment,
+  adminRejectP2PPayment,
+} from './server/firestoreAdmin';
 
 // In-memory store for Paynet transactions & user device preferences
 interface StoredTransaction {
@@ -227,6 +233,92 @@ async function startServer() {
       return res.status(500).json({
         success: false,
         error: 'Platforma maʼlumotlarini yuklashda xatolik yuz berdi.',
+        details: err?.message,
+      });
+    }
+  });
+
+  // Admin Order Action: Approve Payment & Confirm Order
+  app.post('/api/admin/orders/:id/approve', async (req: Request, res: Response) => {
+    try {
+      const orderId = req.params.id;
+      const { adminUid, adminEmail } = req.body || {};
+      const updatedOrder = await adminApproveOrder(orderId, adminUid, adminEmail);
+      console.log(`[Admin Action] Order ${orderId} approved by ${adminEmail || adminUid}`);
+      return res.status(200).json({
+        success: true,
+        message: 'Buyurtma to‘lovi tasdiqlandi va holat yangilandi.',
+        order: updatedOrder,
+      });
+    } catch (err: any) {
+      console.error('[Admin Order Approve Error]:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Buyurtmani tasdiqlashda xatolik yuz berdi.',
+        details: err?.message,
+      });
+    }
+  });
+
+  // Admin Order Action: Reject Payment & Set Rejection Reason
+  app.post('/api/admin/orders/:id/reject', async (req: Request, res: Response) => {
+    try {
+      const orderId = req.params.id;
+      const { reason, adminUid, adminEmail } = req.body || {};
+      const updatedOrder = await adminRejectOrder(orderId, reason, adminUid, adminEmail);
+      console.log(`[Admin Action] Order ${orderId} rejected by ${adminEmail || adminUid}. Reason: ${reason}`);
+      return res.status(200).json({
+        success: true,
+        message: 'Buyurtma to‘lovi rad etildi va sababi saqlandi.',
+        order: updatedOrder,
+      });
+    } catch (err: any) {
+      console.error('[Admin Order Reject Error]:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'Buyurtmani rad etishda xatolik yuz berdi.',
+        details: err?.message,
+      });
+    }
+  });
+
+  // Admin P2P Payment Action: Approve Subscription Payment
+  app.post('/api/admin/payments/:id/approve', async (req: Request, res: Response) => {
+    try {
+      const paymentId = req.params.id;
+      const { adminEmail } = req.body || {};
+      const result = await adminApproveP2PPayment(paymentId, adminEmail);
+      console.log(`[Admin Action] P2P Payment ${paymentId} approved by ${adminEmail}`);
+      return res.status(200).json({
+        success: true,
+        message: 'To‘lov tasdiqlandi va foydalanuvchi obunasi faollashtirildi.',
+      });
+    } catch (err: any) {
+      console.error('[Admin Payment Approve Error]:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'To‘lovni tasdiqlashda xatolik yuz berdi.',
+        details: err?.message,
+      });
+    }
+  });
+
+  // Admin P2P Payment Action: Reject Subscription Payment
+  app.post('/api/admin/payments/:id/reject', async (req: Request, res: Response) => {
+    try {
+      const paymentId = req.params.id;
+      const { reason, adminEmail } = req.body || {};
+      const result = await adminRejectP2PPayment(paymentId, reason, adminEmail);
+      console.log(`[Admin Action] P2P Payment ${paymentId} rejected by ${adminEmail}`);
+      return res.status(200).json({
+        success: true,
+        message: 'To‘lov rad etildi.',
+      });
+    } catch (err: any) {
+      console.error('[Admin Payment Reject Error]:', err);
+      return res.status(500).json({
+        success: false,
+        error: 'To‘lovni rad etishda xatolik yuz berdi.',
         details: err?.message,
       });
     }

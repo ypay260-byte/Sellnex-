@@ -761,16 +761,6 @@ export const firestoreService = {
 
   async confirmOrderPayment(orderId: string, adminUidOrEmail?: string, fallbackEmail?: string): Promise<void> {
     if (!orderId) throw new Error('Order ID is required');
-    const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
-    let existingTimeline: any[] = [];
-    try {
-      const existing = await this.getOrderById(orderId);
-      if (existing?.timeline && Array.isArray(existing.timeline)) {
-        existingTimeline = existing.timeline;
-      }
-    } catch (e) {
-      console.warn('Notice: proceeding with timeline update in confirmOrderPayment:', e);
-    }
 
     let currentAdminUid = auth.currentUser?.uid || 'admin_kamoliddin_5021';
     let currentAdminEmail = auth.currentUser?.email || 'ypay260@gmail.com';
@@ -784,6 +774,37 @@ export const firestoreService = {
     }
     if (fallbackEmail && fallbackEmail.includes('@')) {
       currentAdminEmail = fallbackEmail;
+    }
+
+    // 1. Primary: High-speed server-side administrative endpoint with full DB authority
+    let serverSuccess = false;
+    try {
+      const srvRes = await fetch(`/api/admin/orders/${orderId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminUid: currentAdminUid, adminEmail: currentAdminEmail }),
+      });
+      if (srvRes.ok) {
+        const srvData = await srvRes.json();
+        if (srvData.success) {
+          serverSuccess = true;
+          return;
+        }
+      }
+    } catch (srvErr) {
+      console.warn('Backend order approve endpoint fallback notice:', srvErr);
+    }
+
+    // 2. Client-side Firestore fallback
+    const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
+    let existingTimeline: any[] = [];
+    try {
+      const existing = await this.getOrderById(orderId);
+      if (existing?.timeline && Array.isArray(existing.timeline)) {
+        existingTimeline = existing.timeline;
+      }
+    } catch (e) {
+      console.warn('Notice: proceeding with timeline update in confirmOrderPayment:', e);
     }
 
     const nowIso = new Date().toISOString();
@@ -802,28 +823,21 @@ export const firestoreService = {
       orderStatus: 'confirmed',
       verifiedBy: currentAdminUid,
       adminEmail: currentAdminEmail,
-      verifiedAt: serverTimestamp(),
+      verifiedAt: nowIso,
       verifiedAtIso: nowIso,
       timeline: newTimeline,
       updatedAt: nowIso,
     });
 
-    // Use setDoc with merge to ensure atomic update and avoid not-found errors
-    await setDoc(docRef, payload, { merge: true });
+    try {
+      await updateDoc(docRef, payload);
+    } catch {
+      await setDoc(docRef, payload, { merge: true });
+    }
   },
 
   async rejectOrderPayment(orderId: string, param1?: string, param2?: string, param3?: string): Promise<void> {
     if (!orderId) throw new Error('Order ID is required');
-    const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
-    let existingTimeline: any[] = [];
-    try {
-      const existing = await this.getOrderById(orderId);
-      if (existing?.timeline && Array.isArray(existing.timeline)) {
-        existingTimeline = existing.timeline;
-      }
-    } catch (e) {
-      console.warn('Notice: proceeding with timeline update in rejectOrderPayment:', e);
-    }
 
     let currentAdminUid = auth.currentUser?.uid || 'admin_kamoliddin_5021';
     let currentAdminEmail = auth.currentUser?.email || 'ypay260@gmail.com';
@@ -853,11 +867,40 @@ export const firestoreService = {
       }
     }
 
+    // 1. Primary: High-speed server-side administrative endpoint with full DB authority
+    try {
+      const srvRes = await fetch(`/api/admin/orders/${orderId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, adminUid: currentAdminUid, adminEmail: currentAdminEmail }),
+      });
+      if (srvRes.ok) {
+        const srvData = await srvRes.json();
+        if (srvData.success) {
+          return;
+        }
+      }
+    } catch (srvErr) {
+      console.warn('Backend order reject endpoint fallback notice:', srvErr);
+    }
+
+    // 2. Client-side Firestore fallback
+    const docRef = doc(db, COLLECTIONS.ORDERS, orderId);
+    let existingTimeline: any[] = [];
+    try {
+      const existing = await this.getOrderById(orderId);
+      if (existing?.timeline && Array.isArray(existing.timeline)) {
+        existingTimeline = existing.timeline;
+      }
+    } catch (e) {
+      console.warn('Notice: proceeding with timeline update in rejectOrderPayment:', e);
+    }
+
     const nowIso = new Date().toISOString();
     const newTimeline = [
       ...existingTimeline,
       {
-        status: 'Pending' as const,
+        status: 'rejected' as const,
         timestamp: nowIso,
         title: "To'lov cheki rad etildi (Admin)",
         description: reason,
@@ -870,14 +913,17 @@ export const firestoreService = {
       receiptRejectedReason: reason,
       verifiedBy: currentAdminUid,
       adminEmail: currentAdminEmail,
-      verifiedAt: serverTimestamp(),
+      verifiedAt: nowIso,
       verifiedAtIso: nowIso,
       timeline: newTimeline,
       updatedAt: nowIso,
     });
 
-    // Use setDoc with merge to ensure atomic update and avoid not-found errors
-    await setDoc(docRef, payload, { merge: true });
+    try {
+      await updateDoc(docRef, payload);
+    } catch {
+      await setDoc(docRef, payload, { merge: true });
+    }
   },
 
   async getOrdersByStore(storeId: string, onlyPaid: boolean = true): Promise<Order[]> {
@@ -1450,8 +1496,36 @@ export const firestoreService = {
   },
 
   async updateP2PPayment(paymentId: string, updates: Partial<P2PPayment>): Promise<void> {
-    const docRef = doc(db, COLLECTIONS.P2P_PAYMENTS, paymentId);
-    await updateDoc(docRef, { ...updates, updatedAt: new Date().toISOString() });
+    // 1. Try server-side action if approving or rejecting
+    if (updates.status === 'approved') {
+      try {
+        await fetch(`/api/admin/payments/${paymentId}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminEmail: updates.approvedBy || 'ypay260@gmail.com' }),
+        });
+      } catch (e) {
+        console.warn('Backend payment approve note:', e);
+      }
+    } else if (updates.status === 'rejected') {
+      try {
+        await fetch(`/api/admin/payments/${paymentId}/reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: updates.rejectionReason, adminEmail: updates.approvedBy || 'ypay260@gmail.com' }),
+        });
+      } catch (e) {
+        console.warn('Backend payment reject note:', e);
+      }
+    }
+
+    // 2. Direct Firestore update
+    try {
+      const docRef = doc(db, COLLECTIONS.P2P_PAYMENTS, paymentId);
+      await setDoc(docRef, sanitizeData({ ...updates, updatedAt: new Date().toISOString() }), { merge: true });
+    } catch (e) {
+      console.warn('Direct Firestore P2P payment write note:', e);
+    }
   },
 
   // === PROMO CODE SYSTEM ===

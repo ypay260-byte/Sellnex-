@@ -31,7 +31,7 @@ interface AdminOrdersTabProps {
   users: User[];
   adminEmail: string;
   adminUid?: string;
-  onRefresh: () => Promise<void>;
+  onRefresh: (forceServer?: boolean) => Promise<void>;
   showToast: (title: string, desc?: string, type?: 'success' | 'error' | 'info') => void;
   formatMoney: (amount: number) => string;
 }
@@ -199,7 +199,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         'success'
       );
 
-      await onRefresh();
+      await onRefresh(true);
     } catch (err: any) {
       console.error('Error confirming order payment:', err);
       showToast(
@@ -207,7 +207,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         err?.message || 'Xatolik yuz berdi',
         'error'
       );
-      await onRefresh();
+      await onRefresh(true);
     } finally {
       setIsProcessing(false);
       setProcessingOrderId(null);
@@ -277,7 +277,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       setRejectModalOpen(false);
       setOrderToReject(null);
       setRejectReason('');
-      await onRefresh();
+      await onRefresh(true);
     } catch (err: any) {
       console.error('Error rejecting order payment:', err);
       showToast(
@@ -285,7 +285,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         err?.message || 'Xatolik yuz berdi',
         'error'
       );
-      await onRefresh();
+      await onRefresh(true);
     } finally {
       setIsProcessing(false);
       setProcessingOrderId(null);
